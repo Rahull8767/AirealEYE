@@ -151,13 +151,16 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
     );
   }
 
-  void clearMission() {
+  Future<void> clearMission() async {
     _saveToUndoHistory();
     state = state.copyWith(
       plannedWaypoints: [],
       redoHistory: [],
       isUploaded: false,
     );
+    try {
+      await ref.read(droneServiceProvider).clearMission();
+    } catch (_) {}
   }
 
   void _saveToUndoHistory() {
@@ -166,17 +169,27 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
     );
   }
 
-  void uploadMission() {
+  Future<void> uploadMission() async {
     if (state.plannedWaypoints.isEmpty) return;
-    state = state.copyWith(isUploaded: true);
-    ref.read(notificationProvider.notifier).addNotification(
-          'Mission Uploaded',
-          'Successfully uploaded ${state.plannedWaypoints.length} waypoints to Pixhawk MAVLink buffer.',
-          NotificationType.success,
-        );
+    final droneService = ref.read(droneServiceProvider);
+    try {
+      await droneService.uploadMission(state.plannedWaypoints);
+      state = state.copyWith(isUploaded: true);
+      ref.read(notificationProvider.notifier).addNotification(
+            'Mission Uploaded',
+            'Successfully uploaded ${state.plannedWaypoints.length} waypoints to Pixhawk MAVLink buffer.',
+            NotificationType.success,
+          );
+    } catch (e) {
+      ref.read(notificationProvider.notifier).addNotification(
+            'Upload Failed',
+            'Failed to upload mission: $e',
+            NotificationType.critical,
+          );
+    }
   }
 
-  void startMission() {
+  Future<void> startMission() async {
     if (!state.isUploaded || state.plannedWaypoints.isEmpty) return;
     final droneService = ref.read(droneServiceProvider);
 
@@ -194,25 +207,113 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
       activeMission: newMission,
     );
 
-    droneService.startMission(state.plannedWaypoints);
-
-    ref.read(notificationProvider.notifier).addNotification(
-          'Mission Started',
-          'Autopilot running waypoint grid at ${state.plannedWaypoints.first.altitude}m altitude.',
-          NotificationType.info,
-        );
-
-    ref.read(detectionProvider.notifier).startSimulationForMission(newMission.id);
+    try {
+      await droneService.startMission();
+      ref.read(notificationProvider.notifier).addNotification(
+            'Mission Started',
+            'Autopilot running waypoint grid at ${state.plannedWaypoints.first.altitude}m altitude.',
+            NotificationType.info,
+          );
+      ref.read(detectionProvider.notifier).startSimulationForMission(newMission.id);
+    } catch (e) {
+      ref.read(notificationProvider.notifier).addNotification(
+            'Start Failed',
+            'Failed to start mission: $e',
+            NotificationType.critical,
+          );
+    }
   }
 
-  void stopMission(MissionStatus endStatus) {
+  void generateGrid(double centerLat, double centerLng) {
+    _saveToUndoHistory();
+    final List<Waypoint> gridWaypoints = [];
+    final double latSpacing = 0.00025; // approx 25 meters
+    final double lngSpacing = 0.00025; // approx 25 meters
+    int id = 1;
+
+    for (int sweep = -1; sweep <= 1; sweep++) {
+      final double currentLat = centerLat + (sweep * latSpacing);
+      if (sweep % 2 == 0) {
+        for (int p = -1; p <= 1; p++) {
+          gridWaypoints.add(Waypoint(
+            id: id++,
+            latitude: currentLat,
+            longitude: centerLng + (p * lngSpacing),
+            altitude: 30.0,
+            speed: 5.0,
+            hoverTime: 2,
+          ));
+        }
+      } else {
+        for (int p = 1; p >= -1; p--) {
+          gridWaypoints.add(Waypoint(
+            id: id++,
+            latitude: currentLat,
+            longitude: centerLng + (p * lngSpacing),
+            altitude: 30.0,
+            speed: 5.0,
+            hoverTime: 2,
+          ));
+        }
+      }
+    }
+
+    state = state.copyWith(
+      plannedWaypoints: gridWaypoints,
+      redoHistory: [],
+      isUploaded: false,
+    );
+
+    ref.read(notificationProvider.notifier).addNotification(
+          'Grid Generated',
+          'Lawnmower sweep grid generated with ${gridWaypoints.length} waypoints.',
+          NotificationType.success,
+        );
+  }
+
+  void saveCurrentMission(String name) {
+    if (state.plannedWaypoints.isEmpty) return;
+    final newSaved = Mission(
+      id: 'saved_${DateTime.now().millisecondsSinceEpoch}',
+      name: name,
+      date: DateTime.now(),
+      duration: Duration(minutes: (state.plannedWaypoints.length * 1.5).ceil()),
+      distance: state.plannedWaypoints.length * 0.28,
+      status: MissionStatus.completed,
+      waypoints: List.from(state.plannedWaypoints),
+    );
+    state = state.copyWith(
+      missionHistory: [newSaved, ...state.missionHistory],
+    );
+    ref.read(notificationProvider.notifier).addNotification(
+          'Mission Saved',
+          'Saved "$name" local mission template successfully.',
+          NotificationType.success,
+        );
+  }
+
+  void loadMission(Mission mission) {
+    _saveToUndoHistory();
+    state = state.copyWith(
+      plannedWaypoints: List.from(mission.waypoints),
+      redoHistory: [],
+      isUploaded: false,
+    );
+    ref.read(notificationProvider.notifier).addNotification(
+          'Mission Loaded',
+          'Loaded "${mission.name}" template with ${mission.waypoints.length} points.',
+          NotificationType.info,
+        );
+  }
+
+  Future<void> stopMission(MissionStatus endStatus) async {
     if (state.activeMission == null) return;
     final droneService = ref.read(droneServiceProvider);
 
     if (endStatus == MissionStatus.completed) {
-      droneService.land();
+      await droneService.land();
     } else {
-      droneService.returnToLaunch();
+      await droneService.returnToLaunch();
     }
 
     final double finalDistance = double.parse((droneService.currentTelemetry.distance / 1000).toStringAsFixed(2));

@@ -23,6 +23,81 @@ class MissionPlannerScreen extends ConsumerStatefulWidget {
 class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
   final MapController _mapController = MapController();
 
+  void _showSaveMissionDialog() {
+    final controller = TextEditingController(text: 'Inspection Route ${ref.read(missionProvider).missionHistory.length + 1}');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Save Mission Template'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Mission Template Name',
+            hintText: 'e.g. Oak Street Grid',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                ref.read(missionProvider.notifier).saveCurrentMission(name);
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLoadMissionDialog() {
+    final history = ref.read(missionProvider).missionHistory;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Load Mission Template'),
+        content: history.isEmpty
+            ? const Text('No saved mission templates found.')
+            : SizedBox(
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: history.length,
+                  itemBuilder: (context, idx) {
+                    final item = history[idx];
+                    return ListTile(
+                      title: Text(item.name),
+                      subtitle: Text('${item.waypoints.length} points | ${item.distance.toStringAsFixed(2)} km'),
+                      trailing: const Icon(LucideIcons.arrowUpRight, size: 16),
+                      onTap: () {
+                        ref.read(missionProvider.notifier).loadMission(item);
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _generateLawnmowerGrid() {
+    final center = _mapController.camera.center;
+    ref.read(missionProvider.notifier).generateGrid(center.latitude, center.longitude);
+  }
+
   void _editWaypointSheet(Waypoint wp) {
     showModalBottomSheet(
       context: context,
@@ -268,6 +343,27 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                         onPressed: plannedPoints.isNotEmpty
                             ? () => ref.read(missionProvider.notifier).clearMission()
                             : null,
+                      ),
+                    ],
+                  ),
+                  const Divider(color: AppTheme.border, height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      IconButton(
+                        icon: const Icon(LucideIcons.save, size: 18, color: AppTheme.secondary),
+                        tooltip: 'Save Template',
+                        onPressed: plannedPoints.isNotEmpty ? _showSaveMissionDialog : null,
+                      ),
+                      IconButton(
+                        icon: const Icon(LucideIcons.folderOpen, size: 18, color: AppTheme.secondary),
+                        tooltip: 'Load Template',
+                        onPressed: _showLoadMissionDialog,
+                      ),
+                      IconButton(
+                        icon: const Icon(LucideIcons.grid, size: 18, color: AppTheme.warning),
+                        tooltip: 'Generate Grid',
+                        onPressed: _generateLawnmowerGrid,
                       ),
                     ],
                   ),

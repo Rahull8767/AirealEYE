@@ -6,7 +6,10 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:aerial_eye/core/theme/app_theme.dart';
 import 'package:aerial_eye/core/constants/app_constants.dart';
 import 'package:aerial_eye/models/detection.dart';
+import 'package:aerial_eye/models/telemetry.dart';
 import 'package:aerial_eye/providers/detection_provider.dart';
+import 'package:aerial_eye/providers/drone_provider.dart';
+import 'package:aerial_eye/providers/mission_provider.dart';
 import 'package:aerial_eye/widgets/glass_panel.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
@@ -18,6 +21,7 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   final MapController _mapController = MapController();
+  bool _followDrone = true;
   
   // Custom Map Layer Types
   String _activeTileLayer = 'dark'; // dark, light, osm, terrain
@@ -101,9 +105,22 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Widget build(BuildContext context) {
     final detectionState = ref.watch(detectionProvider);
     final detections = detectionState.detections;
+    final telemetryAsync = ref.watch(droneTelemetryProvider);
+    final telemetry = telemetryAsync.value ?? DroneTelemetry.initial();
+    final plannerState = ref.watch(missionProvider);
+    final plannedPoints = plannerState.plannedWaypoints;
+
+    // Follow drone logic
+    if (_followDrone && telemetry.isConnected) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mapController.move(LatLng(telemetry.latitude, telemetry.longitude), _mapController.camera.zoom);
+      });
+    }
+
+    final pathPoints = plannedPoints.map((wp) => LatLng(wp.latitude, wp.longitude)).toList();
 
     // Create marker widgets from detections
-    final List<Marker> mapMarkers = detections.map((d) {
+    final List<Marker> markers = detections.map((d) {
       return Marker(
         point: LatLng(d.latitude, d.longitude),
         width: 32,
@@ -127,6 +144,64 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       );
     }).toList();
 
+    // Add waypoint markers
+    for (var wp in plannedPoints) {
+      markers.add(
+        Marker(
+          point: LatLng(wp.latitude, wp.longitude),
+          width: 24,
+          height: 24,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: AppTheme.primary,
+              shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: Colors.black38, blurRadius: 4)],
+            ),
+            child: Center(
+              child: Text(
+                '${wp.id}',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final homeLatLng = LatLng(37.7749, -122.4194);
+
+    // Add home marker and drone marker
+    if (telemetry.isConnected) {
+      markers.add(
+        Marker(
+          point: homeLatLng,
+          width: 32,
+          height: 32,
+          child: const Icon(
+            LucideIcons.home,
+            color: AppTheme.success,
+            size: 24,
+          ),
+        ),
+      );
+
+      markers.add(
+        Marker(
+          point: LatLng(telemetry.latitude, telemetry.longitude),
+          width: 40,
+          height: 40,
+          child: Transform.rotate(
+            angle: telemetry.heading * (3.1415926535 / 180),
+            child: const Icon(
+              LucideIcons.plane,
+              color: AppTheme.secondary,
+              size: 32,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: Stack(
         children: [
@@ -142,11 +217,38 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 urlTemplate: _tileProviders[_activeTileLayer]!,
                 subdomains: const ['a', 'b', 'c', 'd'],
               ),
-              MarkerLayer(markers: mapMarkers),
+              if (pathPoints.isNotEmpty)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: pathPoints,
+                      color: AppTheme.secondary,
+                      strokeWidth: 3.0,
+                    ),
+                  ],
+                ),
+              MarkerLayer(markers: markers),
             ],
           ),
 
-          // 2. Floating Map Layer Controller
+          // 2. Follow Drone Button
+          Positioned(
+            right: 16,
+            bottom: 200,
+            child: FloatingActionButton.small(
+              heroTag: 'follow_drone_fab',
+              onPressed: () {
+                setState(() {
+                  _followDrone = !_followDrone;
+                });
+              },
+              backgroundColor: _followDrone ? AppTheme.secondary : AppTheme.card,
+              foregroundColor: _followDrone ? Colors.white : AppTheme.textSecondary,
+              child: const Icon(LucideIcons.compass, size: 18),
+            ),
+          ),
+
+          // 3. Floating Map Layer Controller
           Positioned(
             right: 16,
             bottom: 16,
@@ -167,7 +269,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ),
           ),
 
-          // 3. Pin Legend Panel (Left Top)
+          // 4. Pin Legend Panel (Left Top)
           Positioned(
             left: 16,
             top: 16,
@@ -192,6 +294,45 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
             ),
           ),
+
+          // 5. Flight Info Panel (Left Bottom)
+          Positioned(
+            left: 16,
+            bottom: 16,
+            child: GlassPanel(
+              width: 200,
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'FLIGHT OVERVIEW',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textSecondary, letterSpacing: 0.8),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildSpecRow('Link State', telemetry.isConnected ? 'CONNECTED' : 'DISCONNECTED'),
+                  _buildSpecRow('Flight Mode', telemetry.flightMode),
+                  _buildSpecRow('Altitude AGL', '${telemetry.altitude.toStringAsFixed(1)} m'),
+                  _buildSpecRow('Ground Speed', '${telemetry.speed.toStringAsFixed(1)} m/s'),
+                  _buildSpecRow('GPS Locked', telemetry.isConnected ? '${telemetry.satellites} Sats' : 'No Signal'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpecRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+          Text(value, style: const TextStyle(fontSize: 11, color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
         ],
       ),
     );

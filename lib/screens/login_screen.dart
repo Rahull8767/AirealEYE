@@ -164,10 +164,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 12,
+                          runSpacing: 8,
                           children: [
                             Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 SizedBox(
                                   width: 24,
@@ -281,7 +285,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 children: [
                                   Icon(LucideIcons.chrome, color: Colors.orange.shade400, size: 16),
                                   const SizedBox(width: 10),
-                                  const Text('SSO Login with City Google ID'),
+                                  const Flexible(
+                                    child: Text(
+                                      'SSO Login with City Google ID',
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:aerial_eye/core/theme/app_theme.dart';
 import 'package:aerial_eye/providers/settings_provider.dart';
+import 'package:aerial_eye/providers/drone_provider.dart';
 import 'package:aerial_eye/providers/auth_provider.dart';
+import 'package:aerial_eye/screens/mavlink_connection_screen.dart';
 import 'package:aerial_eye/widgets/glass_panel.dart';
 import 'package:aerial_eye/widgets/animated_button.dart';
 
@@ -100,24 +102,44 @@ class SettingsScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Column(
               children: [
-                _buildEditableField(
-                  context,
-                  'Drone Host IP',
-                  settings.droneIp,
-                  (val) => notifier.updateDroneConnection(val, settings.pixhawkPort),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('MAVLink Network Settings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('Configure UDP listener/direct, ports, IDs, and timeouts', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                  trailing: const Icon(LucideIcons.chevronRight, color: AppTheme.secondary),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MavlinkConnectionScreen()),
+                    );
+                  },
                 ),
                 const Divider(color: AppTheme.border, height: 16),
                 _buildEditableField(
                   context,
-                  'MAVLink Port',
+                  'Default Bind IP',
+                  settings.droneIp,
+                  (val) {
+                    notifier.updateDroneConnection(val, settings.pixhawkPort);
+                    final svc = ref.read(droneServiceProvider);
+                    svc.updateConfig(svc.config.copyWith(bindAddress: val));
+                  },
+                ),
+                const Divider(color: AppTheme.border, height: 16),
+                _buildEditableField(
+                  context,
+                  'MAVLink UDP Port',
                   '${settings.pixhawkPort}',
                   (val) {
                     final p = int.tryParse(val) ?? 14550;
                     notifier.updateDroneConnection(settings.droneIp, p);
+                    final svc = ref.read(droneServiceProvider);
+                    svc.updateConfig(svc.config.copyWith(localPort: p));
                   },
                 ),
                 const Divider(color: AppTheme.border, height: 16),
                 ListTile(
+                  contentPadding: EdgeInsets.zero,
                   title: const Text('Telemetry Rates'),
                   trailing: DropdownButton<String>(
                     value: settings.telemetryFreq,
@@ -129,7 +151,12 @@ class SettingsScreen extends ConsumerWidget {
                       DropdownMenuItem(value: '20 Hz', child: Text('20 Hz')),
                     ],
                     onChanged: (val) {
-                      if (val != null) notifier.updateTelemetryFrequency(val);
+                      if (val != null) {
+                        notifier.updateTelemetryFrequency(val);
+                        final hz = int.tryParse(val.replaceAll(RegExp(r'[^0-9]'), '')) ?? 10;
+                        final svc = ref.read(droneServiceProvider);
+                        svc.updateConfig(svc.config.copyWith(telemetryRateHz: hz));
+                      }
                     },
                   ),
                 ),

@@ -11,6 +11,34 @@ class DroneTelemetry {
   final String flightMode; // e.g. GUIDED, AUTO, RTL, LAND, LOITER, STABILIZE
   final double rssi; // signal strength 0 to 100
   final bool isConnected;
+  final bool isStale;
+
+  // Additional telemetry fields
+  final bool armed;
+  final double relativeAltitude;
+  final double groundSpeed;
+  final double airSpeed;
+  final double roll; // degrees
+  final double pitch; // degrees
+  final double yaw; // degrees
+  final double batteryPercentage; // 0 to 100
+  final double batteryCurrent; // Amps
+  final int gpsFix; // 0-1: no fix, 2: 2D, 3: 3D, etc.
+  final double climbRate; // m/s
+  final DateTime? lastUpdate;
+
+  // Per-stream availability flags and timestamps
+  final bool hasReceivedGps;
+  final bool hasReceivedBattery;
+  final bool hasReceivedPosition;
+  final bool hasReceivedAttitude;
+  final bool hasReceivedVfrHud;
+  final DateTime? lastHeartbeat;
+  final DateTime? lastGlobalPosition;
+  final DateTime? lastBatteryUpdate;
+  final DateTime? lastGpsUpdate;
+  final DateTime? lastAttitudeUpdate;
+  final DateTime? lastVfrHudUpdate;
 
   DroneTelemetry({
     required this.altitude,
@@ -25,6 +53,30 @@ class DroneTelemetry {
     required this.flightMode,
     required this.rssi,
     required this.isConnected,
+    this.isStale = false,
+    required this.armed,
+    required this.relativeAltitude,
+    required this.groundSpeed,
+    required this.airSpeed,
+    required this.roll,
+    required this.pitch,
+    required this.yaw,
+    required this.batteryPercentage,
+    required this.batteryCurrent,
+    required this.gpsFix,
+    required this.climbRate,
+    this.lastUpdate,
+    this.hasReceivedGps = false,
+    this.hasReceivedBattery = false,
+    this.hasReceivedPosition = false,
+    this.hasReceivedAttitude = false,
+    this.hasReceivedVfrHud = false,
+    this.lastHeartbeat,
+    this.lastGlobalPosition,
+    this.lastBatteryUpdate,
+    this.lastGpsUpdate,
+    this.lastAttitudeUpdate,
+    this.lastVfrHudUpdate,
   });
 
   factory DroneTelemetry.initial() {
@@ -33,16 +85,48 @@ class DroneTelemetry {
       speed: 0.0,
       distance: 0.0,
       heading: 0.0,
-      batteryPercent: 1.0,
-      batteryVoltage: 16.8,
-      latitude: 37.7749,
-      longitude: -122.4194,
+      batteryPercent: 0.0,
+      batteryVoltage: 0.0,
+      latitude: 0.0,
+      longitude: 0.0,
       satellites: 0,
       flightMode: 'DISCONNECTED',
       rssi: 0.0,
       isConnected: false,
+      isStale: false,
+      armed: false,
+      relativeAltitude: 0.0,
+      groundSpeed: 0.0,
+      airSpeed: 0.0,
+      roll: 0.0,
+      pitch: 0.0,
+      yaw: 0.0,
+      batteryPercentage: 0.0,
+      batteryCurrent: 0.0,
+      gpsFix: 0,
+      climbRate: 0.0,
+      lastUpdate: null,
+      hasReceivedGps: false,
+      hasReceivedBattery: false,
+      hasReceivedPosition: false,
+      hasReceivedAttitude: false,
+      hasReceivedVfrHud: false,
+      lastHeartbeat: null,
+      lastGlobalPosition: null,
+      lastBatteryUpdate: null,
+      lastGpsUpdate: null,
+      lastAttitudeUpdate: null,
+      lastVfrHudUpdate: null,
     );
   }
+
+  // Formatting helpers to prevent fake zeroes when data hasn't arrived
+  String get altitudeDisplay => hasReceivedPosition || isConnected ? '${altitude.toStringAsFixed(1)} m' : '--';
+  String get speedDisplay => hasReceivedVfrHud || isConnected ? '${speed.toStringAsFixed(1)} m/s' : '--';
+  String get headingDisplay => hasReceivedPosition || isConnected ? '${heading.toStringAsFixed(0)}°' : '--';
+  String get batteryVoltageDisplay => hasReceivedBattery ? '${batteryVoltage.toStringAsFixed(1)} V' : '--';
+  String get batteryPercentDisplay => hasReceivedBattery ? '${batteryPercentage.toStringAsFixed(0)}%' : '--';
+  String get satellitesDisplay => hasReceivedGps ? '$satellites Sats' : 'Waiting...';
 
   DroneTelemetry copyWith({
     double? altitude,
@@ -57,6 +141,30 @@ class DroneTelemetry {
     String? flightMode,
     double? rssi,
     bool? isConnected,
+    bool? isStale,
+    bool? armed,
+    double? relativeAltitude,
+    double? groundSpeed,
+    double? airSpeed,
+    double? roll,
+    double? pitch,
+    double? yaw,
+    double? batteryPercentage,
+    double? batteryCurrent,
+    int? gpsFix,
+    double? climbRate,
+    DateTime? lastUpdate,
+    bool? hasReceivedGps,
+    bool? hasReceivedBattery,
+    bool? hasReceivedPosition,
+    bool? hasReceivedAttitude,
+    bool? hasReceivedVfrHud,
+    DateTime? lastHeartbeat,
+    DateTime? lastGlobalPosition,
+    DateTime? lastBatteryUpdate,
+    DateTime? lastGpsUpdate,
+    DateTime? lastAttitudeUpdate,
+    DateTime? lastVfrHudUpdate,
   }) {
     return DroneTelemetry(
       altitude: altitude ?? this.altitude,
@@ -71,6 +179,30 @@ class DroneTelemetry {
       flightMode: flightMode ?? this.flightMode,
       rssi: rssi ?? this.rssi,
       isConnected: isConnected ?? this.isConnected,
+      isStale: isStale ?? this.isStale,
+      armed: armed ?? this.armed,
+      relativeAltitude: relativeAltitude ?? this.relativeAltitude,
+      groundSpeed: groundSpeed ?? this.groundSpeed,
+      airSpeed: airSpeed ?? this.airSpeed,
+      roll: roll ?? this.roll,
+      pitch: pitch ?? this.pitch,
+      yaw: yaw ?? this.yaw,
+      batteryPercentage: batteryPercentage ?? this.batteryPercentage,
+      batteryCurrent: batteryCurrent ?? this.batteryCurrent,
+      gpsFix: gpsFix ?? this.gpsFix,
+      climbRate: climbRate ?? this.climbRate,
+      lastUpdate: lastUpdate ?? this.lastUpdate,
+      hasReceivedGps: hasReceivedGps ?? this.hasReceivedGps,
+      hasReceivedBattery: hasReceivedBattery ?? this.hasReceivedBattery,
+      hasReceivedPosition: hasReceivedPosition ?? this.hasReceivedPosition,
+      hasReceivedAttitude: hasReceivedAttitude ?? this.hasReceivedAttitude,
+      hasReceivedVfrHud: hasReceivedVfrHud ?? this.hasReceivedVfrHud,
+      lastHeartbeat: lastHeartbeat ?? this.lastHeartbeat,
+      lastGlobalPosition: lastGlobalPosition ?? this.lastGlobalPosition,
+      lastBatteryUpdate: lastBatteryUpdate ?? this.lastBatteryUpdate,
+      lastGpsUpdate: lastGpsUpdate ?? this.lastGpsUpdate,
+      lastAttitudeUpdate: lastAttitudeUpdate ?? this.lastAttitudeUpdate,
+      lastVfrHudUpdate: lastVfrHudUpdate ?? this.lastVfrHudUpdate,
     );
   }
 }

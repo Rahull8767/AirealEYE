@@ -1,12 +1,14 @@
 import 'dart:math';
 import 'package:aerial_eye/models/detection.dart';
+import 'package:aerial_eye/services/detection_service.dart';
 
-class MockDetectionService {
+class MockDetectionService implements DetectionService {
   final List<AiDetection> _allDetections = [];
   final _random = Random();
 
   List<AiDetection> get allDetections => _allDetections;
 
+  @override
   List<AiDetection> generateInitialDetections() {
     _allDetections.clear();
     final now = DateTime.now();
@@ -21,6 +23,8 @@ class MockDetectionService {
         timestamp: now.subtract(const Duration(hours: 2)),
         latitude: 37.7749 + 0.002,
         longitude: -122.4194 - 0.001,
+        altitude: 30.0,
+        boundingBox: [0.15, 0.20, 0.45, 0.55],
         severity: 'High',
         imagePath: 'pothole',
       ),
@@ -32,6 +36,8 @@ class MockDetectionService {
         timestamp: now.subtract(const Duration(hours: 2, minutes: 10)),
         latitude: 37.7749 - 0.0015,
         longitude: -122.4194 + 0.0025,
+        altitude: 30.0,
+        boundingBox: [0.30, 0.35, 0.70, 0.75],
         severity: 'Medium',
         imagePath: 'crack',
       ),
@@ -43,6 +49,8 @@ class MockDetectionService {
         timestamp: now.subtract(const Duration(days: 1)),
         latitude: 37.7749 + 0.0005,
         longitude: -122.4194 + 0.0010,
+        altitude: 35.0,
+        boundingBox: [0.10, 0.10, 0.90, 0.90],
         severity: 'Low',
         imagePath: 'garbage',
       ),
@@ -54,6 +62,8 @@ class MockDetectionService {
         timestamp: now.subtract(const Duration(days: 1, minutes: 30)),
         latitude: 37.7749 + 0.0030,
         longitude: -122.4194 - 0.0020,
+        altitude: 35.0,
+        boundingBox: [0.20, 0.25, 0.80, 0.85],
         severity: 'High',
         imagePath: 'water',
       ),
@@ -65,6 +75,8 @@ class MockDetectionService {
         timestamp: now.subtract(const Duration(days: 2)),
         latitude: 37.7749 - 0.0030,
         longitude: -122.4194 + 0.0015,
+        altitude: 40.0,
+        boundingBox: [0.40, 0.40, 0.60, 0.60],
         severity: 'Medium',
         imagePath: 'animal',
       ),
@@ -76,6 +88,8 @@ class MockDetectionService {
         timestamp: now.subtract(const Duration(days: 2, minutes: 5)),
         latitude: 37.7749 - 0.0025,
         longitude: -122.4194 - 0.0030,
+        altitude: 40.0,
+        boundingBox: [0.05, 0.05, 0.95, 0.95],
         severity: 'Critical',
         imagePath: 'obstacle',
       ),
@@ -87,6 +101,8 @@ class MockDetectionService {
         timestamp: now.subtract(const Duration(days: 3)),
         latitude: 37.7749 + 0.0012,
         longitude: -122.4194 - 0.0005,
+        altitude: 30.0,
+        boundingBox: [0.25, 0.15, 0.75, 0.85],
         severity: 'Low',
         imagePath: 'sign',
       ),
@@ -96,7 +112,8 @@ class MockDetectionService {
     return _allDetections;
   }
 
-  AiDetection generateRandomDetection(double lat, double lng, String missionId) {
+  @override
+  AiDetection generateRandomDetection(double lat, double lng, String missionId, double altitude) {
     final now = DateTime.now();
     final id = 'det_${now.millisecondsSinceEpoch}';
     final typeIndex = _random.nextInt(DetectionType.values.length);
@@ -137,6 +154,12 @@ class MockDetectionService {
         break;
     }
 
+    // Generate simulated bounding box coordinates
+    final xMin = 0.1 + _random.nextDouble() * 0.3;
+    final yMin = 0.1 + _random.nextDouble() * 0.3;
+    final xMax = xMin + 0.2 + _random.nextDouble() * 0.3;
+    final yMax = yMin + 0.2 + _random.nextDouble() * 0.3;
+
     final newDetection = AiDetection(
       id: id,
       missionId: missionId,
@@ -145,6 +168,8 @@ class MockDetectionService {
       timestamp: now,
       latitude: lat,
       longitude: lng,
+      altitude: altitude,
+      boundingBox: [xMin, yMin, xMax, yMax],
       severity: severity,
       imagePath: img,
     );

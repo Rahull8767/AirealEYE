@@ -38,6 +38,8 @@ dependencies:
   flutter_map: ^6.1.0
   latlong2: ^0.9.1
   lucide_icons: ^0.257.0
+  dart_mavlink: ^0.1.0
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:

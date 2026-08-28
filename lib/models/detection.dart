@@ -18,6 +18,8 @@ class AiDetection {
   final DateTime timestamp;
   final double latitude;
   final double longitude;
+  final double altitude; // AGL altitude when detected
+  final List<double>? boundingBox; // [xMin, yMin, xMax, yMax]
   final String severity; // Low, Medium, High, Critical
   final String imagePath; // Local path or placeholder image
 
@@ -29,6 +31,8 @@ class AiDetection {
     required this.timestamp,
     required this.latitude,
     required this.longitude,
+    required this.altitude,
+    this.boundingBox,
     required this.severity,
     required this.imagePath,
   });

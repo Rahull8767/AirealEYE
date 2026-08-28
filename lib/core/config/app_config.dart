@@ -1,11 +1,11 @@
 class AppConfig {
-  // Drone Communication Settings
-  static const String droneHostIp = '192.168.1.100';
+  // Drone Communication Settings (Defaults)
+  static const String droneHostIp = '0.0.0.0';
   static const int pixhawkPort = 14550;
   static const String telemetryFrequencyHz = '10 Hz';
   
   // Video & AI Settings
-  static const String videoFeedUrl = 'rtsp://192.168.1.100:8554/live';
+  static const String videoFeedUrl = 'rtsp://192.168.1.9:8554/live';
   static const double defaultAiConfidenceThreshold = 0.75;
   static const String cameraResolution = '1080p (FHD)';
   static const int videoFps = 30;

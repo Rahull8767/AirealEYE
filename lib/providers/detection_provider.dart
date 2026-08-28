@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aerial_eye/models/detection.dart';
+import 'package:aerial_eye/services/detection_service.dart';
 import 'package:aerial_eye/services/mock_detection_service.dart';
+import 'package:aerial_eye/services/real_detection_service.dart';
 import 'package:aerial_eye/providers/drone_provider.dart';
 import 'package:aerial_eye/providers/notification_provider.dart';
 import 'package:aerial_eye/models/notification.dart';
@@ -33,7 +35,7 @@ class DetectionState {
 
 class DetectionNotifier extends StateNotifier<DetectionState> {
   final Ref ref;
-  final _service = MockDetectionService();
+  final DetectionService _service = MockDetectionService();
   Timer? _simulationTimer;
 
   DetectionNotifier(this.ref)
@@ -78,8 +80,9 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
       
       final lat = droneService.currentTelemetry.latitude;
       final lng = droneService.currentTelemetry.longitude;
+      final alt = droneService.currentTelemetry.altitude;
 
-      final newDet = _service.generateRandomDetection(lat, lng, missionId);
+      final newDet = _service.generateRandomDetection(lat, lng, missionId, alt);
       
       state = state.copyWith(detections: [newDet, ...state.detections]);
 
