@@ -22,6 +22,7 @@ class AiDetection {
   final List<double>? boundingBox; // [xMin, yMin, xMax, yMax]
   final String severity; // Low, Medium, High, Critical
   final String imagePath; // Local path or placeholder image
+  final bool isSimulated;
 
   AiDetection({
     required this.id,
@@ -35,6 +36,7 @@ class AiDetection {
     this.boundingBox,
     required this.severity,
     required this.imagePath,
+    this.isSimulated = true,
   });
 
   String get typeLabel {

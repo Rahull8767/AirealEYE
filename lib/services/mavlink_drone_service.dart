@@ -642,7 +642,7 @@ class MavlinkDroneService implements DroneService {
       _currentTelemetry = _currentTelemetry.copyWith(
         isConnected: true,
         isStale: false,
-        flightMode: isArmed ? mode : 'STANDBY',
+        flightMode: mode,
         armed: isArmed,
         lastHeartbeat: now,
         lastUpdate: now,
@@ -709,16 +709,22 @@ class MavlinkDroneService implements DroneService {
       double alt = msg.relativeAlt / 1000.0;
       double hdg = msg.hdg / 100.0;
 
+      final double? currentHomeLat = _currentTelemetry.homeLatitude ?? (lat != 0.0 ? lat : null);
+      final double? currentHomeLon = _currentTelemetry.homeLongitude ?? (lon != 0.0 ? lon : null);
+
       _currentTelemetry = _currentTelemetry.copyWith(
         latitude: lat,
         longitude: lon,
         altitude: alt,
         relativeAltitude: alt,
         heading: hdg,
+        homeLatitude: currentHomeLat,
+        homeLongitude: currentHomeLon,
         hasReceivedPosition: true,
         lastGlobalPosition: now,
       );
       _telemetryController.add(_currentTelemetry);
+      _logTelemetryThrottled("[TAKEOFF TELEMETRY] altitude=${alt.toStringAsFixed(1)}m");
       _logTelemetryThrottled("GLOBAL_POSITION_INT: lat=$lat, lon=$lon, alt=${alt}m, hdg=$hdg°");
     } else if (msg is Attitude) {
       _currentTelemetry = _currentTelemetry.copyWith(
@@ -756,11 +762,12 @@ class MavlinkDroneService implements DroneService {
           // Accepted, wait for heartbeat confirmation
         } else {
           if (_armCompleter != null && !_armCompleter!.isCompleted) {
-            _armCompleter!.completeError(Exception("Arm/Disarm rejected: result code ${msg.result}"));
+            _armCompleter!.completeError(Exception("Arm/Disarm rejected: result code ${msg.result} (Pre-arm check or state fault)"));
           }
           _cleanupArmChange();
         }
       } else if (msg.command == 22) { // MAV_CMD_NAV_TAKEOFF
+        _logDiagnostic("[TAKEOFF ACK] result=${msg.result}");
         if (msg.result == 0) {
           if (_takeoffCompleter != null && !_takeoffCompleter!.isCompleted) {
             _takeoffCompleter!.complete(true);
@@ -776,14 +783,15 @@ class MavlinkDroneService implements DroneService {
       final textStr = String.fromCharCodes(msg.text.where((c) => c != 0)).trim();
       _logDiagnostic("STATUSTEXT (severity ${msg.severity}): $textStr");
       _currentDiagnostics = _currentDiagnostics.copyWith(lastStatusText: textStr);
-    } else if (msg is MissionRequest) {
-      _logDiagnostic("[MISSION REQUEST] index=${msg.seq}");
+    } else if (msg is MissionRequest || msg is MissionRequestInt) {
+      final int requestedSeq = msg is MissionRequest ? msg.seq : (msg as MissionRequestInt).seq;
+      _logDiagnostic("[MISSION REQUEST] index=$requestedSeq");
       if (_missionUploadCompleter != null && !_missionUploadCompleter!.isCompleted) {
-        if (msg.seq >= 0 && msg.seq < _uploadingWaypoints.length) {
-          final item = _uploadingWaypoints[msg.seq];
+        if (requestedSeq >= 0 && requestedSeq < _uploadingWaypoints.length) {
+          final item = _uploadingWaypoints[requestedSeq];
           final frame = MavlinkFrame.v2(_sequenceNumber++, _config.sourceSystemId, _config.sourceComponentId, item);
           final packet = frame.serialize();
-          _logDiagnostic("[MISSION TX] item=${msg.seq}");
+          _logDiagnostic("[MISSION TX] item=$requestedSeq");
           _sendMavlinkPacket(packet);
 
           _missionUploadTimeoutTimer?.cancel();
@@ -807,15 +815,12 @@ class MavlinkDroneService implements DroneService {
       }
     } else if (msg is MissionCurrent) {
       _logDiagnostic("[MISSION_CURRENT] active seq=${msg.seq}");
-      if (msg.seq > 0 && msg.seq <= _activeWaypoints.length) {
-        _currentWaypointIndex = msg.seq - 1;
-        final target = _activeWaypoints[_currentWaypointIndex];
-        _currentTelemetry = _currentTelemetry.copyWith(
-          altitude: target.altitude,
-          speed: target.speed,
-        );
-        _telemetryController.add(_currentTelemetry);
-      }
+      _currentWaypointIndex = msg.seq;
+      _currentTelemetry = _currentTelemetry.copyWith(
+        currentWaypoint: msg.seq,
+        totalWaypoints: _activeWaypoints.length,
+      );
+      _telemetryController.add(_currentTelemetry);
     }
 
     _updateDiagnostics();
@@ -1226,28 +1231,54 @@ class MavlinkDroneService implements DroneService {
 
   @override
   Future<bool> takeoff(double altitudeMeters) async {
-    if (_connectionState != DroneConnectionState.connected) {
+    _logDiagnostic("[TAKEOFF REQUEST]");
+
+    final bool isConnected = _connectionState == DroneConnectionState.connected && _currentTelemetry.isConnected;
+    _logDiagnostic("[TAKEOFF CHECK] connected=$isConnected");
+
+    if (!isConnected) {
       throw StateError("MAVLink link is not connected.");
     }
 
-    if (!_isUsingHardware) {
-      _currentTelemetry = _currentTelemetry.copyWith(
-        altitude: altitudeMeters,
-        relativeAltitude: altitudeMeters,
-      );
-      _telemetryController.add(_currentTelemetry);
-      return true;
-    }
+    final bool isArmed = _currentTelemetry.armed;
+    _logDiagnostic("[TAKEOFF CHECK] armed=$isArmed");
 
-    if (!_currentTelemetry.armed) {
+    if (!isArmed) {
       throw StateError("Vehicle must be armed before takeoff.");
     }
+
+    _logDiagnostic("[TAKEOFF CHECK] mode=${_currentTelemetry.flightMode}");
 
     if (_takeoffCompleter != null) {
       throw StateError("A takeoff command is already in progress.");
     }
 
-    _logDiagnostic("[TAKEOFF REQUEST] ${altitudeMeters}m targetSys=$effectiveTargetSystemId");
+    if (!_isUsingHardware) {
+      if (_currentTelemetry.flightMode != 'GUIDED') {
+        _logDiagnostic("[TAKEOFF MODE] requesting GUIDED");
+        await setFlightMode('GUIDED');
+        _logDiagnostic("[TAKEOFF MODE] GUIDED confirmed");
+      }
+      _logDiagnostic("[TAKEOFF TX] altitude=$altitudeMeters");
+      _logDiagnostic("[TAKEOFF ACK] result=0");
+      _currentTelemetry = _currentTelemetry.copyWith(
+        altitude: altitudeMeters,
+        relativeAltitude: altitudeMeters,
+      );
+      _telemetryController.add(_currentTelemetry);
+      _logDiagnostic("[TAKEOFF TELEMETRY] altitude=${_currentTelemetry.altitude}");
+      return true;
+    }
+
+    // If vehicle is armed but not in GUIDED, transition to GUIDED and await Heartbeat confirmation
+    if (_currentTelemetry.flightMode != 'GUIDED') {
+      _logDiagnostic("[TAKEOFF MODE] requesting GUIDED");
+      final modeSuccess = await setFlightMode('GUIDED');
+      if (!modeSuccess || _currentTelemetry.flightMode != 'GUIDED') {
+        throw StateError("Failed to transition to GUIDED mode prior to takeoff.");
+      }
+      _logDiagnostic("[TAKEOFF MODE] GUIDED confirmed");
+    }
 
     final command = CommandLong(
       command: 22, // MAV_CMD_NAV_TAKEOFF
@@ -1268,13 +1299,13 @@ class MavlinkDroneService implements DroneService {
 
     _takeoffCompleter = Completer<bool>();
 
-    _logDiagnostic("[TAKEOFF TX] $altitudeMeters");
+    _logDiagnostic("[TAKEOFF TX] altitude=$altitudeMeters");
     _sendMavlinkPacket(packet);
 
-    _takeoffTimeoutTimer = Timer(const Duration(seconds: 3), () {
+    _takeoffTimeoutTimer = Timer(const Duration(seconds: 5), () {
       if (_takeoffCompleter != null && !_takeoffCompleter!.isCompleted) {
         _logDiagnostic("[TAKEOFF TIMEOUT] $altitudeMeters");
-        _takeoffCompleter!.completeError(TimeoutException("Takeoff command timed out"));
+        _takeoffCompleter!.completeError(TimeoutException("Takeoff command timed out waiting for COMMAND_ACK"));
       }
       _cleanupTakeoff();
     });

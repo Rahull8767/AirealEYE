@@ -172,6 +172,7 @@ class MockDetectionService implements DetectionService {
       boundingBox: [xMin, yMin, xMax, yMax],
       severity: severity,
       imagePath: img,
+      isSimulated: true,
     );
 
     _allDetections.insert(0, newDetection);

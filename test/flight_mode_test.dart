@@ -389,4 +389,180 @@ void main() {
       expect(() => service.setFlightMode('GUIDED'), throwsA(isA<StateError>()));
     });
   });
+
+  group('TAKEOFF Command Sequencing Acceptance Tests', () {
+    late MavlinkDroneService service;
+    late MockRawDatagramSocket mockSocket;
+
+    setUp(() {
+      service = MavlinkDroneService();
+      mockSocket = MockRawDatagramSocket();
+      service.setMockSocket(mockSocket);
+    });
+
+    tearDown(() {
+      service.disconnect();
+    });
+
+    test('Test A: Vehicle connected, disarmed, STABILIZE -> TAKEOFF rejected and no NAV_TAKEOFF packet sent', () async {
+      // Connect in STABILIZE mode, disarmed (baseMode = 0)
+      final hb = Heartbeat(
+        customMode: 0, // STABILIZE
+        type: 2,
+        autopilot: 3,
+        baseMode: 0,   // DISARMED
+        systemStatus: 4,
+        mavlinkVersion: 3,
+      );
+      mockSocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, hb).serialize(), InternetAddress.loopbackIPv4, 14550);
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      expect(service.currentTelemetry.isConnected, isTrue);
+      expect(service.currentTelemetry.armed, isFalse);
+      expect(service.currentTelemetry.flightMode, equals('STABILIZE'));
+
+      mockSocket.sentPackets.clear();
+
+      // Attempt takeoff
+      expect(() => service.takeoff(5.0), throwsA(predicate((e) => e is StateError && e.message.contains('Vehicle must be armed before takeoff.'))));
+
+      // Verify no NAV_TAKEOFF packet was sent
+      expect(mockSocket.sentPackets, isEmpty);
+    });
+
+    test('Test B: Vehicle connected, armed, STABILIZE -> TAKEOFF requests GUIDED, confirms GUIDED via heartbeat, then sends TAKEOFF', () async {
+      // Connect in STABILIZE mode, ARMED (baseMode = 128)
+      final hbStabilize = Heartbeat(
+        customMode: 0, // STABILIZE
+        type: 2,
+        autopilot: 3,
+        baseMode: 128, // ARMED
+        systemStatus: 4,
+        mavlinkVersion: 3,
+      );
+      mockSocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, hbStabilize).serialize(), InternetAddress.loopbackIPv4, 14550);
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      expect(service.currentTelemetry.isConnected, isTrue);
+      expect(service.currentTelemetry.armed, isTrue);
+      expect(service.currentTelemetry.flightMode, equals('STABILIZE'));
+
+      mockSocket.sentPackets.clear();
+
+      // Trigger takeoff
+      final takeoffFuture = service.takeoff(5.0);
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      // 1. Verify that first sent packet was MAV_CMD_DO_SET_MODE (cmd 176, param2=4 for GUIDED)
+      expect(mockSocket.sentPackets.isNotEmpty, isTrue);
+
+      // Inject COMMAND_ACK for mode change (176, result=0)
+      final ackMode = CommandAck(command: 176, result: 0, progress: 0, resultParam2: 0, targetSystem: 1, targetComponent: 1);
+      mockSocket.injectDatagram(MavlinkFrame.v2(1, 1, 1, ackMode).serialize(), InternetAddress.loopbackIPv4, 14550);
+
+      // Inject Heartbeat with GUIDED mode (customMode = 4, baseMode = 128)
+      final hbGuided = Heartbeat(
+        customMode: 4, // GUIDED
+        type: 2,
+        autopilot: 3,
+        baseMode: 128, // ARMED
+        systemStatus: 4,
+        mavlinkVersion: 3,
+      );
+      mockSocket.injectDatagram(MavlinkFrame.v2(2, 1, 1, hbGuided).serialize(), InternetAddress.loopbackIPv4, 14550);
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      // 2. Verify that MAV_CMD_NAV_TAKEOFF (cmd 22) was sent
+      expect(mockSocket.sentPackets.length, greaterThanOrEqualTo(2));
+
+      // Inject COMMAND_ACK for TAKEOFF (cmd 22, result=0)
+      final ackTakeoff = CommandAck(command: 22, result: 0, progress: 0, resultParam2: 0, targetSystem: 1, targetComponent: 1);
+      mockSocket.injectDatagram(MavlinkFrame.v2(3, 1, 1, ackTakeoff).serialize(), InternetAddress.loopbackIPv4, 14550);
+
+      final success = await takeoffFuture;
+      expect(success, isTrue);
+      expect(service.currentTelemetry.flightMode, equals('GUIDED'));
+    });
+
+    test('Test C: Vehicle connected, armed, already GUIDED -> TAKEOFF sent immediately without mode change', () async {
+      // Connect in GUIDED mode, ARMED (baseMode = 128)
+      final hbGuided = Heartbeat(
+        customMode: 4, // GUIDED
+        type: 2,
+        autopilot: 3,
+        baseMode: 128, // ARMED
+        systemStatus: 4,
+        mavlinkVersion: 3,
+      );
+      mockSocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, hbGuided).serialize(), InternetAddress.loopbackIPv4, 14550);
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      expect(service.currentTelemetry.isConnected, isTrue);
+      expect(service.currentTelemetry.armed, isTrue);
+      expect(service.currentTelemetry.flightMode, equals('GUIDED'));
+
+      mockSocket.sentPackets.clear();
+
+      // Trigger takeoff
+      final takeoffFuture = service.takeoff(7.5);
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      // Invert sent packet: should be TAKEOFF (cmd 22) directly without DO_SET_MODE
+      expect(mockSocket.sentPackets.length, equals(1));
+
+      // Inject COMMAND_ACK for TAKEOFF (cmd 22, result=0)
+      final ackTakeoff = CommandAck(command: 22, result: 0, progress: 0, resultParam2: 0, targetSystem: 1, targetComponent: 1);
+      mockSocket.injectDatagram(MavlinkFrame.v2(1, 1, 1, ackTakeoff).serialize(), InternetAddress.loopbackIPv4, 14550);
+
+      final success = await takeoffFuture;
+      expect(success, isTrue);
+    });
+
+    test('Test D: After TAKEOFF -> altitude comes strictly from real MAVLink telemetry', () async {
+      // Connect in GUIDED mode, ARMED, altitude = 0.0
+      final hbGuided = Heartbeat(
+        customMode: 4, // GUIDED
+        type: 2,
+        autopilot: 3,
+        baseMode: 128, // ARMED
+        systemStatus: 4,
+        mavlinkVersion: 3,
+      );
+      mockSocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, hbGuided).serialize(), InternetAddress.loopbackIPv4, 14550);
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      expect(service.currentTelemetry.altitude, equals(0.0));
+
+      final takeoffFuture = service.takeoff(10.0);
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      final ackTakeoff = CommandAck(command: 22, result: 0, progress: 0, resultParam2: 0, targetSystem: 1, targetComponent: 1);
+      mockSocket.injectDatagram(MavlinkFrame.v2(1, 1, 1, ackTakeoff).serialize(), InternetAddress.loopbackIPv4, 14550);
+
+      final success = await takeoffFuture;
+      expect(success, isTrue);
+
+      // Hardware telemetry is not faked on command acceptance
+      expect(service.currentTelemetry.altitude, equals(0.0));
+
+      // Now inject real GLOBAL_POSITION_INT with relativeAlt = 4500 (4.5m)
+      final pos = GlobalPositionInt(
+        timeBootMs: 1000,
+        lat: (37.7749 * 1E7).toInt(),
+        lon: (-122.4194 * 1E7).toInt(),
+        alt: 14500,
+        relativeAlt: 4500, // 4.5m
+        vx: 0,
+        vy: 0,
+        vz: 120,
+        hdg: 9000,
+      );
+      mockSocket.injectDatagram(MavlinkFrame.v2(2, 1, 1, pos).serialize(), InternetAddress.loopbackIPv4, 14550);
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      // Altitude updates from real MAVLink telemetry
+      expect(service.currentTelemetry.altitude, equals(4.5));
+      expect(service.currentTelemetry.relativeAltitude, equals(4.5));
+    });
+  });
 }

@@ -209,6 +209,15 @@ class MockDroneService implements DroneService {
 
   @override
   Future<bool> takeoff(double altitudeMeters) async {
+    if (!_currentTelemetry.isConnected) {
+      throw StateError("MAVLink link is not connected.");
+    }
+    if (!_currentTelemetry.armed) {
+      throw StateError("Vehicle must be armed before takeoff.");
+    }
+    if (_currentTelemetry.flightMode != 'GUIDED') {
+      _currentTelemetry = _currentTelemetry.copyWith(flightMode: 'GUIDED');
+    }
     _currentTelemetry = _currentTelemetry.copyWith(
       altitude: altitudeMeters,
       relativeAltitude: altitudeMeters,

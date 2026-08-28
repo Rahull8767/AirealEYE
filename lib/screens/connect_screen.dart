@@ -27,6 +27,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
   bool _isModeChanging = false;
   bool _isArming = false;
   bool _isTakingOff = false;
+  double _configuredTakeoffAltitude = 5.0;
 
   Timer? _uiTickTimer;
 
@@ -125,21 +126,22 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm Arm Command'),
-        content: const Text('WARNING: Arming the drone will spin up the motors. Ensure the area is completely clear and safe to fly.'),
+        title: const Text('Confirm Motor Arming'),
+        content: const Text('Warning: Arming will engage motors and spin propellers. Ensure the drone is clear of all personnel.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
-            child: const Text('ARM VEHICLE'),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
+            child: const Text('ARM MOTORS'),
           ),
         ],
       ),
     );
+
     if (confirmed != true) return;
 
     setState(() => _isArming = true);
@@ -147,7 +149,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       final success = await ref.read(droneServiceProvider).arm();
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Vehicle successfully armed!'), backgroundColor: AppTheme.success),
+          const SnackBar(content: Text('Vehicle Armed Successfully!'), backgroundColor: AppTheme.success),
         );
       }
     } catch (e) {
@@ -162,18 +164,39 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
   }
 
   void _disarmDrone() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Disarm'),
+        content: const Text('Are you sure you want to disarm motors? If the vehicle is airborne it will fall.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
+            child: const Text('DISARM NOW'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     setState(() => _isArming = true);
     try {
       final success = await ref.read(droneServiceProvider).disarm();
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Vehicle successfully disarmed.'), backgroundColor: AppTheme.success),
+          const SnackBar(content: Text('Vehicle Disarmed.'), backgroundColor: AppTheme.primary),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Disarming failed: ${e.toString().replaceAll("Exception: ", "")}'), backgroundColor: AppTheme.danger),
+          SnackBar(content: Text('Disarm failed: ${e.toString().replaceAll("Exception: ", "")}'), backgroundColor: AppTheme.danger),
         );
       }
     } finally {
@@ -182,23 +205,48 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
   }
 
   void _takeoffDrone() async {
+    final droneService = ref.read(droneServiceProvider);
+    final telemetry = droneService.currentTelemetry;
+
+    if (!telemetry.isConnected) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vehicle is disconnected. Establish MAVLink connection first.'),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+      return;
+    }
+
+    if (!telemetry.armed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vehicle must be armed before takeoff.'),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+      return;
+    }
+
     final double? altitude = await showDialog<double>(
       context: context,
       builder: (context) {
-        double targetAlt = 5.0;
+        double targetAlt = _configuredTakeoffAltitude;
         return StatefulBuilder(
           builder: (context, setAltState) => AlertDialog(
+            backgroundColor: AppTheme.card,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: const Text('Command Takeoff'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Set target takeoff altitude (meters AGL):'),
-                const SizedBox(height: 10),
+                const Text('Set target takeoff altitude (meters AGL):', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('${targetAlt.toStringAsFixed(1)} meters', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text('${targetAlt.toStringAsFixed(1)} m AGL', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.secondary)),
                     Row(
                       children: [
                         IconButton(
@@ -210,13 +258,24 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                         IconButton(
                           icon: const Icon(LucideIcons.plusCircle),
                           onPressed: () {
-                            if (targetAlt < 25.0) setAltState(() => targetAlt += 0.5);
+                            if (targetAlt < 50.0) setAltState(() => targetAlt += 0.5);
                           },
                         ),
                       ],
                     )
                   ],
-                )
+                ),
+                Slider(
+                  value: targetAlt,
+                  min: 1.0,
+                  max: 30.0,
+                  divisions: 58,
+                  label: '${targetAlt.toStringAsFixed(1)}m',
+                  activeColor: AppTheme.secondary,
+                  onChanged: (val) {
+                    setAltState(() => targetAlt = val);
+                  },
+                ),
               ],
             ),
             actions: [
@@ -224,10 +283,10 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                 onPressed: () => Navigator.pop(context, null),
                 child: const Text('Cancel'),
               ),
-              TextButton(
+              ElevatedButton(
                 onPressed: () => Navigator.pop(context, targetAlt),
-                style: TextButton.styleFrom(foregroundColor: AppTheme.secondary),
-                child: const Text('TAKEOFF'),
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.secondary),
+                child: const Text('EXECUTE TAKEOFF'),
               ),
             ],
           ),
@@ -236,19 +295,27 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     );
 
     if (altitude == null) return;
+    _configuredTakeoffAltitude = altitude;
 
     setState(() => _isTakingOff = true);
     try {
-      final success = await ref.read(droneServiceProvider).takeoff(altitude);
+      final success = await droneService.takeoff(altitude);
       if (success && mounted) {
+        final currentAlt = droneService.currentTelemetry.altitudeDisplay;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Takeoff initiated to ${altitude.toStringAsFixed(1)}m.'), backgroundColor: AppTheme.success),
+          SnackBar(
+            content: Text('TAKEOFF ACCEPTED (Target: ${altitude.toStringAsFixed(1)}m) — Altitude: $currentAlt'),
+            backgroundColor: AppTheme.success,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Takeoff failed: ${e.toString().replaceAll("Exception: ", "")}'), backgroundColor: AppTheme.danger),
+          SnackBar(
+            content: Text('Takeoff failed: ${e.toString().replaceAll("Exception: ", "").replaceAll("StateError: ", "")}'),
+            backgroundColor: AppTheme.danger,
+          ),
         );
       }
     } finally {
@@ -957,7 +1024,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton(
-                    onPressed: isButtonsDisabled || !telemetry.armed
+                    onPressed: isButtonsDisabled
                         ? null
                         : _takeoffDrone,
                     style: ElevatedButton.styleFrom(

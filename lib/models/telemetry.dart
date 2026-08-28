@@ -27,6 +27,12 @@ class DroneTelemetry {
   final double climbRate; // m/s
   final DateTime? lastUpdate;
 
+  // Mission & Navigation
+  final int currentWaypoint;
+  final int totalWaypoints;
+  final double? homeLatitude;
+  final double? homeLongitude;
+
   // Per-stream availability flags and timestamps
   final bool hasReceivedGps;
   final bool hasReceivedBattery;
@@ -65,6 +71,10 @@ class DroneTelemetry {
     required this.batteryCurrent,
     required this.gpsFix,
     required this.climbRate,
+    this.currentWaypoint = 0,
+    this.totalWaypoints = 0,
+    this.homeLatitude,
+    this.homeLongitude,
     this.lastUpdate,
     this.hasReceivedGps = false,
     this.hasReceivedBattery = false,
@@ -105,6 +115,10 @@ class DroneTelemetry {
       batteryCurrent: 0.0,
       gpsFix: 0,
       climbRate: 0.0,
+      currentWaypoint: 0,
+      totalWaypoints: 0,
+      homeLatitude: null,
+      homeLongitude: null,
       lastUpdate: null,
       hasReceivedGps: false,
       hasReceivedBattery: false,
@@ -127,6 +141,7 @@ class DroneTelemetry {
   String get batteryVoltageDisplay => hasReceivedBattery ? '${batteryVoltage.toStringAsFixed(1)} V' : '--';
   String get batteryPercentDisplay => hasReceivedBattery ? '${batteryPercentage.toStringAsFixed(0)}%' : '--';
   String get satellitesDisplay => hasReceivedGps ? '$satellites Sats' : 'Waiting...';
+  String get waypointProgressDisplay => totalWaypoints > 0 ? 'WP $currentWaypoint / $totalWaypoints' : '--';
 
   DroneTelemetry copyWith({
     double? altitude,
@@ -153,6 +168,10 @@ class DroneTelemetry {
     double? batteryCurrent,
     int? gpsFix,
     double? climbRate,
+    int? currentWaypoint,
+    int? totalWaypoints,
+    double? homeLatitude,
+    double? homeLongitude,
     DateTime? lastUpdate,
     bool? hasReceivedGps,
     bool? hasReceivedBattery,
@@ -191,6 +210,10 @@ class DroneTelemetry {
       batteryCurrent: batteryCurrent ?? this.batteryCurrent,
       gpsFix: gpsFix ?? this.gpsFix,
       climbRate: climbRate ?? this.climbRate,
+      currentWaypoint: currentWaypoint ?? this.currentWaypoint,
+      totalWaypoints: totalWaypoints ?? this.totalWaypoints,
+      homeLatitude: homeLatitude ?? this.homeLatitude,
+      homeLongitude: homeLongitude ?? this.homeLongitude,
       lastUpdate: lastUpdate ?? this.lastUpdate,
       hasReceivedGps: hasReceivedGps ?? this.hasReceivedGps,
       hasReceivedBattery: hasReceivedBattery ?? this.hasReceivedBattery,
