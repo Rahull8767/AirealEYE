@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aerial_eye/models/detection.dart';
 import 'package:aerial_eye/services/detection_service.dart';
 import 'package:aerial_eye/services/mock_detection_service.dart';
-import 'package:aerial_eye/services/real_detection_service.dart';
 import 'package:aerial_eye/providers/drone_provider.dart';
 import 'package:aerial_eye/providers/notification_provider.dart';
 import 'package:aerial_eye/models/notification.dart';
@@ -39,10 +38,7 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
   Timer? _simulationTimer;
 
   DetectionNotifier(this.ref)
-      : super(DetectionState(
-          detections: [],
-          confidenceFilter: 0.70,
-        )) {
+    : super(DetectionState(detections: [], confidenceFilter: 0.70)) {
     final initialList = _service.generateInitialDetections();
     state = state.copyWith(detections: List.from(initialList));
   }
@@ -70,26 +66,30 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
 
   void startSimulationForMission(String missionId) {
     _simulationTimer?.cancel();
-    
+
     _simulationTimer = Timer.periodic(const Duration(seconds: 8), (timer) {
       final droneService = ref.read(droneServiceProvider);
-      if (!droneService.currentTelemetry.isConnected || 
+      if (!droneService.currentTelemetry.isConnected ||
           droneService.currentTelemetry.flightMode != 'AUTO') {
         return;
       }
-      
+
       final lat = droneService.currentTelemetry.latitude;
       final lng = droneService.currentTelemetry.longitude;
       final alt = droneService.currentTelemetry.altitude;
 
       final newDet = _service.generateRandomDetection(lat, lng, missionId, alt);
-      
+
       state = state.copyWith(detections: [newDet, ...state.detections]);
 
-      ref.read(notificationProvider.notifier).addNotification(
+      ref
+          .read(notificationProvider.notifier)
+          .addNotification(
             'AI Anomaly Spotted',
             'Discovered: ${newDet.typeLabel} (Severity: ${newDet.severity}) at [${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}].',
-            newDet.severity == 'Critical' ? NotificationType.critical : NotificationType.warning,
+            newDet.severity == 'Critical'
+                ? NotificationType.critical
+                : NotificationType.warning,
           );
     });
   }
@@ -105,6 +105,7 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
   }
 }
 
-final detectionProvider = StateNotifierProvider<DetectionNotifier, DetectionState>((ref) {
-  return DetectionNotifier(ref);
-});
+final detectionProvider =
+    StateNotifierProvider<DetectionNotifier, DetectionState>((ref) {
+      return DetectionNotifier(ref);
+    });

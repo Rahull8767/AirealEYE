@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aerial_eye/models/telemetry.dart';
-import 'package:aerial_eye/models/mavlink_connection_config.dart';
 import 'package:aerial_eye/models/connection_diagnostics.dart';
 import 'package:aerial_eye/services/drone_service.dart';
 import 'package:aerial_eye/services/mavlink_drone_service.dart';
@@ -21,7 +20,9 @@ final droneTelemetryProvider = StreamProvider<DroneTelemetry>((ref) {
 });
 
 // Connection state stream provider.
-final droneConnectionStateProvider = StreamProvider<DroneConnectionState>((ref) {
+final droneConnectionStateProvider = StreamProvider<DroneConnectionState>((
+  ref,
+) {
   final service = ref.watch(droneServiceProvider);
   return service.connectionStateStream;
 });

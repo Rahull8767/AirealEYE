@@ -6,6 +6,9 @@ import 'package:aerial_eye/providers/settings_provider.dart';
 import 'package:aerial_eye/providers/drone_provider.dart';
 import 'package:aerial_eye/providers/auth_provider.dart';
 import 'package:aerial_eye/screens/mavlink_connection_screen.dart';
+import 'package:aerial_eye/screens/camera_connection_screen.dart';
+import 'package:aerial_eye/providers/pi_camera_provider.dart';
+import 'package:aerial_eye/models/camera_connection_config.dart';
 import 'package:aerial_eye/widgets/glass_panel.dart';
 import 'package:aerial_eye/widgets/animated_button.dart';
 
@@ -16,6 +19,9 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
+    final cameraService = ref.watch(piCameraServiceProvider);
+    final cameraState =
+        ref.watch(piCameraStateProvider).value ?? cameraService.currentState;
 
     return Scaffold(
       appBar: AppBar(
@@ -37,7 +43,9 @@ class SettingsScreen extends ConsumerWidget {
                 SwitchListTile(
                   value: settings.isDarkMode,
                   title: const Text('Dark professional layout'),
-                  subtitle: const Text('Vibrant dark scheme to prevent screen reflection outside'),
+                  subtitle: const Text(
+                    'Vibrant dark scheme to prevent screen reflection outside',
+                  ),
                   activeColor: AppTheme.secondary,
                   onChanged: (val) => notifier.updateDarkMode(val),
                 ),
@@ -48,9 +56,15 @@ class SettingsScreen extends ConsumerWidget {
                     dropdownColor: AppTheme.card,
                     underline: const SizedBox(),
                     items: const [
-                      DropdownMenuItem(value: 'Blue', child: Text('Blue Accent')),
+                      DropdownMenuItem(
+                        value: 'Blue',
+                        child: Text('Blue Accent'),
+                      ),
                       DropdownMenuItem(value: 'Cyan', child: Text('Cyan Sky')),
-                      DropdownMenuItem(value: 'Green', child: Text('Emerald Green')),
+                      DropdownMenuItem(
+                        value: 'Green',
+                        child: Text('Emerald Green'),
+                      ),
                     ],
                     onChanged: (val) {
                       if (val != null) notifier.updateThemeColor(val);
@@ -75,9 +89,18 @@ class SettingsScreen extends ConsumerWidget {
                     dropdownColor: AppTheme.card,
                     underline: const SizedBox(),
                     items: const [
-                      DropdownMenuItem(value: 'Hybrid', child: Text('Dark Hybrid (CARTO)')),
-                      DropdownMenuItem(value: 'Standard', child: Text('Standard Light')),
-                      DropdownMenuItem(value: 'Terrain', child: Text('Topography Terrain')),
+                      DropdownMenuItem(
+                        value: 'Hybrid',
+                        child: Text('Dark Hybrid (CARTO)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Standard',
+                        child: Text('Standard Light'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Terrain',
+                        child: Text('Topography Terrain'),
+                      ),
                     ],
                     onChanged: (val) {
                       if (val != null) notifier.updateMapType(val);
@@ -87,7 +110,9 @@ class SettingsScreen extends ConsumerWidget {
                 SwitchListTile(
                   value: settings.offlineMapsEnabled,
                   title: const Text('Offline map buffering'),
-                  subtitle: const Text('Enable SQLite local cache files for remote areas'),
+                  subtitle: const Text(
+                    'Enable SQLite local cache files for remote areas',
+                  ),
                   activeColor: AppTheme.secondary,
                   onChanged: (val) => notifier.toggleOfflineMaps(val),
                 ),
@@ -104,13 +129,27 @@ class SettingsScreen extends ConsumerWidget {
               children: [
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('MAVLink Network Settings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: const Text('Configure UDP listener/direct, ports, IDs, and timeouts', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                  trailing: const Icon(LucideIcons.chevronRight, color: AppTheme.secondary),
+                  title: const Text(
+                    'MAVLink Network Settings',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  subtitle: const Text(
+                    'Configure UDP listener/direct, ports, IDs, and timeouts',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    LucideIcons.chevronRight,
+                    color: AppTheme.secondary,
+                  ),
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const MavlinkConnectionScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const MavlinkConnectionScreen(),
+                      ),
                     );
                   },
                 ),
@@ -153,9 +192,15 @@ class SettingsScreen extends ConsumerWidget {
                     onChanged: (val) {
                       if (val != null) {
                         notifier.updateTelemetryFrequency(val);
-                        final hz = int.tryParse(val.replaceAll(RegExp(r'[^0-9]'), '')) ?? 10;
+                        final hz =
+                            int.tryParse(
+                              val.replaceAll(RegExp(r'[^0-9]'), ''),
+                            ) ??
+                            10;
                         final svc = ref.read(droneServiceProvider);
-                        svc.updateConfig(svc.config.copyWith(telemetryRateHz: hz));
+                        svc.updateConfig(
+                          svc.config.copyWith(telemetryRateHz: hz),
+                        );
                       }
                     },
                   ),
@@ -165,7 +210,139 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
 
-          // Section 4: AI Model specs
+          // Section 4: Raspberry Pi Camera Link
+          _buildSectionHeader('Raspberry Pi Live Camera Feed'),
+          GlassPanel(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color:
+                          (cameraState.isConnected
+                                  ? AppTheme.success
+                                  : AppTheme.secondary)
+                              .withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      LucideIcons.camera,
+                      color: cameraState.isConnected
+                          ? AppTheme.success
+                          : AppTheme.secondary,
+                      size: 20,
+                    ),
+                  ),
+                  title: const Text(
+                    'Camera Network Settings',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    'Status: ${cameraState.statusDisplay} (${cameraService.config.baseUrl})',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    LucideIcons.chevronRight,
+                    color: AppTheme.secondary,
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CameraConnectionScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(color: AppTheme.border, height: 16),
+                _buildEditableField(
+                  context,
+                  'Camera URL',
+                  cameraService.config.baseUrl,
+                  (val) {
+                    final validation = CameraConnectionConfig.validateUrl(val);
+                    if (validation.isValid) {
+                      cameraService.updateConfig(
+                        cameraService.config.copyWith(
+                          baseUrl: validation.normalizedUrl!,
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            validation.errorMessage ?? 'Invalid URL format.',
+                          ),
+                          backgroundColor: AppTheme.danger,
+                        ),
+                      );
+                    }
+                  },
+                ),
+                const Divider(color: AppTheme.border, height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const CameraConnectionScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(LucideIcons.stethoscope, size: 14),
+                      label: const Text('Test Connection'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.secondary,
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        if (cameraState.isConnected) {
+                          cameraService.disconnect();
+                        } else {
+                          cameraService.connect();
+                        }
+                      },
+                      icon: Icon(
+                        cameraState.isConnected
+                            ? LucideIcons.power
+                            : LucideIcons.play,
+                        size: 14,
+                      ),
+                      label: Text(
+                        cameraState.isConnected ? 'Disconnect' : 'Connect',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: cameraState.isConnected
+                            ? AppTheme.danger
+                            : AppTheme.secondary,
+                        foregroundColor: cameraState.isConnected
+                            ? Colors.white
+                            : Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Section 5: AI Model specs
           _buildSectionHeader('AI Detection Model Config'),
           GlassPanel(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -175,8 +352,17 @@ class SettingsScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Confidence Threshold', style: TextStyle(fontWeight: FontWeight.w500)),
-                    Text('${(settings.aiConfidenceThreshold * 100).toStringAsFixed(0)}%', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.secondary)),
+                    const Text(
+                      'Confidence Threshold',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    Text(
+                      '${(settings.aiConfidenceThreshold * 100).toStringAsFixed(0)}%',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.secondary,
+                      ),
+                    ),
                   ],
                 ),
                 Slider(
@@ -187,38 +373,63 @@ class SettingsScreen extends ConsumerWidget {
                   onChanged: (val) => notifier.updateAiConfidence(val),
                 ),
                 const SizedBox(height: 8),
-                const Text('ENABLED DETECTOR CLASSES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textSecondary, letterSpacing: 0.8)),
+                const Text(
+                  'ENABLED DETECTOR CLASSES',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textSecondary,
+                    letterSpacing: 0.8,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: [
-                    'Pothole',
-                    'Road Crack',
-                    'Garbage',
-                    'Water Logging',
-                    'Animal',
-                    'Obstacle',
-                    'Broken Road Sign',
-                  ].map((cls) {
-                    final active = settings.enabledAiClasses.contains(cls);
-                    return InkWell(
-                      onTap: () => notifier.toggleAiClass(cls),
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: active ? AppTheme.secondary.withOpacity(0.15) : AppTheme.surface,
+                  children:
+                      [
+                        'Pothole',
+                        'Road Crack',
+                        'Garbage',
+                        'Water Logging',
+                        'Animal',
+                        'Obstacle',
+                        'Broken Road Sign',
+                      ].map((cls) {
+                        final active = settings.enabledAiClasses.contains(cls);
+                        return InkWell(
+                          onTap: () => notifier.toggleAiClass(cls),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: active ? AppTheme.secondary.withOpacity(0.3) : AppTheme.border, width: 0.8),
-                        ),
-                        child: Text(
-                          cls,
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: active ? AppTheme.secondary : AppTheme.textSecondary),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: active
+                                  ? AppTheme.secondary.withOpacity(0.15)
+                                  : AppTheme.surface,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: active
+                                    ? AppTheme.secondary.withOpacity(0.3)
+                                    : AppTheme.border,
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              cls,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: active
+                                    ? AppTheme.secondary
+                                    : AppTheme.textSecondary,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                 ),
               ],
             ),
@@ -234,7 +445,9 @@ class SettingsScreen extends ConsumerWidget {
                 SwitchListTile(
                   value: settings.firebaseSyncEnabled,
                   title: const Text('Real-time database sync'),
-                  subtitle: const Text('Upload anomaly frames directly to city cloud database'),
+                  subtitle: const Text(
+                    'Upload anomaly frames directly to city cloud database',
+                  ),
                   activeColor: AppTheme.secondary,
                   onChanged: (val) => notifier.toggleFirebaseSync(val),
                 ),
@@ -271,12 +484,22 @@ class SettingsScreen extends ConsumerWidget {
       padding: const EdgeInsets.only(left: 8, bottom: 8),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textSecondary, letterSpacing: 0.8),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.textSecondary,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
 
-  Widget _buildEditableField(BuildContext context, String label, String value, Function(String) onSubmit) {
+  Widget _buildEditableField(
+    BuildContext context,
+    String label,
+    String value,
+    Function(String) onSubmit,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -293,7 +516,10 @@ class SettingsScreen extends ConsumerWidget {
                   decoration: const InputDecoration(filled: true),
                 ),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
                   TextButton(
                     onPressed: () {
                       onSubmit(controller.text);
@@ -307,9 +533,19 @@ class SettingsScreen extends ConsumerWidget {
           },
           child: Row(
             children: [
-              Text(value, style: const TextStyle(color: AppTheme.secondary, fontWeight: FontWeight.bold)),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: AppTheme.secondary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(width: 6),
-              const Icon(LucideIcons.edit2, size: 12, color: AppTheme.secondary),
+              const Icon(
+                LucideIcons.edit2,
+                size: 12,
+                color: AppTheme.secondary,
+              ),
             ],
           ),
         ),

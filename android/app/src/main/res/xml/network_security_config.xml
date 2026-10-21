@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Scoped network security configuration for Raspberry Pi IoT local network streaming -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Target Raspberry Pi 3A+ default IP -->
+        <domain includeSubdomains="true">10.174.17.87</domain>
+        <!-- Standard mobile hotspot & private IPv4 subnets -->
+        <domain includeSubdomains="true">10.174.17.*</domain>
+        <domain includeSubdomains="true">10.0.0.0</domain>
+        <domain includeSubdomains="true">192.168.1.1</domain>
+        <domain includeSubdomains="true">192.168.43.1</domain>
+        <domain includeSubdomains="true">192.168.0.0</domain>
+        <domain includeSubdomains="true">172.16.0.0</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+    <!-- Base config permits cleartext HTTP on local development networks -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

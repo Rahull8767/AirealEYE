@@ -11,6 +11,9 @@ import 'package:aerial_eye/models/connection_diagnostics.dart';
 import 'package:aerial_eye/providers/drone_provider.dart';
 import 'package:aerial_eye/services/drone_service.dart';
 import 'package:aerial_eye/screens/mavlink_connection_screen.dart';
+import 'package:aerial_eye/screens/camera_connection_screen.dart';
+import 'package:aerial_eye/providers/pi_camera_provider.dart';
+import 'package:aerial_eye/models/camera_stream_state.dart';
 import 'package:aerial_eye/widgets/glass_panel.dart';
 import 'package:aerial_eye/widgets/animated_button.dart';
 
@@ -60,7 +63,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Confirm Safety Command'),
-          content: Text('Are you sure you want to command the drone to ${mode == "RTL" ? "Return to Launch (RTL)" : "LAND"}?'),
+          content: Text(
+            'Are you sure you want to command the drone to ${mode == "RTL" ? "Return to Launch (RTL)" : "LAND"}?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -107,7 +112,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Mode change failed: ${e.toString().replaceAll("Exception: ", "")}'),
+            content: Text(
+              'Mode change failed: ${e.toString().replaceAll("Exception: ", "")}',
+            ),
             backgroundColor: AppTheme.danger,
           ),
         );
@@ -127,7 +134,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm Motor Arming'),
-        content: const Text('Warning: Arming will engage motors and spin propellers. Ensure the drone is clear of all personnel.'),
+        content: const Text(
+          'Warning: Arming will engage motors and spin propellers. Ensure the drone is clear of all personnel.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -149,13 +158,21 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       final success = await ref.read(droneServiceProvider).arm();
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Vehicle Armed Successfully!'), backgroundColor: AppTheme.success),
+          const SnackBar(
+            content: Text('Vehicle Armed Successfully!'),
+            backgroundColor: AppTheme.success,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Arming failed: ${e.toString().replaceAll("Exception: ", "")}'), backgroundColor: AppTheme.danger),
+          SnackBar(
+            content: Text(
+              'Arming failed: ${e.toString().replaceAll("Exception: ", "")}',
+            ),
+            backgroundColor: AppTheme.danger,
+          ),
         );
       }
     } finally {
@@ -168,7 +185,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm Disarm'),
-        content: const Text('Are you sure you want to disarm motors? If the vehicle is airborne it will fall.'),
+        content: const Text(
+          'Are you sure you want to disarm motors? If the vehicle is airborne it will fall.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -190,13 +209,21 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       final success = await ref.read(droneServiceProvider).disarm();
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Vehicle Disarmed.'), backgroundColor: AppTheme.primary),
+          const SnackBar(
+            content: Text('Vehicle Disarmed.'),
+            backgroundColor: AppTheme.primary,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Disarm failed: ${e.toString().replaceAll("Exception: ", "")}'), backgroundColor: AppTheme.danger),
+          SnackBar(
+            content: Text(
+              'Disarm failed: ${e.toString().replaceAll("Exception: ", "")}',
+            ),
+            backgroundColor: AppTheme.danger,
+          ),
         );
       }
     } finally {
@@ -211,7 +238,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     if (!telemetry.isConnected) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Vehicle is disconnected. Establish MAVLink connection first.'),
+          content: Text(
+            'Vehicle is disconnected. Establish MAVLink connection first.',
+          ),
           backgroundColor: AppTheme.danger,
         ),
       );
@@ -235,34 +264,48 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
         return StatefulBuilder(
           builder: (context, setAltState) => AlertDialog(
             backgroundColor: AppTheme.card,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: const Text('Command Takeoff'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Set target takeoff altitude (meters AGL):', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                const Text(
+                  'Set target takeoff altitude (meters AGL):',
+                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                ),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('${targetAlt.toStringAsFixed(1)} m AGL', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.secondary)),
+                    Text(
+                      '${targetAlt.toStringAsFixed(1)} m AGL',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppTheme.secondary,
+                      ),
+                    ),
                     Row(
                       children: [
                         IconButton(
                           icon: const Icon(LucideIcons.minusCircle),
                           onPressed: () {
-                            if (targetAlt > 1.0) setAltState(() => targetAlt -= 0.5);
+                            if (targetAlt > 1.0)
+                              setAltState(() => targetAlt -= 0.5);
                           },
                         ),
                         IconButton(
                           icon: const Icon(LucideIcons.plusCircle),
                           onPressed: () {
-                            if (targetAlt < 50.0) setAltState(() => targetAlt += 0.5);
+                            if (targetAlt < 50.0)
+                              setAltState(() => targetAlt += 0.5);
                           },
                         ),
                       ],
-                    )
+                    ),
                   ],
                 ),
                 Slider(
@@ -285,7 +328,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(context, targetAlt),
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.secondary),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.secondary,
+                ),
                 child: const Text('EXECUTE TAKEOFF'),
               ),
             ],
@@ -304,7 +349,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
         final currentAlt = droneService.currentTelemetry.altitudeDisplay;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('TAKEOFF ACCEPTED (Target: ${altitude.toStringAsFixed(1)}m) — Altitude: $currentAlt'),
+            content: Text(
+              'TAKEOFF ACCEPTED (Target: ${altitude.toStringAsFixed(1)}m) — Altitude: $currentAlt',
+            ),
             backgroundColor: AppTheme.success,
           ),
         );
@@ -313,7 +360,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Takeoff failed: ${e.toString().replaceAll("Exception: ", "").replaceAll("StateError: ", "")}'),
+            content: Text(
+              'Takeoff failed: ${e.toString().replaceAll("Exception: ", "").replaceAll("StateError: ", "")}',
+            ),
             backgroundColor: AppTheme.danger,
           ),
         );
@@ -352,16 +401,23 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
 
     final droneService = ref.watch(droneServiceProvider);
     final connectionStateAsync = ref.watch(droneConnectionStateProvider);
-    final connectionState = connectionStateAsync.value ?? droneService.connectionState;
+    final connectionState =
+        connectionStateAsync.value ?? droneService.connectionState;
     final diagnosticsAsync = ref.watch(droneDiagnosticsProvider);
-    final diagnostics = diagnosticsAsync.value ?? droneService.currentDiagnostics;
+    final diagnostics =
+        diagnosticsAsync.value ?? droneService.currentDiagnostics;
     final connectionMode = droneService.connectionMode;
     final config = droneService.config;
+
+    final piCamService = ref.watch(piCameraServiceProvider);
+    final piCamState =
+        ref.watch(piCameraStateProvider).value ?? piCamService.currentState;
 
     String statusText = 'DISCONNECTED';
     Color statusColor = AppTheme.danger;
 
-    if (connectionMode == DroneConnectionMode.simulation && connectionState == DroneConnectionState.connected) {
+    if (connectionMode == DroneConnectionMode.simulation &&
+        connectionState == DroneConnectionState.connected) {
       statusText = 'SIMULATION';
       statusColor = AppTheme.secondary;
     } else {
@@ -376,11 +432,13 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
           statusColor = AppTheme.secondary;
           break;
         case DroneConnectionState.udpPacketsNoMavlink:
-          statusText = 'RECEIVING (RAW UDP: ${diagnostics.rawDatagramsReceived} PKTS)';
+          statusText =
+              'RECEIVING (RAW UDP: ${diagnostics.rawDatagramsReceived} PKTS)';
           statusColor = AppTheme.warning;
           break;
         case DroneConnectionState.mavlinkNoHeartbeat:
-          statusText = 'RECEIVING (MAVLINK FRAMES: ${diagnostics.mavlinkFramesReceived})';
+          statusText =
+              'RECEIVING (MAVLINK FRAMES: ${diagnostics.mavlinkFramesReceived})';
           statusColor = AppTheme.secondary;
           break;
         case DroneConnectionState.telemetryStale:
@@ -406,13 +464,15 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       }
     }
 
-    final isLiveOrStale = connectionState == DroneConnectionState.connected ||
+    final isLiveOrStale =
+        connectionState == DroneConnectionState.connected ||
         connectionState == DroneConnectionState.telemetryStale ||
         connectionState == DroneConnectionState.connectionLost ||
         connectionState == DroneConnectionState.stale ||
         connectionState == DroneConnectionState.mavlinkNoHeartbeat;
 
-    final isListeningOrActive = connectionState == DroneConnectionState.socketBoundWaiting ||
+    final isListeningOrActive =
+        connectionState == DroneConnectionState.socketBoundWaiting ||
         connectionState == DroneConnectionState.listening ||
         connectionState == DroneConnectionState.connecting ||
         connectionState == DroneConnectionState.udpPacketsNoMavlink ||
@@ -460,17 +520,25 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                     items: const [
                       DropdownMenuItem(
                         value: DroneConnectionMode.real,
-                        child: Text('Real MAVLink (UDP)', style: TextStyle(color: Colors.white, fontSize: 13)),
+                        child: Text(
+                          'Real MAVLink (UDP)',
+                          style: TextStyle(color: Colors.white, fontSize: 13),
+                        ),
                       ),
                       DropdownMenuItem(
                         value: DroneConnectionMode.simulation,
-                        child: Text('Simulation / Mock', style: TextStyle(color: Colors.white, fontSize: 13)),
+                        child: Text(
+                          'Simulation / Mock',
+                          style: TextStyle(color: Colors.white, fontSize: 13),
+                        ),
                       ),
                     ],
-                    onChanged: connectionState == DroneConnectionState.disconnected
+                    onChanged:
+                        connectionState == DroneConnectionState.disconnected
                         ? (mode) {
                             if (mode != null) {
-                              ref.read(droneServiceProvider).connectionMode = mode;
+                              ref.read(droneServiceProvider).connectionMode =
+                                  mode;
                               setState(() {});
                             }
                           }
@@ -482,7 +550,10 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
             const SizedBox(height: 16),
 
             // 1. Connection Animation / status indicator
-            _buildPulseRing(connectionState == DroneConnectionState.connected, statusColor),
+            _buildPulseRing(
+              connectionState == DroneConnectionState.connected,
+              statusColor,
+            ),
             const SizedBox(height: 24),
 
             // 2. Drone Connection Card
@@ -496,12 +567,14 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                     children: [
                       Text(
                         'MAVLink Link Status',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: statusColor.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
@@ -539,20 +612,30 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                       decoration: BoxDecoration(
                         color: AppTheme.secondary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppTheme.secondary.withOpacity(0.3)),
+                        border: Border.all(
+                          color: AppTheme.secondary.withOpacity(0.3),
+                        ),
                       ),
                       child: Row(
                         children: [
                           const SizedBox(
                             width: 14,
                             height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppTheme.secondary)),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppTheme.secondary,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               'Listening on ${config.bindAddress}:${config.localPort}... Waiting for MAVLink heartbeat from MAVProxy / SITL.',
-                              style: const TextStyle(fontSize: 11, color: Colors.white),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ],
@@ -567,16 +650,24 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                       children: [
                         const Text(
                           'MAVLink Heartbeat:',
-                          style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                         Text(
                           diagnostics.heartbeatHealth == LinkHealth.live
                               ? 'LIVE (${diagnostics.lastHeartbeatTime != null ? '${(DateTime.now().difference(diagnostics.lastHeartbeatTime!).inMilliseconds / 1000.0).toStringAsFixed(1)}s ago' : 'active'})'
-                              : (diagnostics.heartbeatHealth == LinkHealth.stale ? 'STALE' : 'NOT AVAILABLE'),
+                              : (diagnostics.heartbeatHealth == LinkHealth.stale
+                                    ? 'STALE'
+                                    : 'NOT AVAILABLE'),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: diagnostics.heartbeatHealth == LinkHealth.live ? AppTheme.success : AppTheme.warning,
+                            color:
+                                diagnostics.heartbeatHealth == LinkHealth.live
+                                ? AppTheme.success
+                                : AppTheme.warning,
                           ),
                         ),
                       ],
@@ -587,14 +678,24 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                       children: [
                         const Text(
                           'Telemetry Stream:',
-                          style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                         Text(
-                          diagnostics.telemetryHealth == LinkHealth.live ? 'LIVE' : (diagnostics.telemetryHealth == LinkHealth.stale ? 'STALE' : 'WAITING...'),
+                          diagnostics.telemetryHealth == LinkHealth.live
+                              ? 'LIVE'
+                              : (diagnostics.telemetryHealth == LinkHealth.stale
+                                    ? 'STALE'
+                                    : 'WAITING...'),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: diagnostics.telemetryHealth == LinkHealth.live ? AppTheme.success : AppTheme.warning,
+                            color:
+                                diagnostics.telemetryHealth == LinkHealth.live
+                                ? AppTheme.success
+                                : AppTheme.warning,
                           ),
                         ),
                       ],
@@ -605,18 +706,30 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                       children: [
                         const Text(
                           'Remote Vehicle:',
-                          style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                         Text(
-                          diagnostics.vehicleType != 'Unknown' ? '${diagnostics.vehicleType} (${diagnostics.autopilotType})' : 'Auto-discovering...',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                          diagnostics.vehicleType != 'Unknown'
+                              ? '${diagnostics.vehicleType} (${diagnostics.autopilotType})'
+                              : 'Auto-discovering...',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ],
                     ),
                   ] else ...[
                     const Text(
                       'MAVLink UDP endpoint configured to listen for heartbeat telemetry packets.',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
 
@@ -625,16 +738,180 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                   // Configured parameters summary
                   _buildSettingRow('Bind Address', config.bindAddress),
                   _buildSettingRow('Local UDP Port', '${config.localPort}'),
-                  _buildSettingRow('Connection Mode', config.connectionMode == MavlinkConnectionMode.listener ? 'UDP Listener' : 'UDP Direct (${config.remoteHost}:${config.remotePort})'),
-                  _buildSettingRow('Target Addressing', config.autoTargetSystem ? 'Auto-Discover (Discovered: Sys ${diagnostics.discoveredSystemId ?? "--"}, Comp ${diagnostics.discoveredComponentId ?? "--"})' : 'Manual (Sys ${config.targetSystemId}, Comp ${config.targetComponentId})'),
+                  _buildSettingRow(
+                    'Connection Mode',
+                    config.connectionMode == MavlinkConnectionMode.listener
+                        ? 'UDP Listener'
+                        : 'UDP Direct (${config.remoteHost}:${config.remotePort})',
+                  ),
+                  _buildSettingRow(
+                    'Target Addressing',
+                    config.autoTargetSystem
+                        ? 'Auto-Discover (Discovered: Sys ${diagnostics.discoveredSystemId ?? "--"}, Comp ${diagnostics.discoveredComponentId ?? "--"})'
+                        : 'Manual (Sys ${config.targetSystemId}, Comp ${config.targetComponentId})',
+                  ),
 
                   const SizedBox(height: 8),
                   Center(
                     child: TextButton.icon(
                       onPressed: _openMavlinkSettings,
-                      icon: const Icon(LucideIcons.sliders, size: 14, color: AppTheme.secondary),
-                      label: const Text('Configure MAVLink Settings', style: TextStyle(color: AppTheme.secondary, fontSize: 12, fontWeight: FontWeight.bold)),
+                      icon: const Icon(
+                        LucideIcons.sliders,
+                        size: 14,
+                        color: AppTheme.secondary,
+                      ),
+                      label: const Text(
+                        'Configure MAVLink Settings',
+                        style: TextStyle(
+                          color: AppTheme.secondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // 2.5 Raspberry Pi Camera Feed Card
+            GlassPanel(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            LucideIcons.camera,
+                            color: piCamState.isConnected
+                                ? AppTheme.success
+                                : AppTheme.secondary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Raspberry Pi Camera Feed',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              (piCamState.isConnected
+                                      ? AppTheme.success
+                                      : (piCamState.hasError
+                                            ? AppTheme.danger
+                                            : AppTheme.surface))
+                                  .withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          piCamState.statusDisplay,
+                          style: TextStyle(
+                            color: piCamState.isConnected
+                                ? AppTheme.success
+                                : (piCamState.hasError
+                                      ? AppTheme.danger
+                                      : AppTheme.textSecondary),
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildSettingRow(
+                    'Camera Endpoint',
+                    piCamService.config.baseUrl,
+                  ),
+                  if (piCamState.isConnected) ...[
+                    _buildSettingRow(
+                      'Stream Rate',
+                      '${piCamState.fps.toStringAsFixed(0)} FPS (${piCamState.latencyMs} ms latency)',
+                    ),
+                    _buildSettingRow(
+                      'Frames Received',
+                      '${piCamState.totalFramesReceived} frames',
+                    ),
+                  ],
+                  if (piCamState.hasError &&
+                      piCamState.errorMessage != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      piCamState.errorMessage!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.danger,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const CameraConnectionScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(LucideIcons.settings, size: 14),
+                          label: const Text('Configure IP'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: AppTheme.border),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            if (piCamState.isConnected) {
+                              piCamService.disconnect();
+                            } else {
+                              piCamService.connect();
+                            }
+                          },
+                          icon: Icon(
+                            piCamState.isConnected
+                                ? LucideIcons.power
+                                : LucideIcons.play,
+                            size: 14,
+                          ),
+                          label: Text(
+                            piCamState.isConnected
+                                ? 'Disconnect'
+                                : 'Connect Feed',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: piCamState.isConnected
+                                ? AppTheme.danger
+                                : AppTheme.secondary,
+                            foregroundColor: piCamState.isConnected
+                                ? Colors.white
+                                : Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -653,55 +930,140 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                       children: [
                         Text(
                           'Link Diagnostics',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         TextButton.icon(
-                          onPressed: () => _copyDiagnosticsToClipboard(diagnostics),
-                          icon: const Icon(LucideIcons.copy, size: 14, color: AppTheme.secondary),
-                          label: const Text('Copy Report', style: TextStyle(color: AppTheme.secondary, fontSize: 12, fontWeight: FontWeight.bold)),
+                          onPressed: () =>
+                              _copyDiagnosticsToClipboard(diagnostics),
+                          icon: const Icon(
+                            LucideIcons.copy,
+                            size: 14,
+                            color: AppTheme.secondary,
+                          ),
+                          label: const Text(
+                            'Copy Report',
+                            style: TextStyle(
+                              color: AppTheme.secondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: _buildDiagTile('Battery Pack', telemetry.batteryVoltageDisplay, LucideIcons.battery)),
-                        Expanded(child: _buildDiagTile('Flight Mode', telemetry.flightMode, LucideIcons.plane)),
+                        Expanded(
+                          child: _buildDiagTile(
+                            'Battery Pack',
+                            telemetry.batteryVoltageDisplay,
+                            LucideIcons.battery,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildDiagTile(
+                            'Flight Mode',
+                            telemetry.flightMode,
+                            LucideIcons.plane,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(child: _buildDiagTile('GPS Satellites', telemetry.satellitesDisplay, LucideIcons.satellite)),
-                        Expanded(child: _buildDiagTile('Telemetry RSSI', '${telemetry.rssi.toStringAsFixed(0)} %', LucideIcons.wifi)),
+                        Expanded(
+                          child: _buildDiagTile(
+                            'GPS Satellites',
+                            telemetry.satellitesDisplay,
+                            LucideIcons.satellite,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildDiagTile(
+                            'Telemetry RSSI',
+                            '${telemetry.rssi.toStringAsFixed(0)} %',
+                            LucideIcons.wifi,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(child: _buildDiagTile('Altitude AGL', telemetry.altitudeDisplay, LucideIcons.arrowUpRight)),
-                        Expanded(child: _buildDiagTile('Heading Comp.', telemetry.headingDisplay, LucideIcons.compass)),
+                        Expanded(
+                          child: _buildDiagTile(
+                            'Altitude AGL',
+                            telemetry.altitudeDisplay,
+                            LucideIcons.arrowUpRight,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildDiagTile(
+                            'Heading Comp.',
+                            telemetry.headingDisplay,
+                            LucideIcons.compass,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(child: _buildDiagTile('Raw UDP Packets', '${diagnostics.rawDatagramsReceived} pkts', LucideIcons.activity)),
-                        Expanded(child: _buildDiagTile('Valid MAVLink', '${diagnostics.mavlinkFramesReceived} frames (${diagnostics.packetsPerSecond.toStringAsFixed(0)} pps)', LucideIcons.checkCircle)),
+                        Expanded(
+                          child: _buildDiagTile(
+                            'Raw UDP Packets',
+                            '${diagnostics.rawDatagramsReceived} pkts',
+                            LucideIcons.activity,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildDiagTile(
+                            'Valid MAVLink',
+                            '${diagnostics.mavlinkFramesReceived} frames (${diagnostics.packetsPerSecond.toStringAsFixed(0)} pps)',
+                            LucideIcons.checkCircle,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(child: _buildDiagTile('Protocol', diagnostics.mavlinkProtocolVersion, LucideIcons.shieldCheck)),
-                        Expanded(child: _buildDiagTile('Addressing', 'GCS ${diagnostics.sourceSystemId} -> Drone ${diagnostics.commandTargetSystemId}', LucideIcons.radio)),
+                        Expanded(
+                          child: _buildDiagTile(
+                            'Protocol',
+                            diagnostics.mavlinkProtocolVersion,
+                            LucideIcons.shieldCheck,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildDiagTile(
+                            'Addressing',
+                            'GCS ${diagnostics.sourceSystemId} -> Drone ${diagnostics.commandTargetSystemId}',
+                            LucideIcons.radio,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(child: _buildDiagTile('Remote Endpoint', diagnostics.remoteAddress ?? '--', LucideIcons.network)),
-                        Expanded(child: _buildDiagTile('Malformed Pkts', '${diagnostics.malformedFramesCount}', LucideIcons.alertTriangle)),
+                        Expanded(
+                          child: _buildDiagTile(
+                            'Remote Endpoint',
+                            diagnostics.remoteAddress ?? '--',
+                            LucideIcons.network,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildDiagTile(
+                            'Malformed Pkts',
+                            '${diagnostics.malformedFramesCount}',
+                            LucideIcons.alertTriangle,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -720,7 +1082,11 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                 if (_isConnecting)
                   const Padding(
                     padding: EdgeInsets.only(bottom: 16),
-                    child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppTheme.secondary)),
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppTheme.secondary,
+                      ),
+                    ),
                   ),
                 Row(
                   children: [
@@ -740,18 +1106,22 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                         onTap: _isConnecting
                             ? null
                             : isListeningOrActive
-                                ? _disconnectDrone
-                                : _connectDrone,
+                            ? _disconnectDrone
+                            : _connectDrone,
                         child: ElevatedButton(
                           onPressed: _isConnecting
                               ? null
                               : isListeningOrActive
-                                  ? _disconnectDrone
-                                  : _connectDrone,
+                              ? _disconnectDrone
+                              : _connectDrone,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isListeningOrActive ? AppTheme.danger : AppTheme.primary,
+                            backgroundColor: isListeningOrActive
+                                ? AppTheme.danger
+                                : AppTheme.primary,
                           ),
-                          child: Text(isListeningOrActive ? 'Disconnect' : 'Connect Link'),
+                          child: Text(
+                            isListeningOrActive ? 'Disconnect' : 'Connect Link',
+                          ),
                         ),
                       ),
                     ),
@@ -772,10 +1142,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       decoration: BoxDecoration(
         color: ringColor.withOpacity(0.08),
         shape: BoxShape.circle,
-        border: Border.all(
-          color: ringColor.withOpacity(0.3),
-          width: 2.0,
-        ),
+        border: Border.all(color: ringColor.withOpacity(0.3), width: 2.0),
       ),
       child: Center(
         child: TweenAnimationBuilder<double>(
@@ -784,11 +1151,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
           builder: (context, val, child) {
             return Transform.scale(
               scale: isConnected ? val : 1.0,
-              child: Icon(
-                LucideIcons.plane,
-                size: 36,
-                color: ringColor,
-              ),
+              child: Icon(LucideIcons.plane, size: 36, color: ringColor),
             );
           },
         ),
@@ -802,12 +1165,19 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -831,8 +1201,23 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontSize: 9, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
-                Text(value, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 9,
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  value,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
@@ -841,9 +1226,15 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     );
   }
 
-  Widget _buildFlightModePanel(BuildContext context, DroneTelemetry telemetry, DroneConnectionState connectionState) {
+  Widget _buildFlightModePanel(
+    BuildContext context,
+    DroneTelemetry telemetry,
+    DroneConnectionState connectionState,
+  ) {
     final modes = ['STABILIZE', 'GUIDED', 'LOITER', 'AUTO', 'RTL', 'LAND'];
-    final isConnectionLost = connectionState == DroneConnectionState.connectionLost || connectionState == DroneConnectionState.stale;
+    final isConnectionLost =
+        connectionState == DroneConnectionState.connectionLost ||
+        connectionState == DroneConnectionState.stale;
 
     return GlassPanel(
       padding: const EdgeInsets.all(20),
@@ -852,9 +1243,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
         children: [
           Text(
             'FLIGHT MODE CONTROL',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -865,9 +1256,15 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Current confirmed mode:', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+              const Text(
+                'Current confirmed mode:',
+                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+              ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.secondary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
@@ -893,12 +1290,18 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
 
               Color buttonBgColor = AppTheme.surface;
               Color buttonTextColor = AppTheme.textPrimary;
-              BorderSide borderSide = const BorderSide(color: AppTheme.border, width: 0.8);
+              BorderSide borderSide = const BorderSide(
+                color: AppTheme.border,
+                width: 0.8,
+              );
 
               if (isCurrent) {
                 buttonBgColor = AppTheme.secondary.withOpacity(0.2);
                 buttonTextColor = AppTheme.secondary;
-                borderSide = const BorderSide(color: AppTheme.secondary, width: 1.2);
+                borderSide = const BorderSide(
+                  color: AppTheme.secondary,
+                  width: 1.2,
+                );
               }
 
               if (isConnectionLost) {
@@ -907,11 +1310,16 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
               }
 
               return InkWell(
-                onTap: (_isModeChanging || isConnectionLost) ? null : () => _setFlightMode(mode),
+                onTap: (_isModeChanging || isConnectionLost)
+                    ? null
+                    : () => _setFlightMode(mode),
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
                   width: (MediaQuery.of(context).size.width - 80) / 2,
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: buttonBgColor,
                     borderRadius: BorderRadius.circular(10),
@@ -926,7 +1334,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                           height: 12,
                           child: CircularProgressIndicator(
                             strokeWidth: 1.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.secondary),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppTheme.secondary,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -950,12 +1360,21 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     );
   }
 
-  Widget _buildArmControlPanel(BuildContext context, DroneTelemetry telemetry, DroneConnectionState connectionState) {
-    final isConnectionLost = connectionState == DroneConnectionState.connectionLost || connectionState == DroneConnectionState.stale;
-    if (!telemetry.isConnected && !isConnectionLost) return const SizedBox.shrink();
+  Widget _buildArmControlPanel(
+    BuildContext context,
+    DroneTelemetry telemetry,
+    DroneConnectionState connectionState,
+  ) {
+    final isConnectionLost =
+        connectionState == DroneConnectionState.connectionLost ||
+        connectionState == DroneConnectionState.stale;
+    if (!telemetry.isConnected && !isConnectionLost)
+      return const SizedBox.shrink();
 
     String armLabel = telemetry.armed ? 'ARMED' : 'DISARMED';
-    Color armColor = telemetry.armed ? AppTheme.success : AppTheme.textSecondary;
+    Color armColor = telemetry.armed
+        ? AppTheme.success
+        : AppTheme.textSecondary;
     if (_isArming) {
       armLabel = telemetry.armed ? 'DISARMING...' : 'ARMING...';
       armColor = AppTheme.warning;
@@ -970,9 +1389,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
         children: [
           Text(
             'VEHICLE OPERATION CONTROL',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -986,7 +1405,13 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Motors State:', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                  const Text(
+                    'Motors State:',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     armLabel,
@@ -1005,8 +1430,13 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                         ? null
                         : (telemetry.armed ? _disarmDrone : _armDrone),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: telemetry.armed ? AppTheme.danger : AppTheme.success,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      backgroundColor: telemetry.armed
+                          ? AppTheme.danger
+                          : AppTheme.success,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -1014,7 +1444,12 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                           const SizedBox(
                             width: 14,
                             height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 8),
                         ],
@@ -1024,12 +1459,13 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton(
-                    onPressed: isButtonsDisabled
-                        ? null
-                        : _takeoffDrone,
+                    onPressed: isButtonsDisabled ? null : _takeoffDrone,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.secondary,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -1037,7 +1473,12 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                           const SizedBox(
                             width: 14,
                             height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 8),
                         ],

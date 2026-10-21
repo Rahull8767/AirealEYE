@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:aerial_eye/core/theme/app_theme.dart';
-import 'package:aerial_eye/core/constants/app_constants.dart';
 import 'package:aerial_eye/models/telemetry.dart';
 import 'package:aerial_eye/providers/auth_provider.dart';
 import 'package:aerial_eye/providers/drone_provider.dart';
@@ -18,6 +17,7 @@ import 'package:aerial_eye/screens/reports_screen.dart';
 
 // Standalone Screens
 import 'package:aerial_eye/screens/connect_screen.dart';
+import 'package:aerial_eye/screens/camera_connection_screen.dart';
 import 'package:aerial_eye/screens/ai_detections_screen.dart';
 import 'package:aerial_eye/screens/mission_history_screen.dart';
 import 'package:aerial_eye/screens/gallery_screen.dart';
@@ -70,14 +70,16 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
               duration: const Duration(seconds: 1),
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: telemetry.isConnected 
+                color: telemetry.isConnected
                     ? AppTheme.success.withOpacity(0.12)
                     : AppTheme.danger.withOpacity(0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 LucideIcons.plane,
-                color: telemetry.isConnected ? AppTheme.success : AppTheme.danger,
+                color: telemetry.isConnected
+                    ? AppTheme.success
+                    : AppTheme.danger,
                 size: 18,
               ),
             ),
@@ -88,17 +90,17 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
                 Text(
                   'AerialEye',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
                 ),
                 Text(
                   missionStatusText,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: missionStatusColor,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: missionStatusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -112,7 +114,9 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationsScreen(),
+                    ),
                   );
                 },
               ),
@@ -169,10 +173,7 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
         ],
       ),
       drawer: _buildDrawer(context, authState, telemetry),
-      body: IndexedStack(
-        index: _currentTabIndex,
-        children: _tabs,
-      ),
+      body: IndexedStack(index: _currentTabIndex, children: _tabs),
       bottomNavigationBar: Container(
         margin: const EdgeInsets.only(left: 24, right: 24, bottom: 20),
         height: 68,
@@ -185,7 +186,7 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
               color: Colors.black.withOpacity(0.4),
               blurRadius: 18,
               offset: const Offset(0, 6),
-            )
+            ),
           ],
         ),
         child: ClipRRect(
@@ -244,7 +245,11 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context, AuthState authState, DroneTelemetry telemetry) {
+  Widget _buildDrawer(
+    BuildContext context,
+    AuthState authState,
+    DroneTelemetry telemetry,
+  ) {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -253,7 +258,9 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
           DrawerHeader(
             decoration: const BoxDecoration(
               color: AppTheme.card,
-              border: Border(bottom: BorderSide(color: AppTheme.border, width: 1.0)),
+              border: Border(
+                bottom: BorderSide(color: AppTheme.border, width: 1.0),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,7 +273,11 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
                       backgroundColor: AppTheme.primary,
                       child: Text(
                         authState.name != null ? authState.name![0] : 'E',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -276,17 +287,15 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
                         children: [
                           Text(
                             authState.name ?? 'Municipal Engineer',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             authState.role ?? 'Road Inspector',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.textSecondary,
-                                ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppTheme.textSecondary),
                           ),
                         ],
                       ),
@@ -300,14 +309,16 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: telemetry.isConnected ? AppTheme.success : AppTheme.danger,
+                        color: telemetry.isConnected
+                            ? AppTheme.success
+                            : AppTheme.danger,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      telemetry.isConnected 
-                          ? 'Pixhawk Connected (${telemetry.flightMode})' 
+                      telemetry.isConnected
+                          ? 'Pixhawk Connected (${telemetry.flightMode})'
                           : 'Pixhawk Disconnected',
                       style: const TextStyle(
                         fontSize: 11,
@@ -332,18 +343,38 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
             Navigator.pop(context);
             setState(() => _currentTabIndex = 2);
           }),
+          _buildDrawerItem(LucideIcons.video, 'Pi Camera Settings', () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CameraConnectionScreen(),
+              ),
+            );
+          }),
+          _buildDrawerItem(LucideIcons.network, 'Hardware Connections', () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ConnectScreen()),
+            );
+          }),
           _buildDrawerItem(LucideIcons.scanFace, 'AI Detection Feed', () {
             Navigator.pop(context);
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const AiDetectionsScreen()),
+              MaterialPageRoute(
+                builder: (context) => const AiDetectionsScreen(),
+              ),
             );
           }),
           _buildDrawerItem(LucideIcons.history, 'Mission History', () {
             Navigator.pop(context);
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const MissionHistoryScreen()),
+              MaterialPageRoute(
+                builder: (context) => const MissionHistoryScreen(),
+              ),
             );
           }),
           _buildDrawerItem(LucideIcons.fileBarChart, 'Reports Summary', () {
@@ -361,10 +392,17 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
             Navigator.pop(context);
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+              MaterialPageRoute(
+                builder: (context) => const NotificationsScreen(),
+              ),
             );
           }),
-          const Divider(color: AppTheme.border, thickness: 1, indent: 16, endIndent: 16),
+          const Divider(
+            color: AppTheme.border,
+            thickness: 1,
+            indent: 16,
+            endIndent: 16,
+          ),
           _buildDrawerItem(LucideIcons.settings, 'Settings', () {
             Navigator.pop(context);
             Navigator.push(
@@ -389,7 +427,12 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
     );
   }
 
-  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap, {Color? color}) {
+  Widget _buildDrawerItem(
+    IconData icon,
+    String title,
+    VoidCallback onTap, {
+    Color? color,
+  }) {
     return ListTile(
       leading: Icon(icon, color: color ?? AppTheme.textSecondary, size: 20),
       title: Text(

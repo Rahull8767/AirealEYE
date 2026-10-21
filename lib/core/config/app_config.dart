@@ -3,15 +3,18 @@ class AppConfig {
   static const String droneHostIp = '0.0.0.0';
   static const int pixhawkPort = 14550;
   static const String telemetryFrequencyHz = '10 Hz';
-  
+
   // Video & AI Settings
-  static const String videoFeedUrl = 'rtsp://192.168.1.9:8554/live';
+  static const String videoFeedUrl = 'http://10.174.17.87:8080';
+  static const String defaultPiCameraIp = '10.174.17.87';
+  static const int defaultPiCameraPort = 8080;
   static const double defaultAiConfidenceThreshold = 0.75;
   static const String cameraResolution = '1080p (FHD)';
   static const int videoFps = 30;
 
   // Third-Party Services
-  static const String firebaseSyncEndpoint = 'https://mock-firebase-aerialeye.firebaseio.com';
+  static const String firebaseSyncEndpoint =
+      'https://mock-firebase-aerialeye.firebaseio.com';
   static const String firebaseApiKey = 'AIzaSyMockKeyForAerialEyeM3';
   static const String mapboxAccessToken = 'pk.mockAccessTokenForAerialEye';
 
