@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:aerial_eye/core/theme/app_theme.dart';
+import 'package:aerial_eye/models/detection.dart';
 import 'package:aerial_eye/models/mission.dart';
 import 'package:aerial_eye/models/notification.dart';
 import 'package:aerial_eye/models/telemetry.dart';
 import 'package:aerial_eye/models/camera_stream_state.dart';
+import 'package:aerial_eye/providers/detection_provider.dart';
 import 'package:aerial_eye/providers/drone_provider.dart';
 import 'package:aerial_eye/providers/mission_provider.dart';
 import 'package:aerial_eye/providers/notification_provider.dart';
 import 'package:aerial_eye/providers/pi_camera_provider.dart';
 import 'package:aerial_eye/screens/camera_connection_screen.dart';
+import 'package:aerial_eye/services/detection_storage_service.dart';
 import 'package:aerial_eye/widgets/camera/pi_camera_view.dart';
 
 class LiveMonitoringScreen extends ConsumerStatefulWidget {
@@ -292,15 +295,58 @@ class _LiveMonitoringScreenState extends ConsumerState<LiveMonitoringScreen> {
                             color: Colors.white,
                             size: 18,
                           ),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'High-res image frame captured and saved to storage.',
+                          onPressed: () async {
+                            final frame = cameraService.latestFrame;
+                            if (frame != null && frame.isNotEmpty) {
+                              final currentTelemetry =
+                                  ref.read(droneTelemetryProvider).value ??
+                                  DroneTelemetry.initial();
+                              final snap = AiDetection(
+                                id: 'snapshot_${DateTime.now().millisecondsSinceEpoch}',
+                                missionId:
+                                    missionState.activeMission?.id ??
+                                    'MANUAL_INSPECTION',
+                                type: DetectionType.obstacle,
+                                confidence: 1.0,
+                                timestamp: DateTime.now(),
+                                latitude: currentTelemetry.latitude,
+                                longitude: currentTelemetry.longitude,
+                                altitude: currentTelemetry.altitude,
+                                severity: 'Low',
+                                imagePath: '',
+                                isSimulated: false,
+                                sequenceNumber: 0,
+                              );
+
+                              final saved =
+                                  await DetectionStorageService.saveDetection(
+                                    detection: snap,
+                                    imageBytes: frame,
+                                  );
+                              ref
+                                  .read(detectionProvider.notifier)
+                                  .addDetectionDirectly(saved);
+
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Camera frame captured & saved to Gallery.',
+                                    ),
+                                    backgroundColor: AppTheme.success,
+                                  ),
+                                );
+                              }
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'No camera frame available. Ensure feed is connected.',
+                                  ),
+                                  backgroundColor: AppTheme.danger,
                                 ),
-                                backgroundColor: AppTheme.success,
-                              ),
-                            );
+                              );
+                            }
                           },
                         ),
                         // Zoom toggle

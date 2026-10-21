@@ -15,7 +15,8 @@ class SplashScreen extends ConsumerStatefulWidget {
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends ConsumerState<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
@@ -70,10 +71,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                     tween: Tween<double>(begin: 0.0, end: 2 * 3.14159),
                     duration: const Duration(seconds: 4),
                     builder: (context, value, child) {
-                      return Transform.rotate(
-                        angle: value,
-                        child: child,
-                      );
+                      return Transform.rotate(angle: value, child: child);
                     },
                     child: Container(
                       padding: const EdgeInsets.all(24),
@@ -96,18 +94,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                   Text(
                     AppConfig.appName,
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2.0,
-                        ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2.0,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'AI-Based Road Inspection & Monitoring',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
-                          letterSpacing: 0.5,
-                        ),
+                      color: AppTheme.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                   const SizedBox(height: 48),
                   const SizedBox(
@@ -115,7 +113,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                     height: 28,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.secondary),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppTheme.secondary,
+                      ),
                     ),
                   ),
                 ],
@@ -129,9 +129,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                 child: Text(
                   AppConfig.appVersion,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondary.withOpacity(0.5),
-                        fontWeight: FontWeight.w500,
-                      ),
+                    color: AppTheme.textSecondary.withOpacity(0.5),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),

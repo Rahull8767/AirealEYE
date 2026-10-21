@@ -83,7 +83,9 @@ class SurveyNotifier extends StateNotifier<SurveyState> {
 
   void finishPolygon() {
     if (state.activeArea.vertices.length < 3) {
-      ref.read(notificationProvider.notifier).addNotification(
+      ref
+          .read(notificationProvider.notifier)
+          .addNotification(
             'Survey Polygon Incomplete',
             'Define at least 3 vertices to enclose a survey area.',
             NotificationType.warning,
@@ -96,7 +98,9 @@ class SurveyNotifier extends StateNotifier<SurveyState> {
       activeArea: state.activeArea.copyWith(isClosed: true),
     );
 
-    ref.read(notificationProvider.notifier).addNotification(
+    ref
+        .read(notificationProvider.notifier)
+        .addNotification(
           'Survey Area Defined',
           'Enclosed ${state.activeArea.formattedArea} with ${state.activeArea.vertices.length} vertices.',
           NotificationType.info,
@@ -123,7 +127,9 @@ class SurveyNotifier extends StateNotifier<SurveyState> {
 
   List<Waypoint> generateSurveyGrid() {
     if (state.activeArea.vertices.length < 3) {
-      ref.read(notificationProvider.notifier).addNotification(
+      ref
+          .read(notificationProvider.notifier)
+          .addNotification(
             'Cannot Generate Grid',
             'Draw a polygon survey boundary first.',
             NotificationType.warning,
@@ -131,7 +137,9 @@ class SurveyNotifier extends StateNotifier<SurveyState> {
       return [];
     }
 
-    final waypoints = _gridService.generateSurveyGrid(surveyArea: state.activeArea);
+    final waypoints = _gridService.generateSurveyGrid(
+      surveyArea: state.activeArea,
+    );
 
     state = state.copyWith(
       generatedGrid: waypoints,
@@ -139,7 +147,9 @@ class SurveyNotifier extends StateNotifier<SurveyState> {
     );
 
     if (waypoints.isNotEmpty) {
-      ref.read(notificationProvider.notifier).addNotification(
+      ref
+          .read(notificationProvider.notifier)
+          .addNotification(
             'Survey Grid Generated',
             'Computed ${waypoints.length} flight waypoints at ${state.activeArea.parameters.flightAltitude.toStringAsFixed(0)}m AGL.',
             NotificationType.success,
@@ -151,7 +161,9 @@ class SurveyNotifier extends StateNotifier<SurveyState> {
 
   /// Sends the generated survey grid to the main mission planner
   void applyGridToMissionPlanner() {
-    final grid = state.generatedGrid.isNotEmpty ? state.generatedGrid : generateSurveyGrid();
+    final grid = state.generatedGrid.isNotEmpty
+        ? state.generatedGrid
+        : generateSurveyGrid();
     if (grid.isEmpty) return;
 
     final missionNotifier = ref.read(missionProvider.notifier);
@@ -161,7 +173,9 @@ class SurveyNotifier extends StateNotifier<SurveyState> {
       missionNotifier.addWaypoint(wp.latitude, wp.longitude);
     }
 
-    ref.read(notificationProvider.notifier).addNotification(
+    ref
+        .read(notificationProvider.notifier)
+        .addNotification(
           'Grid Loaded to Mission',
           'Transferred ${grid.length} survey waypoints to active mission queue.',
           NotificationType.success,
@@ -169,6 +183,8 @@ class SurveyNotifier extends StateNotifier<SurveyState> {
   }
 }
 
-final surveyProvider = StateNotifierProvider<SurveyNotifier, SurveyState>((ref) {
+final surveyProvider = StateNotifierProvider<SurveyNotifier, SurveyState>((
+  ref,
+) {
   return SurveyNotifier(ref);
 });

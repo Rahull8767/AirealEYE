@@ -33,3 +33,11 @@ final piCameraDiagnosticsProvider = StreamProvider<CameraDiagnosticsResult>((
   final service = ref.watch(piCameraServiceProvider);
   return service.diagnosticsStream;
 });
+
+/// Stream provider for synchronized detections emitted directly with frame headers.
+final piCameraDetectionsProvider = StreamProvider<List<Map<String, dynamic>>>((
+  ref,
+) {
+  final service = ref.watch(piCameraServiceProvider);
+  return service.detectionsStream;
+});

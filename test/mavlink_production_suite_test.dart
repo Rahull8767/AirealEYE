@@ -17,16 +17,24 @@ import 'package:dart_mavlink/mavlink.dart';
 import 'package:dart_mavlink/dialects/ardupilotmega.dart';
 
 // Mock implementation of RawDatagramSocket for testing
-class TestSpyDatagramSocket extends Stream<RawSocketEvent> implements RawDatagramSocket {
+class TestSpyDatagramSocket extends Stream<RawSocketEvent>
+    implements RawDatagramSocket {
   final List<Uint8List> sentPackets = [];
-  StreamController<RawSocketEvent> _controller = StreamController<RawSocketEvent>.broadcast();
+  StreamController<RawSocketEvent> _controller =
+      StreamController<RawSocketEvent>.broadcast();
   final List<Datagram> _incomingQueue = [];
 
-  void injectDatagram(Uint8List data, {InternetAddress? address, int port = 14550}) {
+  void injectDatagram(
+    Uint8List data, {
+    InternetAddress? address,
+    int port = 14550,
+  }) {
     if (_controller.isClosed) {
       _controller = StreamController<RawSocketEvent>.broadcast();
     }
-    _incomingQueue.add(Datagram(data, address ?? InternetAddress.loopbackIPv4, port));
+    _incomingQueue.add(
+      Datagram(data, address ?? InternetAddress.loopbackIPv4, port),
+    );
     _controller.add(RawSocketEvent.read);
   }
 
@@ -43,7 +51,12 @@ class TestSpyDatagramSocket extends Stream<RawSocketEvent> implements RawDatagra
     void Function()? onDone,
     bool? cancelOnError,
   }) {
-    return _controller.stream.listen(onData, onError: onError, onDone: onDone, cancelOnError: cancelOnError);
+    return _controller.stream.listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
   }
 
   @override
@@ -117,23 +130,26 @@ void main() {
       expect(validConfig.validate(), isEmpty);
     });
 
-    test('1.3 Configuration validation detects invalid port, IDs, and timeouts', () {
-      const invalidConfig = MavlinkConnectionConfig(
-        localPort: 99999, // out of range
-        sourceSystemId: 0, // invalid
-        sourceComponentId: 300, // out of range
-        autoTargetSystem: false,
-        targetSystemId: 0, // invalid when manual
-        heartbeatTimeoutSeconds: 0, // too short
-      );
-      final errors = invalidConfig.validate();
-      expect(errors, isNotEmpty);
-      expect(errors.any((e) => e.contains('Port')), isTrue);
-      expect(errors.any((e) => e.contains('Source System ID')), isTrue);
-      expect(errors.any((e) => e.contains('Source Component ID')), isTrue);
-      expect(errors.any((e) => e.contains('Target System ID')), isTrue);
-      expect(errors.any((e) => e.contains('Heartbeat timeout')), isTrue);
-    });
+    test(
+      '1.3 Configuration validation detects invalid port, IDs, and timeouts',
+      () {
+        const invalidConfig = MavlinkConnectionConfig(
+          localPort: 99999, // out of range
+          sourceSystemId: 0, // invalid
+          sourceComponentId: 300, // out of range
+          autoTargetSystem: false,
+          targetSystemId: 0, // invalid when manual
+          heartbeatTimeoutSeconds: 0, // too short
+        );
+        final errors = invalidConfig.validate();
+        expect(errors, isNotEmpty);
+        expect(errors.any((e) => e.contains('Port')), isTrue);
+        expect(errors.any((e) => e.contains('Source System ID')), isTrue);
+        expect(errors.any((e) => e.contains('Source Component ID')), isTrue);
+        expect(errors.any((e) => e.contains('Target System ID')), isTrue);
+        expect(errors.any((e) => e.contains('Heartbeat timeout')), isTrue);
+      },
+    );
 
     test('1.4 Configuration persistence with SharedPreferences', () async {
       SharedPreferences.setMockInitialValues({});
@@ -188,35 +204,42 @@ void main() {
       service.disconnect();
     });
 
-    test('2.1 Heartbeat parsing, System ID discovery, and vehicle identification', () async {
-      final hb = Heartbeat(
-        customMode: 4, // GUIDED
-        type: 2,       // ArduCopter (Quad)
-        autopilot: 3,  // ArduPilot
-        baseMode: 128, // Armed
-        systemStatus: 4,
-        mavlinkVersion: 3,
-      );
-      final frame = MavlinkFrame.v2(0, 1, 1, hb);
-      final bytes = frame.serialize();
+    test(
+      '2.1 Heartbeat parsing, System ID discovery, and vehicle identification',
+      () async {
+        final hb = Heartbeat(
+          customMode: 4, // GUIDED
+          type: 2, // ArduCopter (Quad)
+          autopilot: 3, // ArduPilot
+          baseMode: 128, // Armed
+          systemStatus: 4,
+          mavlinkVersion: 3,
+        );
+        final frame = MavlinkFrame.v2(0, 1, 1, hb);
+        final bytes = frame.serialize();
 
-      spySocket.injectDatagram(bytes, address: InternetAddress('192.168.1.5'), port: 14550);
-      await Future.delayed(const Duration(milliseconds: 50));
+        spySocket.injectDatagram(
+          bytes,
+          address: InternetAddress('192.168.1.5'),
+          port: 14550,
+        );
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      final tel = service.currentTelemetry;
-      final diag = service.currentDiagnostics;
+        final tel = service.currentTelemetry;
+        final diag = service.currentDiagnostics;
 
-      expect(tel.isConnected, isTrue);
-      expect(tel.flightMode, equals('GUIDED'));
-      expect(tel.armed, isTrue);
+        expect(tel.isConnected, isTrue);
+        expect(tel.flightMode, equals('GUIDED'));
+        expect(tel.armed, isTrue);
 
-      expect(diag.discoveredSystemId, equals(1));
-      expect(diag.discoveredComponentId, equals(1));
-      expect(diag.vehicleType, equals('ArduCopter (Quad)'));
-      expect(diag.autopilotType, equals('ArduPilot'));
-      expect(diag.heartbeatHealth, equals(LinkHealth.live));
-      expect(diag.remoteAddress, equals('192.168.1.5:14550'));
-    });
+        expect(diag.discoveredSystemId, equals(1));
+        expect(diag.discoveredComponentId, equals(1));
+        expect(diag.vehicleType, equals('ArduCopter (Quad)'));
+        expect(diag.autopilotType, equals('ArduPilot'));
+        expect(diag.heartbeatHealth, equals(LinkHealth.live));
+        expect(diag.remoteAddress, equals('192.168.1.5:14550'));
+      },
+    );
 
     test('2.2 SYS_STATUS battery parsing', () async {
       final sys = SysStatus(
@@ -225,8 +248,8 @@ void main() {
         onboardControlSensorsHealth: 0,
         load: 500,
         voltageBattery: 16800, // 16.80 V
-        currentBattery: 1200,  // 12.00 A
-        batteryRemaining: 85,  // 85%
+        currentBattery: 1200, // 12.00 A
+        batteryRemaining: 85, // 85%
         dropRateComm: 0,
         errorsComm: 0,
         errorsCount1: 0,
@@ -307,7 +330,7 @@ void main() {
     test('2.5 ATTITUDE and VFR_HUD parsing', () async {
       final att = Attitude(
         timeBootMs: 3000,
-        roll: 0.1,  // ~5.73 deg
+        roll: 0.1, // ~5.73 deg
         pitch: -0.05, // ~ -2.86 deg
         yaw: 3.14159, // ~ 180 deg
         rollspeed: 0.0,
@@ -350,58 +373,107 @@ void main() {
       service.disconnect();
     });
 
-    test('3.1 Dynamic target addressing uses auto-discovered IDs for commands', () async {
-      // First inject a heartbeat from SysID 2, CompID 1
-      final hb = Heartbeat(customMode: 0, type: 2, autopilot: 3, baseMode: 0, systemStatus: 4, mavlinkVersion: 3);
-      spySocket.injectDatagram(MavlinkFrame.v2(0, 2, 1, hb).serialize());
-      await Future.delayed(const Duration(milliseconds: 50));
+    test(
+      '3.1 Dynamic target addressing uses auto-discovered IDs for commands',
+      () async {
+        // First inject a heartbeat from SysID 2, CompID 1
+        final hb = Heartbeat(
+          customMode: 0,
+          type: 2,
+          autopilot: 3,
+          baseMode: 0,
+          systemStatus: 4,
+          mavlinkVersion: 3,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(0, 2, 1, hb).serialize());
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      expect(service.effectiveTargetSystemId, equals(2));
+        expect(service.effectiveTargetSystemId, equals(2));
 
-      // Trigger arm command
-      final future = service.arm();
+        // Trigger arm command
+        final future = service.arm();
 
-      expect(spySocket.sentPackets, isNotEmpty);
-      final parser = MavlinkParser(MavlinkDialectArdupilotmega());
-      MavlinkFrame? parsedFrame;
-      parser.stream.listen((frame) { parsedFrame = frame; });
-      parser.parse(spySocket.sentPackets.last);
-      await Future.delayed(Duration.zero);
+        expect(spySocket.sentPackets, isNotEmpty);
+        final parser = MavlinkParser(MavlinkDialectArdupilotmega());
+        MavlinkFrame? parsedFrame;
+        parser.stream.listen((frame) {
+          parsedFrame = frame;
+        });
+        parser.parse(spySocket.sentPackets.last);
+        await Future.delayed(Duration.zero);
 
-      expect(parsedFrame, isNotNull);
-      final cmd = parsedFrame!.message as CommandLong;
-      expect(cmd.targetSystem, equals(2)); // auto-discovered target ID!
+        expect(parsedFrame, isNotNull);
+        final cmd = parsedFrame!.message as CommandLong;
+        expect(cmd.targetSystem, equals(2)); // auto-discovered target ID!
 
-      // Confirm with ACK & Heartbeat
-      spySocket.injectDatagram(MavlinkFrame.v2(1, 2, 1, CommandAck(command: 400, result: 0, progress: 0, resultParam2: 0, targetSystem: 255, targetComponent: 190)).serialize());
-      await Future.delayed(const Duration(milliseconds: 50));
+        // Confirm with ACK & Heartbeat
+        spySocket.injectDatagram(
+          MavlinkFrame.v2(
+            1,
+            2,
+            1,
+            CommandAck(
+              command: 400,
+              result: 0,
+              progress: 0,
+              resultParam2: 0,
+              targetSystem: 255,
+              targetComponent: 190,
+            ),
+          ).serialize(),
+        );
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      final armedHb = Heartbeat(customMode: 0, type: 2, autopilot: 3, baseMode: 128, systemStatus: 4, mavlinkVersion: 3);
-      spySocket.injectDatagram(MavlinkFrame.v2(2, 2, 1, armedHb).serialize());
+        final armedHb = Heartbeat(
+          customMode: 0,
+          type: 2,
+          autopilot: 3,
+          baseMode: 128,
+          systemStatus: 4,
+          mavlinkVersion: 3,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(2, 2, 1, armedHb).serialize());
 
-      final res = await future;
-      expect(res, isTrue);
-      expect(service.currentTelemetry.armed, isTrue);
-    });
+        final res = await future;
+        expect(res, isTrue);
+        expect(service.currentTelemetry.armed, isTrue);
+      },
+    );
 
-    test('3.2 COMMAND_ACK rejection throws Exception and cleans up completer', () async {
-      final future = service.setFlightMode('LOITER');
+    test(
+      '3.2 COMMAND_ACK rejection throws Exception and cleans up completer',
+      () async {
+        final future = service.setFlightMode('LOITER');
 
-      // Inject COMMAND_ACK DENIED (result = 2)
-      final ack = CommandAck(command: 176, result: 2, progress: 0, resultParam2: 0, targetSystem: 255, targetComponent: 190);
-      spySocket.injectDatagram(MavlinkFrame.v2(1, 1, 1, ack).serialize());
+        // Inject COMMAND_ACK DENIED (result = 2)
+        final ack = CommandAck(
+          command: 176,
+          result: 2,
+          progress: 0,
+          resultParam2: 0,
+          targetSystem: 255,
+          targetComponent: 190,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(1, 1, 1, ack).serialize());
 
-      expect(future, throwsA(isA<Exception>()));
-    });
+        expect(future, throwsA(isA<Exception>()));
+      },
+    );
 
     test('3.3 Connect and disconnect idempotency', () {
       service.connect();
       service.connect(); // safe duplicate call
-      expect(service.connectionState, isNot(equals(DroneConnectionState.error)));
+      expect(
+        service.connectionState,
+        isNot(equals(DroneConnectionState.error)),
+      );
 
       service.disconnect();
       service.disconnect(); // safe duplicate call
-      expect(service.connectionState, equals(DroneConnectionState.disconnected));
+      expect(
+        service.connectionState,
+        equals(DroneConnectionState.disconnected),
+      );
     });
 
     test('3.4 MockDroneService functions without real socket', () async {
@@ -443,7 +515,14 @@ void main() {
     });
 
     test('4.1 Datagram counts and protocol detection for MAVLink v2', () async {
-      final hb = Heartbeat(customMode: 0, type: 2, autopilot: 3, baseMode: 0, systemStatus: 4, mavlinkVersion: 3);
+      final hb = Heartbeat(
+        customMode: 0,
+        type: 2,
+        autopilot: 3,
+        baseMode: 0,
+        systemStatus: 4,
+        mavlinkVersion: 3,
+      );
       final frame = MavlinkFrame.v2(0, 1, 1, hb);
       spySocket.injectDatagram(frame.serialize());
       await Future.delayed(const Duration(milliseconds: 50));
@@ -470,8 +549,19 @@ void main() {
     });
 
     test('4.3 Diagnostics report formatting for clipboard export', () async {
-      final hb = Heartbeat(customMode: 4, type: 2, autopilot: 3, baseMode: 128, systemStatus: 4, mavlinkVersion: 3);
-      spySocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, hb).serialize(), address: InternetAddress('192.168.1.5'), port: 14550);
+      final hb = Heartbeat(
+        customMode: 4,
+        type: 2,
+        autopilot: 3,
+        baseMode: 128,
+        systemStatus: 4,
+        mavlinkVersion: 3,
+      );
+      spySocket.injectDatagram(
+        MavlinkFrame.v2(0, 1, 1, hb).serialize(),
+        address: InternetAddress('192.168.1.5'),
+        port: 14550,
+      );
       await Future.delayed(const Duration(milliseconds: 50));
 
       final diag = service.currentDiagnostics;
@@ -479,7 +569,12 @@ void main() {
 
       expect(report, contains('=== AerialEye MAVLink Network Diagnostics ==='));
       expect(report, contains('Socket Status: BOUND'));
-      expect(report, contains('Local Endpoint: ${service.config.bindAddress}:${service.config.localPort}'));
+      expect(
+        report,
+        contains(
+          'Local Endpoint: ${service.config.bindAddress}:${service.config.localPort}',
+        ),
+      );
       expect(report, contains('Discovered Remote Sender: 192.168.1.5:14550'));
       expect(report, contains('Raw UDP Datagrams: 1'));
       expect(report, contains('Valid MAVLink Frames: 1'));
@@ -488,21 +583,31 @@ void main() {
       expect(report, contains('Recent Diagnostic Events'));
     });
 
-    test('4.4 Arbitrary UDP packet reception (e.g. TEST-WINDOWS-UDP) correctly counts and previews payload', () async {
-      // Simulate Windows PowerShell sending "TEST-WINDOWS-UDP"
-      final testData = Uint8List.fromList('TEST-WINDOWS-UDP'.codeUnits);
-      spySocket.injectDatagram(testData, address: InternetAddress('192.168.1.5'), port: 54321);
-      await Future.delayed(const Duration(milliseconds: 50));
+    test(
+      '4.4 Arbitrary UDP packet reception (e.g. TEST-WINDOWS-UDP) correctly counts and previews payload',
+      () async {
+        // Simulate Windows PowerShell sending "TEST-WINDOWS-UDP"
+        final testData = Uint8List.fromList('TEST-WINDOWS-UDP'.codeUnits);
+        spySocket.injectDatagram(
+          testData,
+          address: InternetAddress('192.168.1.5'),
+          port: 54321,
+        );
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      final diag = service.currentDiagnostics;
-      expect(diag.rawDatagramsReceived, equals(1));
-      expect(diag.mavlinkFramesReceived, equals(0));
-      expect(diag.malformedFramesCount, equals(1));
-      expect(diag.lastRawSender, equals('192.168.1.5:54321'));
-      expect(diag.lastRawDatagramSize, equals(16));
-      expect(diag.lastRawDatagramPreview, equals('TEST-WINDOWS-UDP'));
-      expect(diag.recentLogs.any((l) => l.contains('TEST-WINDOWS-UDP')), isTrue);
-    });
+        final diag = service.currentDiagnostics;
+        expect(diag.rawDatagramsReceived, equals(1));
+        expect(diag.mavlinkFramesReceived, equals(0));
+        expect(diag.malformedFramesCount, equals(1));
+        expect(diag.lastRawSender, equals('192.168.1.5:54321'));
+        expect(diag.lastRawDatagramSize, equals(16));
+        expect(diag.lastRawDatagramPreview, equals('TEST-WINDOWS-UDP'));
+        expect(
+          diag.recentLogs.any((l) => l.contains('TEST-WINDOWS-UDP')),
+          isTrue,
+        );
+      },
+    );
   });
 
   group('5. Flight Control, Mission Protocol & Safety Suite', () {
@@ -519,118 +624,217 @@ void main() {
       service.disconnect();
     });
 
-    test('5.1 Arm and Disarm command dispatch with COMMAND_ACK and HEARTBEAT confirmation', () async {
-      // Connect first
-      final hb = Heartbeat(customMode: 4, type: 2, autopilot: 3, baseMode: 0, systemStatus: 4, mavlinkVersion: 3);
-      spySocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, hb).serialize());
-      await Future.delayed(const Duration(milliseconds: 50));
-      expect(service.currentTelemetry.isConnected, isTrue);
-      expect(service.currentTelemetry.armed, isFalse);
+    test(
+      '5.1 Arm and Disarm command dispatch with COMMAND_ACK and HEARTBEAT confirmation',
+      () async {
+        // Connect first
+        final hb = Heartbeat(
+          customMode: 4,
+          type: 2,
+          autopilot: 3,
+          baseMode: 0,
+          systemStatus: 4,
+          mavlinkVersion: 3,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, hb).serialize());
+        await Future.delayed(const Duration(milliseconds: 50));
+        expect(service.currentTelemetry.isConnected, isTrue);
+        expect(service.currentTelemetry.armed, isFalse);
 
-      // Trigger arm()
-      final armFuture = service.arm();
-      await Future.delayed(const Duration(milliseconds: 50));
+        // Trigger arm()
+        final armFuture = service.arm();
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      // Inject COMMAND_ACK for cmd 400 (ARM)
-      final ack = CommandAck(command: 400, result: 0, progress: 0, resultParam2: 0, targetSystem: 1, targetComponent: 1);
-      spySocket.injectDatagram(MavlinkFrame.v2(1, 1, 1, ack).serialize());
+        // Inject COMMAND_ACK for cmd 400 (ARM)
+        final ack = CommandAck(
+          command: 400,
+          result: 0,
+          progress: 0,
+          resultParam2: 0,
+          targetSystem: 1,
+          targetComponent: 1,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(1, 1, 1, ack).serialize());
 
-      // Inject updated HEARTBEAT with armed flag (baseMode=128)
-      final hbArmed = Heartbeat(customMode: 4, type: 2, autopilot: 3, baseMode: 128, systemStatus: 4, mavlinkVersion: 3);
-      spySocket.injectDatagram(MavlinkFrame.v2(2, 1, 1, hbArmed).serialize());
+        // Inject updated HEARTBEAT with armed flag (baseMode=128)
+        final hbArmed = Heartbeat(
+          customMode: 4,
+          type: 2,
+          autopilot: 3,
+          baseMode: 128,
+          systemStatus: 4,
+          mavlinkVersion: 3,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(2, 1, 1, hbArmed).serialize());
 
-      final armed = await armFuture;
-      expect(armed, isTrue);
-      expect(service.currentTelemetry.armed, isTrue);
-    });
+        final armed = await armFuture;
+        expect(armed, isTrue);
+        expect(service.currentTelemetry.armed, isTrue);
+      },
+    );
 
-    test('5.2 Takeoff command dispatch with altitude parameter and COMMAND_ACK', () async {
-      // Connect and Arm first
-      final hb = Heartbeat(customMode: 4, type: 2, autopilot: 3, baseMode: 128, systemStatus: 4, mavlinkVersion: 3);
-      spySocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, hb).serialize());
-      await Future.delayed(const Duration(milliseconds: 50));
+    test(
+      '5.2 Takeoff command dispatch with altitude parameter and COMMAND_ACK',
+      () async {
+        // Connect and Arm first
+        final hb = Heartbeat(
+          customMode: 4,
+          type: 2,
+          autopilot: 3,
+          baseMode: 128,
+          systemStatus: 4,
+          mavlinkVersion: 3,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, hb).serialize());
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      final takeoffFuture = service.takeoff(15.0);
-      await Future.delayed(const Duration(milliseconds: 50));
+        final takeoffFuture = service.takeoff(15.0);
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      // Respond with COMMAND_ACK for cmd 22 (TAKEOFF)
-      final ack = CommandAck(command: 22, result: 0, progress: 0, resultParam2: 0, targetSystem: 1, targetComponent: 1);
-      spySocket.injectDatagram(MavlinkFrame.v2(1, 1, 1, ack).serialize());
+        // Respond with COMMAND_ACK for cmd 22 (TAKEOFF)
+        final ack = CommandAck(
+          command: 22,
+          result: 0,
+          progress: 0,
+          resultParam2: 0,
+          targetSystem: 1,
+          targetComponent: 1,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(1, 1, 1, ack).serialize());
 
-      final takeoffSuccess = await takeoffFuture;
-      expect(takeoffSuccess, isTrue);
-    });
+        final takeoffSuccess = await takeoffFuture;
+        expect(takeoffSuccess, isTrue);
+      },
+    );
 
-    test('5.3 Mission upload protocol supporting both MissionRequest and MissionRequestInt', () async {
-      final hb = Heartbeat(customMode: 4, type: 2, autopilot: 3, baseMode: 128, systemStatus: 4, mavlinkVersion: 3);
-      spySocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, hb).serialize());
-      await Future.delayed(const Duration(milliseconds: 50));
+    test(
+      '5.3 Mission upload protocol supporting both MissionRequest and MissionRequestInt',
+      () async {
+        final hb = Heartbeat(
+          customMode: 4,
+          type: 2,
+          autopilot: 3,
+          baseMode: 128,
+          systemStatus: 4,
+          mavlinkVersion: 3,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, hb).serialize());
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      final waypoints = [
-        Waypoint(id: 1, latitude: 37.7750, longitude: -122.4190, altitude: 25.0, speed: 5.0, hoverTime: 2),
-        Waypoint(id: 2, latitude: 37.7760, longitude: -122.4180, altitude: 30.0, speed: 5.0, hoverTime: 3),
-      ];
+        final waypoints = [
+          Waypoint(
+            id: 1,
+            latitude: 37.7750,
+            longitude: -122.4190,
+            altitude: 25.0,
+            speed: 5.0,
+            hoverTime: 2,
+          ),
+          Waypoint(
+            id: 2,
+            latitude: 37.7760,
+            longitude: -122.4180,
+            altitude: 30.0,
+            speed: 5.0,
+            hoverTime: 3,
+          ),
+        ];
 
-      final uploadFuture = service.uploadMission(waypoints);
-      await Future.delayed(const Duration(milliseconds: 50));
+        final uploadFuture = service.uploadMission(waypoints);
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      // Autopilot requests Home (seq 0) via MissionRequest
-      final req0 = MissionRequest(targetSystem: 255, targetComponent: 190, seq: 0, missionType: 0);
-      spySocket.injectDatagram(MavlinkFrame.v2(1, 1, 1, req0).serialize());
-      await Future.delayed(const Duration(milliseconds: 50));
+        // Autopilot requests Home (seq 0) via MissionRequest
+        final req0 = MissionRequest(
+          targetSystem: 255,
+          targetComponent: 190,
+          seq: 0,
+          missionType: 0,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(1, 1, 1, req0).serialize());
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      // Autopilot requests WP1 (seq 1) via MissionRequestInt
-      final req1 = MissionRequestInt(targetSystem: 255, targetComponent: 190, seq: 1, missionType: 0);
-      spySocket.injectDatagram(MavlinkFrame.v2(2, 1, 1, req1).serialize());
-      await Future.delayed(const Duration(milliseconds: 50));
+        // Autopilot requests WP1 (seq 1) via MissionRequestInt
+        final req1 = MissionRequestInt(
+          targetSystem: 255,
+          targetComponent: 190,
+          seq: 1,
+          missionType: 0,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(2, 1, 1, req1).serialize());
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      // Autopilot requests WP2 (seq 2) via MissionRequestInt
-      final req2 = MissionRequestInt(targetSystem: 255, targetComponent: 190, seq: 2, missionType: 0);
-      spySocket.injectDatagram(MavlinkFrame.v2(3, 1, 1, req2).serialize());
-      await Future.delayed(const Duration(milliseconds: 50));
+        // Autopilot requests WP2 (seq 2) via MissionRequestInt
+        final req2 = MissionRequestInt(
+          targetSystem: 255,
+          targetComponent: 190,
+          seq: 2,
+          missionType: 0,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(3, 1, 1, req2).serialize());
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      // Autopilot sends MissionAck (type 0 = ACCEPTED)
-      final ack = MissionAck(targetSystem: 255, targetComponent: 190, type: 0, missionType: 0, opaqueId: 0);
-      spySocket.injectDatagram(MavlinkFrame.v2(4, 1, 1, ack).serialize());
+        // Autopilot sends MissionAck (type 0 = ACCEPTED)
+        final ack = MissionAck(
+          targetSystem: 255,
+          targetComponent: 190,
+          type: 0,
+          missionType: 0,
+          opaqueId: 0,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(4, 1, 1, ack).serialize());
 
-      final result = await uploadFuture;
-      expect(result, isTrue);
-      expect(service.activeWaypoints.length, equals(2));
-    });
+        final result = await uploadFuture;
+        expect(result, isTrue);
+        expect(service.activeWaypoints.length, equals(2));
+      },
+    );
 
-    test('5.4 MissionCurrent message updates telemetry currentWaypoint & totalWaypoints', () async {
-      final hb = Heartbeat(customMode: 3, type: 2, autopilot: 3, baseMode: 128, systemStatus: 4, mavlinkVersion: 3);
-      spySocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, hb).serialize());
-      await Future.delayed(const Duration(milliseconds: 50));
+    test(
+      '5.4 MissionCurrent message updates telemetry currentWaypoint & totalWaypoints',
+      () async {
+        final hb = Heartbeat(
+          customMode: 3,
+          type: 2,
+          autopilot: 3,
+          baseMode: 128,
+          systemStatus: 4,
+          mavlinkVersion: 3,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, hb).serialize());
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      // Inject MissionCurrent msg seq=2
-      final currentMsg = MissionCurrent(
-        seq: 2,
-        total: 5,
-        missionState: 2,
-        missionMode: 0,
-        missionId: 0,
-        fenceId: 0,
-        rallyPointsId: 0,
-      );
-      spySocket.injectDatagram(MavlinkFrame.v2(1, 1, 1, currentMsg).serialize());
-      await Future.delayed(const Duration(milliseconds: 50));
+        // Inject MissionCurrent msg seq=2
+        final currentMsg = MissionCurrent(
+          seq: 2,
+          total: 5,
+          missionState: 2,
+          missionMode: 0,
+          missionId: 0,
+          fenceId: 0,
+          rallyPointsId: 0,
+        );
+        spySocket.injectDatagram(
+          MavlinkFrame.v2(1, 1, 1, currentMsg).serialize(),
+        );
+        await Future.delayed(const Duration(milliseconds: 50));
 
-      final tel = service.currentTelemetry;
-      expect(tel.currentWaypoint, equals(2));
-    });
+        final tel = service.currentTelemetry;
+        expect(tel.currentWaypoint, equals(2));
+      },
+    );
 
     test('5.5 MissionNotifier validation rules and waypoint reordering', () {
       final container = ProviderContainer(
-        overrides: [
-          droneServiceProvider.overrideWithValue(service),
-        ],
+        overrides: [droneServiceProvider.overrideWithValue(service)],
       );
 
       final notifier = container.read(missionProvider.notifier);
 
       // Validation fails on empty waypoints
-      expect(notifier.validateMission(checkConnection: false), contains('at least 1 waypoint'));
+      expect(
+        notifier.validateMission(checkConnection: false),
+        contains('at least 1 waypoint'),
+      );
 
       // Add 2 waypoints
       notifier.addWaypoint(37.775, -122.419);
@@ -655,16 +859,22 @@ void main() {
       container.dispose();
     });
 
-    test('5.6 Flight command safety guards when link is disconnected', () async {
-      service.disconnect();
-      expect(service.connectionState, equals(DroneConnectionState.disconnected));
+    test(
+      '5.6 Flight command safety guards when link is disconnected',
+      () async {
+        service.disconnect();
+        expect(
+          service.connectionState,
+          equals(DroneConnectionState.disconnected),
+        );
 
-      expect(() => service.arm(), throwsStateError);
-      expect(() => service.disarm(), throwsStateError);
-      expect(() => service.setFlightMode('GUIDED'), throwsStateError);
-      expect(() => service.takeoff(10.0), throwsStateError);
-      expect(() => service.uploadMission([]), throwsStateError);
-      expect(() => service.startMission(), throwsStateError);
-    });
+        expect(() => service.arm(), throwsStateError);
+        expect(() => service.disarm(), throwsStateError);
+        expect(() => service.setFlightMode('GUIDED'), throwsStateError);
+        expect(() => service.takeoff(10.0), throwsStateError);
+        expect(() => service.uploadMission([]), throwsStateError);
+        expect(() => service.startMission(), throwsStateError);
+      },
+    );
   });
 }

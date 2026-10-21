@@ -24,7 +24,8 @@ class MissionPlannerScreen extends ConsumerStatefulWidget {
   const MissionPlannerScreen({super.key});
 
   @override
-  ConsumerState<MissionPlannerScreen> createState() => _MissionPlannerScreenState();
+  ConsumerState<MissionPlannerScreen> createState() =>
+      _MissionPlannerScreenState();
 }
 
 class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
@@ -33,7 +34,8 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
 
   void _showSaveMissionDialog() {
     final controller = TextEditingController(
-      text: 'Inspection Route ${ref.read(missionProvider).missionHistory.length + 1}',
+      text:
+          'Inspection Route ${ref.read(missionProvider).missionHistory.length + 1}',
     );
     showDialog(
       context: context,
@@ -111,7 +113,9 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
 
   void _generateLawnmowerGrid() {
     final center = _mapController.camera.center;
-    ref.read(missionProvider.notifier).generateGrid(center.latitude, center.longitude);
+    ref
+        .read(missionProvider.notifier)
+        .generateGrid(center.latitude, center.longitude);
   }
 
   void _showWaypointsManagerModal() {
@@ -139,11 +143,18 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(LucideIcons.listOrdered, color: AppTheme.secondary, size: 20),
+                          const Icon(
+                            LucideIcons.listOrdered,
+                            color: AppTheme.secondary,
+                            size: 20,
+                          ),
                           const SizedBox(width: 10),
                           Text(
                             'Waypoints Manager (${waypoints.length})',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                         ],
                       ),
@@ -155,18 +166,25 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                   ),
                   const Text(
                     'Drag handles to reorder execution sequence or tap to configure altitude/speed.',
-                    style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                   const Divider(color: AppTheme.border, height: 20),
                   Expanded(
                     child: waypoints.isEmpty
                         ? const Center(
-                            child: Text('No waypoints added yet. Tap on the map to add points.'),
+                            child: Text(
+                              'No waypoints added yet. Tap on the map to add points.',
+                            ),
                           )
                         : ReorderableListView.builder(
                             itemCount: waypoints.length,
                             onReorder: (oldIdx, newIdx) {
-                              ref.read(missionProvider.notifier).reorderWaypoints(oldIdx, newIdx);
+                              ref
+                                  .read(missionProvider.notifier)
+                                  .reorderWaypoints(oldIdx, newIdx);
                             },
                             itemBuilder: (context, index) {
                               final wp = waypoints[index];
@@ -178,33 +196,52 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                                   leading: CircleAvatar(
                                     radius: 14,
                                     backgroundColor: AppTheme.primary,
-                                    child: Text('${wp.id}',
-                                        style: const TextStyle(color: Colors.white, fontSize: 11)),
+                                    child: Text(
+                                      '${wp.id}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                      ),
+                                    ),
                                   ),
                                   title: Text(
                                     'WP ${wp.id}: [${wp.latitude.toStringAsFixed(5)}, ${wp.longitude.toStringAsFixed(5)}]',
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   subtitle: Text(
                                     'Alt: ${wp.altitude.toStringAsFixed(0)}m • Spd: ${wp.speed.toStringAsFixed(1)}m/s • Hover: ${wp.hoverTime}s',
-                                    style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppTheme.textSecondary,
+                                    ),
                                   ),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        icon: const Icon(LucideIcons.sliders,
-                                            size: 16, color: AppTheme.secondary),
+                                        icon: const Icon(
+                                          LucideIcons.sliders,
+                                          size: 16,
+                                          color: AppTheme.secondary,
+                                        ),
                                         onPressed: () {
                                           Navigator.pop(context);
                                           _editWaypointSheet(wp);
                                         },
                                       ),
                                       IconButton(
-                                        icon: const Icon(LucideIcons.trash,
-                                            size: 16, color: AppTheme.danger),
+                                        icon: const Icon(
+                                          LucideIcons.trash,
+                                          size: 16,
+                                          color: AppTheme.danger,
+                                        ),
                                         onPressed: () {
-                                          ref.read(missionProvider.notifier).deleteWaypoint(wp.id);
+                                          ref
+                                              .read(missionProvider.notifier)
+                                              .deleteWaypoint(wp.id);
                                         },
                                       ),
                                     ],
@@ -224,7 +261,8 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
   }
 
   void _showPreFlightCheckDialog() {
-    final telemetry = ref.read(droneTelemetryProvider).value ?? DroneTelemetry.initial();
+    final telemetry =
+        ref.read(droneTelemetryProvider).value ?? DroneTelemetry.initial();
     final plannerState = ref.read(missionProvider);
 
     showDialog(
@@ -236,8 +274,10 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
           children: [
             Icon(LucideIcons.shieldCheck, color: AppTheme.secondary, size: 22),
             SizedBox(width: 10),
-            Text('Pre-Flight Safety Check',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(
+              'Pre-Flight Safety Check',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
           ],
         ),
         content: Column(
@@ -250,24 +290,44 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
             ),
             const SizedBox(height: 14),
             _buildSafetyRow(
-                'Inspection Type', plannerState.selectedInspectionType.label, Colors.white),
+              'Inspection Type',
+              plannerState.selectedInspectionType.label,
+              Colors.white,
+            ),
             _buildSafetyRow(
-                'MAVLink Link',
-                telemetry.isConnected ? 'CONNECTED' : 'DISCONNECTED',
-                telemetry.isConnected ? AppTheme.success : AppTheme.danger),
-            _buildSafetyRow('Flight Mode', telemetry.flightMode, AppTheme.secondary),
-            _buildSafetyRow('Motor Armed', telemetry.armed ? 'ARMED' : 'DISARMED',
-                telemetry.armed ? AppTheme.success : AppTheme.warning),
+              'MAVLink Link',
+              telemetry.isConnected ? 'CONNECTED' : 'DISCONNECTED',
+              telemetry.isConnected ? AppTheme.success : AppTheme.danger,
+            ),
             _buildSafetyRow(
-                'GPS Fix',
-                telemetry.isConnected ? '${telemetry.satellites} Satellites' : 'No Fix',
-                telemetry.satellites >= 6 ? AppTheme.success : AppTheme.warning),
+              'Flight Mode',
+              telemetry.flightMode,
+              AppTheme.secondary,
+            ),
             _buildSafetyRow(
-                'Battery Pack',
-                '${telemetry.batteryVoltageDisplay} (${telemetry.batteryPercentDisplay})',
-                telemetry.batteryVoltage >= 14.8 ? AppTheme.success : AppTheme.warning),
-            _buildSafetyRow('Waypoints in Queue', '${plannerState.plannedWaypoints.length} points',
-                AppTheme.primary),
+              'Motor Armed',
+              telemetry.armed ? 'ARMED' : 'DISARMED',
+              telemetry.armed ? AppTheme.success : AppTheme.warning,
+            ),
+            _buildSafetyRow(
+              'GPS Fix',
+              telemetry.isConnected
+                  ? '${telemetry.satellites} Satellites'
+                  : 'No Fix',
+              telemetry.satellites >= 6 ? AppTheme.success : AppTheme.warning,
+            ),
+            _buildSafetyRow(
+              'Battery Pack',
+              '${telemetry.batteryVoltageDisplay} (${telemetry.batteryPercentDisplay})',
+              telemetry.batteryVoltage >= 14.8
+                  ? AppTheme.success
+                  : AppTheme.warning,
+            ),
+            _buildSafetyRow(
+              'Waypoints in Queue',
+              '${plannerState.plannedWaypoints.length} points',
+              AppTheme.primary,
+            ),
             const SizedBox(height: 12),
             if (!telemetry.armed)
               Container(
@@ -275,11 +335,17 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                 decoration: BoxDecoration(
                   color: AppTheme.warning.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
+                  border: Border.all(
+                    color: AppTheme.warning.withValues(alpha: 0.4),
+                  ),
                 ),
                 child: const Row(
                   children: [
-                    Icon(LucideIcons.alertTriangle, color: AppTheme.warning, size: 16),
+                    Icon(
+                      LucideIcons.alertTriangle,
+                      color: AppTheme.warning,
+                      size: 16,
+                    ),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -298,9 +364,7 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.success,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.success),
             onPressed: () {
               Navigator.pop(context);
               ref.read(missionProvider.notifier).startMission();
@@ -318,8 +382,18 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-          Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -350,19 +424,29 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                     children: [
                       Text(
                         'Waypoint #${wp.id} Config',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
                       ),
                       IconButton(
-                        icon: const Icon(LucideIcons.trash2, color: AppTheme.danger),
+                        icon: const Icon(
+                          LucideIcons.trash2,
+                          color: AppTheme.danger,
+                        ),
                         onPressed: () {
-                          ref.read(missionProvider.notifier).deleteWaypoint(wp.id);
+                          ref
+                              .read(missionProvider.notifier)
+                              .deleteWaypoint(wp.id);
                           Navigator.pop(context);
                         },
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Text('Waypoint Altitude: ${localAlt.toStringAsFixed(0)} meters AGL'),
+                  Text(
+                    'Waypoint Altitude: ${localAlt.toStringAsFixed(0)} meters AGL',
+                  ),
                   Slider(
                     value: localAlt,
                     min: 10,
@@ -370,7 +454,9 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                     activeColor: AppTheme.secondary,
                     onChanged: (val) {
                       setSheetState(() => localAlt = val);
-                      ref.read(missionProvider.notifier).updateWaypoint(wp.copyWith(altitude: val));
+                      ref
+                          .read(missionProvider.notifier)
+                          .updateWaypoint(wp.copyWith(altitude: val));
                     },
                   ),
                   Text('Transit Speed: ${localSpeed.toStringAsFixed(1)} m/s'),
@@ -381,7 +467,9 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                     activeColor: AppTheme.warning,
                     onChanged: (val) {
                       setSheetState(() => localSpeed = val);
-                      ref.read(missionProvider.notifier).updateWaypoint(wp.copyWith(speed: val));
+                      ref
+                          .read(missionProvider.notifier)
+                          .updateWaypoint(wp.copyWith(speed: val));
                     },
                   ),
                   Row(
@@ -397,19 +485,25 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                                 setSheetState(() => localHover--);
                                 ref
                                     .read(missionProvider.notifier)
-                                    .updateWaypoint(wp.copyWith(hoverTime: localHover));
+                                    .updateWaypoint(
+                                      wp.copyWith(hoverTime: localHover),
+                                    );
                               }
                             },
                           ),
-                          Text('$localHover sec',
-                              style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Text(
+                            '$localHover sec',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           IconButton(
                             icon: const Icon(LucideIcons.plusCircle),
                             onPressed: () {
                               setSheetState(() => localHover++);
                               ref
                                   .read(missionProvider.notifier)
-                                  .updateWaypoint(wp.copyWith(hoverTime: localHover));
+                                  .updateWaypoint(
+                                    wp.copyWith(hoverTime: localHover),
+                                  );
                             },
                           ),
                         ],
@@ -445,7 +539,9 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
     final surveyArea = surveyState.activeArea;
     final userLocation = ref.watch(userLocationProvider);
 
-    final pathPoints = plannedPoints.map((wp) => LatLng(wp.latitude, wp.longitude)).toList();
+    final pathPoints = plannedPoints
+        .map((wp) => LatLng(wp.latitude, wp.longitude))
+        .toList();
 
     final List<Marker> markers = [];
 
@@ -468,7 +564,8 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
     }
 
     // Add drone marker if connected
-    if (telemetry.isConnected && (telemetry.latitude != 0.0 || telemetry.longitude != 0.0)) {
+    if (telemetry.isConnected &&
+        (telemetry.latitude != 0.0 || telemetry.longitude != 0.0)) {
       markers.add(
         Marker(
           point: LatLng(telemetry.latitude, telemetry.longitude),
@@ -477,7 +574,10 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
           child: DroneMarkerWidget(
             telemetry: telemetry,
             onTap: () {
-              _mapController.move(LatLng(telemetry.latitude, telemetry.longitude), 16);
+              _mapController.move(
+                LatLng(telemetry.latitude, telemetry.longitude),
+                16,
+              );
             },
           ),
         ),
@@ -487,7 +587,8 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
     // Add waypoint markers
     for (int i = 0; i < plannedPoints.length; i++) {
       final wp = plannedPoints[i];
-      final bool isActive = plannerState.activeMission != null &&
+      final bool isActive =
+          plannerState.activeMission != null &&
           (telemetry.currentWaypoint == wp.id ||
               plannerState.activeMission!.currentWaypointIndex == wp.id);
 
@@ -529,9 +630,11 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
     final double totalDistance = plannedPoints.length * 0.28;
     final int estimatedMinutes = (plannedPoints.length * 1.5).ceil();
 
-    final LatLng centerCoord = telemetry.isConnected && telemetry.latitude != 0.0
+    final LatLng centerCoord =
+        telemetry.isConnected && telemetry.latitude != 0.0
         ? LatLng(telemetry.latitude, telemetry.longitude)
-        : (userLocation.userPosition ?? LatLng(MapConfig.defaultLatitude, MapConfig.defaultLongitude));
+        : (userLocation.userPosition ??
+              LatLng(MapConfig.defaultLatitude, MapConfig.defaultLongitude));
 
     final List<Polygon> polygons = [];
     if (surveyArea.vertices.length >= 3) {
@@ -559,9 +662,13 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
               maxZoom: MapConfig.maxZoom,
               onTap: (tapPosition, point) {
                 if (_surveyModeActive) {
-                  ref.read(surveyProvider.notifier).addVertex(point.latitude, point.longitude);
+                  ref
+                      .read(surveyProvider.notifier)
+                      .addVertex(point.latitude, point.longitude);
                 } else {
-                  ref.read(missionProvider.notifier).addWaypoint(point.latitude, point.longitude);
+                  ref
+                      .read(missionProvider.notifier)
+                      .addWaypoint(point.latitude, point.longitude);
                 }
               },
             ),
@@ -605,13 +712,15 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                     children: [
                       Text(
                         'Mission Specs',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.secondary.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(6),
@@ -619,9 +728,10 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                         child: Text(
                           plannerState.missionStatus.name.toUpperCase(),
                           style: const TextStyle(
-                              color: AppTheme.secondary,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold),
+                            color: AppTheme.secondary,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -632,42 +742,61 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Target:',
-                          style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                      const Text(
+                        'Target:',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
                       DropdownButton<InspectionType>(
                         value: plannerState.selectedInspectionType,
                         dropdownColor: AppTheme.card,
                         underline: const SizedBox(),
                         isDense: true,
                         style: const TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.secondary,
-                            fontWeight: FontWeight.bold),
+                          fontSize: 11,
+                          color: AppTheme.secondary,
+                          fontWeight: FontWeight.bold,
+                        ),
                         items: const [
                           DropdownMenuItem(
-                              value: InspectionType.generalSurvey,
-                              child: Text('General Survey')),
+                            value: InspectionType.generalSurvey,
+                            child: Text('General Survey'),
+                          ),
                           DropdownMenuItem(
-                              value: InspectionType.animalSurvey, child: Text('Animal Survey')),
+                            value: InspectionType.animalSurvey,
+                            child: Text('Animal Survey'),
+                          ),
                           DropdownMenuItem(
-                              value: InspectionType.roadInspection,
-                              child: Text('Road Survey')),
+                            value: InspectionType.roadInspection,
+                            child: Text('Road Survey'),
+                          ),
                           DropdownMenuItem(
-                              value: InspectionType.wasteInspection,
-                              child: Text('Waste Survey')),
+                            value: InspectionType.wasteInspection,
+                            child: Text('Waste Survey'),
+                          ),
                         ],
                         onChanged: (val) {
                           if (val != null) {
-                            ref.read(missionProvider.notifier).setInspectionType(val);
+                            ref
+                                .read(missionProvider.notifier)
+                                .setInspectionType(val);
                           }
                         },
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  _buildSpecRow('Distance', '${totalDistance.toStringAsFixed(2)} km'),
+                  _buildSpecRow(
+                    'Distance',
+                    '${totalDistance.toStringAsFixed(2)} km',
+                  ),
                   _buildSpecRow('Flight Duration', '$estimatedMinutes mins'),
-                  _buildSpecRow('Waypoints added', '${plannedPoints.length} points'),
+                  _buildSpecRow(
+                    'Waypoints added',
+                    '${plannedPoints.length} points',
+                  ),
                   const Divider(color: AppTheme.border, height: 14),
 
                   // Action Toolbar: Undo, Redo, Waypoint List, Clear
@@ -689,16 +818,27 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                             : null,
                       ),
                       IconButton(
-                        icon: const Icon(LucideIcons.listOrdered,
-                            size: 16, color: AppTheme.secondary),
+                        icon: const Icon(
+                          LucideIcons.listOrdered,
+                          size: 16,
+                          color: AppTheme.secondary,
+                        ),
                         tooltip: 'Manage List',
-                        onPressed: plannedPoints.isNotEmpty ? _showWaypointsManagerModal : null,
+                        onPressed: plannedPoints.isNotEmpty
+                            ? _showWaypointsManagerModal
+                            : null,
                       ),
                       IconButton(
-                        icon: const Icon(LucideIcons.trash, size: 16, color: AppTheme.danger),
+                        icon: const Icon(
+                          LucideIcons.trash,
+                          size: 16,
+                          color: AppTheme.danger,
+                        ),
                         tooltip: 'Clear Mission',
                         onPressed: plannedPoints.isNotEmpty
-                            ? () => ref.read(missionProvider.notifier).clearMission()
+                            ? () => ref
+                                  .read(missionProvider.notifier)
+                                  .clearMission()
                             : null,
                       ),
                     ],
@@ -708,18 +848,31 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       IconButton(
-                        icon: const Icon(LucideIcons.save, size: 16, color: AppTheme.secondary),
+                        icon: const Icon(
+                          LucideIcons.save,
+                          size: 16,
+                          color: AppTheme.secondary,
+                        ),
                         tooltip: 'Save Template',
-                        onPressed: plannedPoints.isNotEmpty ? _showSaveMissionDialog : null,
+                        onPressed: plannedPoints.isNotEmpty
+                            ? _showSaveMissionDialog
+                            : null,
                       ),
                       IconButton(
-                        icon:
-                            const Icon(LucideIcons.folderOpen, size: 16, color: AppTheme.secondary),
+                        icon: const Icon(
+                          LucideIcons.folderOpen,
+                          size: 16,
+                          color: AppTheme.secondary,
+                        ),
                         tooltip: 'Load Template',
                         onPressed: _showLoadMissionDialog,
                       ),
                       IconButton(
-                        icon: const Icon(LucideIcons.grid, size: 16, color: AppTheme.warning),
+                        icon: const Icon(
+                          LucideIcons.grid,
+                          size: 16,
+                          color: AppTheme.warning,
+                        ),
                         tooltip: 'Auto Sweep Grid',
                         onPressed: _generateLawnmowerGrid,
                       ),
@@ -744,11 +897,17 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                   () {
                     if (plannedPoints.isNotEmpty) {
                       _mapController.move(
-                          LatLng(plannedPoints.first.latitude, plannedPoints.first.longitude),
-                          16);
+                        LatLng(
+                          plannedPoints.first.latitude,
+                          plannedPoints.first.longitude,
+                        ),
+                        16,
+                      );
                     } else if (telemetry.isConnected) {
                       _mapController.move(
-                          LatLng(telemetry.latitude, telemetry.longitude), 16);
+                        LatLng(telemetry.latitude, telemetry.longitude),
+                        16,
+                      );
                     }
                   },
                 ),
@@ -756,7 +915,9 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                 _buildFloatingActionBtn(
                   context,
                   LucideIcons.shapes,
-                  _surveyModeActive ? 'Exit Polygon Mode' : 'Draw Survey Polygon',
+                  _surveyModeActive
+                      ? 'Exit Polygon Mode'
+                      : 'Draw Survey Polygon',
                   () {
                     setState(() {
                       _surveyModeActive = !_surveyModeActive;
@@ -771,22 +932,27 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                   context,
                   LucideIcons.uploadCloud,
                   'Upload to Autopilot',
-                  plannedPoints.isEmpty || plannerState.missionStatus == MissionStatus.uploading
+                  plannedPoints.isEmpty ||
+                          plannerState.missionStatus == MissionStatus.uploading
                       ? null
-                      : () => ref.read(missionProvider.notifier).uploadMission(),
+                      : () =>
+                            ref.read(missionProvider.notifier).uploadMission(),
                 ),
                 const SizedBox(height: 8),
                 _buildFloatingActionBtn(
                   context,
                   LucideIcons.play,
                   'Start Mission',
-                  (!plannerState.isUploaded || plannerState.activeMission != null)
+                  (!plannerState.isUploaded ||
+                          plannerState.activeMission != null)
                       ? null
                       : () {
                           if (!telemetry.isConnected) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Drone disconnected. Power on telemetry first.'),
+                                content: Text(
+                                  'Drone disconnected. Power on telemetry first.',
+                                ),
                                 backgroundColor: AppTheme.danger,
                               ),
                             );
@@ -828,7 +994,11 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(LucideIcons.activity, color: AppTheme.success, size: 18),
+                        const Icon(
+                          LucideIcons.activity,
+                          color: AppTheme.success,
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -837,14 +1007,17 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                             const Text(
                               'AUTOPILOT MISSION RUNNING',
                               style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                  color: AppTheme.success),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                color: AppTheme.success,
+                              ),
                             ),
                             Text(
                               'Target: WP ${telemetry.currentWaypoint} / ${plannedPoints.length}',
                               style: const TextStyle(
-                                  fontSize: 10, color: AppTheme.textSecondary),
+                                fontSize: 10,
+                                color: AppTheme.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -854,12 +1027,19 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ElevatedButton(
-                          onPressed: () => ref.read(missionProvider.notifier).pauseMission(),
+                          onPressed: () =>
+                              ref.read(missionProvider.notifier).pauseMission(),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.warning,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
                           ),
-                          child: const Text('PAUSE', style: TextStyle(fontSize: 11)),
+                          child: const Text(
+                            'PAUSE',
+                            style: TextStyle(fontSize: 11),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
@@ -868,9 +1048,15 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
                               .stopMission(MissionStatus.failed),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.danger,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
                           ),
-                          child: const Text('RTL', style: TextStyle(fontSize: 11)),
+                          child: const Text(
+                            'RTL',
+                            style: TextStyle(fontSize: 11),
+                          ),
                         ),
                       ],
                     ),
@@ -889,23 +1075,36 @@ class _MissionPlannerScreenState extends ConsumerState<MissionPlannerScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
-          Text(value,
-              style: const TextStyle(
-                  fontSize: 11, color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildFloatingActionBtn(
-      BuildContext context, IconData icon, String tooltip, VoidCallback? onTap) {
+    BuildContext context,
+    IconData icon,
+    String tooltip,
+    VoidCallback? onTap,
+  ) {
     final bool disabled = onTap == null;
     return FloatingActionButton.small(
       heroTag: 'fab_$tooltip',
       onPressed: onTap,
-      backgroundColor:
-          disabled ? AppTheme.surface.withValues(alpha: 0.5) : AppTheme.card,
+      backgroundColor: disabled
+          ? AppTheme.surface.withValues(alpha: 0.5)
+          : AppTheme.card,
       foregroundColor: disabled ? AppTheme.textSecondary : AppTheme.secondary,
       child: Icon(icon, size: 18),
     );

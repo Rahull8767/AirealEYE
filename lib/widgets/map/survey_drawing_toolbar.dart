@@ -9,10 +9,7 @@ import 'package:aerial_eye/widgets/glass_panel.dart';
 class SurveyDrawingToolbarWidget extends ConsumerWidget {
   final VoidCallback? onSettingsTap;
 
-  const SurveyDrawingToolbarWidget({
-    super.key,
-    this.onSettingsTap,
-  });
+  const SurveyDrawingToolbarWidget({super.key, this.onSettingsTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,15 +33,21 @@ class SurveyDrawingToolbarWidget extends ConsumerWidget {
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: surveyState.isDrawing ? AppTheme.warning : AppTheme.success,
+                      color: surveyState.isDrawing
+                          ? AppTheme.warning
+                          : AppTheme.success,
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    surveyState.isDrawing ? 'DRAWING SURVEY AREA' : 'SURVEY POLYGON READY',
+                    surveyState.isDrawing
+                        ? 'DRAWING SURVEY AREA'
+                        : 'SURVEY POLYGON READY',
                     style: TextStyle(
-                      color: surveyState.isDrawing ? AppTheme.warning : AppTheme.success,
+                      color: surveyState.isDrawing
+                          ? AppTheme.warning
+                          : AppTheme.success,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
@@ -54,7 +57,11 @@ class SurveyDrawingToolbarWidget extends ConsumerWidget {
               ),
               if (onSettingsTap != null)
                 IconButton(
-                  icon: const Icon(LucideIcons.sliders, size: 16, color: AppTheme.secondary),
+                  icon: const Icon(
+                    LucideIcons.sliders,
+                    size: 16,
+                    color: AppTheme.secondary,
+                  ),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   tooltip: 'Survey Grid Parameters',
@@ -71,7 +78,10 @@ class SurveyDrawingToolbarWidget extends ConsumerWidget {
               const SizedBox(width: 16),
               _buildMetric('Area', area.formattedArea),
               const SizedBox(width: 16),
-              _buildMetric('Altitude', '${area.parameters.flightAltitude.toStringAsFixed(0)}m'),
+              _buildMetric(
+                'Altitude',
+                '${area.parameters.flightAltitude.toStringAsFixed(0)}m',
+              ),
             ],
           ),
           const Divider(color: AppTheme.border, height: 16),
@@ -93,10 +103,16 @@ class SurveyDrawingToolbarWidget extends ConsumerWidget {
               if (surveyState.isDrawing)
                 ElevatedButton.icon(
                   icon: const Icon(LucideIcons.check, size: 14),
-                  label: const Text('Finish Area', style: TextStyle(fontSize: 11)),
+                  label: const Text(
+                    'Finish Area',
+                    style: TextStyle(fontSize: 11),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.secondary,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                   ),
                   onPressed: vertexCount >= 3
                       ? () => ref.read(surveyProvider.notifier).finishPolygon()
@@ -107,19 +123,31 @@ class SurveyDrawingToolbarWidget extends ConsumerWidget {
               if (!surveyState.isDrawing && vertexCount >= 3)
                 ElevatedButton.icon(
                   icon: const Icon(LucideIcons.grid, size: 14),
-                  label: const Text('Create Grid', style: TextStyle(fontSize: 11)),
+                  label: const Text(
+                    'Create Grid',
+                    style: TextStyle(fontSize: 11),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.success,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                   ),
                   onPressed: () {
-                    ref.read(surveyProvider.notifier).applyGridToMissionPlanner();
+                    ref
+                        .read(surveyProvider.notifier)
+                        .applyGridToMissionPlanner();
                   },
                 ),
 
               // Clear polygon
               IconButton(
-                icon: const Icon(LucideIcons.trash2, size: 16, color: AppTheme.danger),
+                icon: const Icon(
+                  LucideIcons.trash2,
+                  size: 16,
+                  color: AppTheme.danger,
+                ),
                 tooltip: 'Clear Polygon',
                 onPressed: vertexCount > 0
                     ? () => ref.read(surveyProvider.notifier).clearPolygon()
@@ -136,7 +164,10 @@ class SurveyDrawingToolbarWidget extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
+        Text(
+          label,
+          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+        ),
         Text(
           value,
           style: const TextStyle(

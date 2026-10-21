@@ -49,15 +49,26 @@ class DroneCameraPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     final roadWidth = size.width * 0.45;
     final roadLeft = (size.width - roadWidth) / 2;
-    canvas.drawRect(Rect.fromLTWH(roadLeft, 0, roadWidth, size.height), roadPaint);
+    canvas.drawRect(
+      Rect.fromLTWH(roadLeft, 0, roadWidth, size.height),
+      roadPaint,
+    );
 
     // Draw road shoulders
     final shoulderPaint = Paint()
       ..color = const Color(0xFF2E3748)
       ..strokeWidth = 4
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(roadLeft, 0), Offset(roadLeft, size.height), shoulderPaint);
-    canvas.drawLine(Offset(roadLeft + roadWidth, 0), Offset(roadLeft + roadWidth, size.height), shoulderPaint);
+    canvas.drawLine(
+      Offset(roadLeft, 0),
+      Offset(roadLeft, size.height),
+      shoulderPaint,
+    );
+    canvas.drawLine(
+      Offset(roadLeft + roadWidth, 0),
+      Offset(roadLeft + roadWidth, size.height),
+      shoulderPaint,
+    );
 
     // Draw road markings (scrolling dashes)
     final markingPaint = Paint()
@@ -82,8 +93,19 @@ class DroneCameraPainter extends CustomPainter {
     final environmentPaint = Paint()
       ..color = Colors.green.withOpacity(0.1)
       ..style = PaintingStyle.fill;
-    canvas.drawRect(Rect.fromLTWH(0, 0, roadLeft, size.height), environmentPaint);
-    canvas.drawRect(Rect.fromLTWH(roadLeft + roadWidth, 0, size.width - (roadLeft + roadWidth), size.height), environmentPaint);
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, roadLeft, size.height),
+      environmentPaint,
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(
+        roadLeft + roadWidth,
+        0,
+        size.width - (roadLeft + roadWidth),
+        size.height,
+      ),
+      environmentPaint,
+    );
 
     // Draw subtle grid scan lines
     final gridPaint = Paint()
@@ -107,33 +129,69 @@ class DroneCameraPainter extends CustomPainter {
 
     // Center reticle
     canvas.drawCircle(Offset(centerX, centerY), 45, hudPaint);
-    canvas.drawCircle(Offset(centerX, centerY), 4, Paint()..color = const Color(0xFF42A5F5).withOpacity(0.7));
+    canvas.drawCircle(
+      Offset(centerX, centerY),
+      4,
+      Paint()..color = const Color(0xFF42A5F5).withOpacity(0.7),
+    );
 
     // Pitch ticks
-    canvas.drawLine(Offset(centerX - 80, centerY), Offset(centerX - 20, centerY), hudPaint);
-    canvas.drawLine(Offset(centerX + 20, centerY), Offset(centerX + 80, centerY), hudPaint);
-    canvas.drawLine(Offset(centerX, centerY - 80), Offset(centerX, centerY - 20), hudPaint);
-    canvas.drawLine(Offset(centerX, centerY + 20), Offset(centerX, centerY + 80), hudPaint);
+    canvas.drawLine(
+      Offset(centerX - 80, centerY),
+      Offset(centerX - 20, centerY),
+      hudPaint,
+    );
+    canvas.drawLine(
+      Offset(centerX + 20, centerY),
+      Offset(centerX + 80, centerY),
+      hudPaint,
+    );
+    canvas.drawLine(
+      Offset(centerX, centerY - 80),
+      Offset(centerX, centerY - 20),
+      hudPaint,
+    );
+    canvas.drawLine(
+      Offset(centerX, centerY + 20),
+      Offset(centerX, centerY + 80),
+      hudPaint,
+    );
 
     // Dynamic HUD Horizon indicator
     final double horizonOffset = sin(animationValue * pi * 2) * 12;
     final double horizonAngle = cos(animationValue * pi * 2) * 0.05; // radians
-    
+
     canvas.save();
     canvas.translate(centerX, centerY);
     canvas.rotate(horizonAngle);
-    
+
     final horizonPaint = Paint()
       ..color = const Color(0xFF4CAF50).withOpacity(0.6)
       ..strokeWidth = 1.0;
-    
+
     // Left horizon line
-    canvas.drawLine(Offset(-150, horizonOffset), Offset(-60, horizonOffset), horizonPaint);
-    canvas.drawLine(Offset(-60, horizonOffset), Offset(-60, horizonOffset + 10), horizonPaint);
+    canvas.drawLine(
+      Offset(-150, horizonOffset),
+      Offset(-60, horizonOffset),
+      horizonPaint,
+    );
+    canvas.drawLine(
+      Offset(-60, horizonOffset),
+      Offset(-60, horizonOffset + 10),
+      horizonPaint,
+    );
     // Right horizon line
-    canvas.drawLine(Offset(60, horizonOffset), Offset(150, horizonOffset), horizonPaint);
-    canvas.drawLine(Offset(60, horizonOffset), Offset(60, horizonOffset + 10), horizonPaint);
-    
+    canvas.drawLine(
+      Offset(60, horizonOffset),
+      Offset(150, horizonOffset),
+      horizonPaint,
+    );
+    canvas.drawLine(
+      Offset(60, horizonOffset),
+      Offset(60, horizonOffset + 10),
+      horizonPaint,
+    );
+
     canvas.restore();
 
     // Draw AI Bounding Boxes
@@ -151,44 +209,80 @@ class DroneCameraPainter extends CustomPainter {
       // Animate detection boxes scrolling down with the road
       final double speedMultiplier = 180.0;
       final double initialY = box.yPercent * size.height;
-      final double animatedY = (initialY + (animationValue * speedMultiplier)) % (size.height + 100) - 50;
+      final double animatedY =
+          (initialY + (animationValue * speedMultiplier)) %
+              (size.height + 100) -
+          50;
       final double xPos = box.xPercent * size.width;
 
       if (animatedY > 0 && animatedY < size.height) {
         boxPaint.color = box.color;
         cornerPaint.color = box.color;
-        
+
         final rect = Rect.fromCenter(
           center: Offset(xPos, animatedY),
           width: box.width * zoomLevel,
           height: box.height * zoomLevel,
         );
-        
+
         // Draw dashed bounding box
         canvas.drawRect(rect, boxPaint);
 
         // Draw premium heavy corners
         final double len = 12.0;
         // Top Left
-        canvas.drawLine(rect.topLeft, rect.topLeft + Offset(len, 0), cornerPaint);
-        canvas.drawLine(rect.topLeft, rect.topLeft + Offset(0, len), cornerPaint);
+        canvas.drawLine(
+          rect.topLeft,
+          rect.topLeft + Offset(len, 0),
+          cornerPaint,
+        );
+        canvas.drawLine(
+          rect.topLeft,
+          rect.topLeft + Offset(0, len),
+          cornerPaint,
+        );
         // Top Right
-        canvas.drawLine(rect.topRight, rect.topRight + Offset(-len, 0), cornerPaint);
-        canvas.drawLine(rect.topRight, rect.topRight + Offset(0, len), cornerPaint);
+        canvas.drawLine(
+          rect.topRight,
+          rect.topRight + Offset(-len, 0),
+          cornerPaint,
+        );
+        canvas.drawLine(
+          rect.topRight,
+          rect.topRight + Offset(0, len),
+          cornerPaint,
+        );
         // Bottom Left
-        canvas.drawLine(rect.bottomLeft, rect.bottomLeft + Offset(len, 0), cornerPaint);
-        canvas.drawLine(rect.bottomLeft, rect.bottomLeft + Offset(0, -len), cornerPaint);
+        canvas.drawLine(
+          rect.bottomLeft,
+          rect.bottomLeft + Offset(len, 0),
+          cornerPaint,
+        );
+        canvas.drawLine(
+          rect.bottomLeft,
+          rect.bottomLeft + Offset(0, -len),
+          cornerPaint,
+        );
         // Bottom Right
-        canvas.drawLine(rect.bottomRight, rect.bottomRight + Offset(-len, 0), cornerPaint);
-        canvas.drawLine(rect.bottomRight, rect.bottomRight + Offset(0, -len), cornerPaint);
+        canvas.drawLine(
+          rect.bottomRight,
+          rect.bottomRight + Offset(-len, 0),
+          cornerPaint,
+        );
+        canvas.drawLine(
+          rect.bottomRight,
+          rect.bottomRight + Offset(0, -len),
+          cornerPaint,
+        );
 
         // Label Tag Background
         final labelBgPaint = Paint()
           ..color = box.color
           ..style = PaintingStyle.fill;
-        
+
         final textSpan = TextSpan(
-          text: '${box.label.toUpperCase()} ${(box.confidence * 100).toStringAsFixed(0)}%',
+          text:
+              '${box.label.toUpperCase()} ${(box.confidence * 100).toStringAsFixed(0)}%',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 10,
@@ -198,7 +292,7 @@ class DroneCameraPainter extends CustomPainter {
         );
         textPainter.text = textSpan;
         textPainter.layout();
-        
+
         final double labelPadding = 4.0;
         final labelRect = Rect.fromLTWH(
           rect.left,
@@ -206,9 +300,15 @@ class DroneCameraPainter extends CustomPainter {
           textPainter.width + (labelPadding * 2),
           textPainter.height + (labelPadding * 2),
         );
-        
+
         canvas.drawRect(labelRect, labelBgPaint);
-        textPainter.paint(canvas, Offset(rect.left + labelPadding, rect.top - textPainter.height - labelPadding));
+        textPainter.paint(
+          canvas,
+          Offset(
+            rect.left + labelPadding,
+            rect.top - textPainter.height - labelPadding,
+          ),
+        );
       }
     }
   }

@@ -1,10 +1,8 @@
-enum MavlinkTransport {
-  udp,
-}
+enum MavlinkTransport { udp }
 
 enum MavlinkConnectionMode {
   listener, // Binds on 0.0.0.0:<localPort> and receives from MAVProxy/SITL/Radio
-  direct,   // Sends directly to <remoteHost>:<remotePort>
+  direct, // Sends directly to <remoteHost>:<remotePort>
 }
 
 class MavlinkConnectionConfig {
@@ -82,9 +80,12 @@ class MavlinkConnectionConfig {
       targetComponentId: targetComponentId ?? this.targetComponentId,
       autoTargetSystem: autoTargetSystem ?? this.autoTargetSystem,
       autoTargetComponent: autoTargetComponent ?? this.autoTargetComponent,
-      heartbeatTimeoutSeconds: heartbeatTimeoutSeconds ?? this.heartbeatTimeoutSeconds,
-      telemetryTimeoutSeconds: telemetryTimeoutSeconds ?? this.telemetryTimeoutSeconds,
-      reconnectIntervalSeconds: reconnectIntervalSeconds ?? this.reconnectIntervalSeconds,
+      heartbeatTimeoutSeconds:
+          heartbeatTimeoutSeconds ?? this.heartbeatTimeoutSeconds,
+      telemetryTimeoutSeconds:
+          telemetryTimeoutSeconds ?? this.telemetryTimeoutSeconds,
+      reconnectIntervalSeconds:
+          reconnectIntervalSeconds ?? this.reconnectIntervalSeconds,
       telemetryRateHz: telemetryRateHz ?? this.telemetryRateHz,
       debugLogging: debugLogging ?? this.debugLogging,
     );
@@ -173,7 +174,8 @@ class MavlinkConnectionConfig {
       errors.add('Target System ID must be between 1 and 255 when manual');
     }
 
-    if (!autoTargetComponent && (targetComponentId < 1 || targetComponentId > 255)) {
+    if (!autoTargetComponent &&
+        (targetComponentId < 1 || targetComponentId > 255)) {
       errors.add('Target Component ID must be between 1 and 255 when manual');
     }
 

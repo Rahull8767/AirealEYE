@@ -26,7 +26,8 @@ class GlassPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: borderRadius ?? BorderRadius.circular(AppConstants.radiusLarge),
+      borderRadius:
+          borderRadius ?? BorderRadius.circular(AppConstants.radiusLarge),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
         child: Container(
@@ -35,7 +36,8 @@ class GlassPanel extends StatelessWidget {
           padding: padding ?? const EdgeInsets.all(AppConstants.paddingMedium),
           decoration: BoxDecoration(
             color: color ?? AppTheme.card.withOpacity(0.65),
-            borderRadius: borderRadius ?? BorderRadius.circular(AppConstants.radiusLarge),
+            borderRadius:
+                borderRadius ?? BorderRadius.circular(AppConstants.radiusLarge),
             border: Border.all(
               color: Colors.white.withOpacity(0.08),
               width: 1.0,

@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Supported Map Layer Styles
-enum MapTileStyle {
-  dark,
-  light,
-  osm,
-  satellite,
-  terrain,
-}
+enum MapTileStyle { dark, light, osm, satellite, terrain }
 
 /// Metadata definition for a map tile layer provider
 class MapTileLayerConfig {
@@ -75,8 +69,14 @@ class MapConfig {
   static const String userAgentPackageName = 'com.aerialeye.app';
 
   // Optional custom tile keys/endpoints passed via --dart-define
-  static const String mapboxApiKey = String.fromEnvironment('MAPBOX_API_KEY', defaultValue: '');
-  static const String customSatelliteUrl = String.fromEnvironment('CUSTOM_SATELLITE_URL', defaultValue: '');
+  static const String mapboxApiKey = String.fromEnvironment(
+    'MAPBOX_API_KEY',
+    defaultValue: '',
+  );
+  static const String customSatelliteUrl = String.fromEnvironment(
+    'CUSTOM_SATELLITE_URL',
+    defaultValue: '',
+  );
 
   /// Available Real Map Tile Styles
   static final Map<MapTileStyle, MapTileLayerConfig> tileLayers = {
@@ -84,7 +84,8 @@ class MapConfig {
       style: MapTileStyle.dark,
       id: 'dark',
       displayName: 'Dark HUD',
-      urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      urlTemplate:
+          'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
       subdomains: ['a', 'b', 'c', 'd'],
       attribution: '© OpenStreetMap contributors, © CARTO',
       hasRetinaTag: true,
@@ -96,7 +97,8 @@ class MapConfig {
       style: MapTileStyle.light,
       id: 'light',
       displayName: 'Light',
-      urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      urlTemplate:
+          'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
       subdomains: ['a', 'b', 'c', 'd'],
       attribution: '© OpenStreetMap contributors, © CARTO',
       hasRetinaTag: true,
@@ -138,7 +140,8 @@ class MapConfig {
       displayName: 'Topo / Terrain',
       urlTemplate: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
       subdomains: ['a', 'b', 'c'],
-      attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)',
+      attribution:
+          'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)',
       hasRetinaTag: false,
       minZoom: 1,
       maxZoom: 17,

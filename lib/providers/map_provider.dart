@@ -2,12 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:aerial_eye/config/map_config.dart';
 
-enum MapTileLoadingStatus {
-  idle,
-  loading,
-  ready,
-  networkError,
-}
+enum MapTileLoadingStatus { idle, loading, ready, networkError }
 
 class MapState {
   final MapTileStyle activeStyle;
@@ -39,7 +34,10 @@ class MapState {
       activeStyle: MapTileStyle.dark,
       followDrone: true,
       isFullscreen: false,
-      currentCenter: LatLng(MapConfig.defaultLatitude, MapConfig.defaultLongitude),
+      currentCenter: LatLng(
+        MapConfig.defaultLatitude,
+        MapConfig.defaultLongitude,
+      ),
       currentZoom: MapConfig.defaultZoom,
     );
   }
@@ -101,10 +99,7 @@ class MapNotifier extends StateNotifier<MapState> {
   }
 
   void updatePosition(LatLng center, double zoom) {
-    state = state.copyWith(
-      currentCenter: center,
-      currentZoom: zoom,
-    );
+    state = state.copyWith(currentCenter: center, currentZoom: zoom);
   }
 
   void setTileStatus(MapTileLoadingStatus status) {

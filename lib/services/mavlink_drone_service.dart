@@ -17,13 +17,17 @@ class MavlinkDroneService implements DroneService {
   final _telemetryController = StreamController<DroneTelemetry>.broadcast();
   DroneTelemetry _currentTelemetry = DroneTelemetry.initial();
 
-  final _connectionStateController = StreamController<DroneConnectionState>.broadcast();
+  final _connectionStateController =
+      StreamController<DroneConnectionState>.broadcast();
   DroneConnectionState _connectionState = DroneConnectionState.disconnected;
 
-  final _diagnosticsController = StreamController<ConnectionDiagnostics>.broadcast();
+  final _diagnosticsController =
+      StreamController<ConnectionDiagnostics>.broadcast();
   ConnectionDiagnostics _currentDiagnostics = ConnectionDiagnostics.initial();
 
-  final MavlinkParser _mavlinkParser = MavlinkParser(MavlinkDialectArdupilotmega());
+  final MavlinkParser _mavlinkParser = MavlinkParser(
+    MavlinkDialectArdupilotmega(),
+  );
 
   Completer<bool>? _modeChangeCompleter;
   String? _targetMode;
@@ -93,19 +97,26 @@ class MavlinkDroneService implements DroneService {
   }
 
   void _initParserListener() {
-    _mavlinkParser.stream.listen((frame) {
-      _mavlinkFramesReceived++;
-      _lastMavlinkFrameTime = DateTime.now();
-      _lastReceivedSourceSystemId = frame.systemId;
-      _lastReceivedSourceComponentId = frame.componentId;
-      _lastReceivedMessageType = frame.message.runtimeType.toString();
+    _mavlinkParser.stream.listen(
+      (frame) {
+        _mavlinkFramesReceived++;
+        _lastMavlinkFrameTime = DateTime.now();
+        _lastReceivedSourceSystemId = frame.systemId;
+        _lastReceivedSourceComponentId = frame.componentId;
+        _lastReceivedMessageType = frame.message.runtimeType.toString();
 
-      _handleTypedMavlinkMessage(frame.message, frame.systemId, frame.componentId);
-    }, onError: (err) {
-      _malformedFramesCount++;
-      _packetsDropped++;
-      _logDiagnostic("[MAVLINK ERROR] Framing / CRC parse error: $err");
-    });
+        _handleTypedMavlinkMessage(
+          frame.message,
+          frame.systemId,
+          frame.componentId,
+        );
+      },
+      onError: (err) {
+        _malformedFramesCount++;
+        _packetsDropped++;
+        _logDiagnostic("[MAVLINK ERROR] Framing / CRC parse error: $err");
+      },
+    );
   }
 
   Future<void> _initStoredConfig() async {
@@ -131,7 +142,9 @@ class MavlinkDroneService implements DroneService {
   void updateConfig(MavlinkConnectionConfig newConfig) {
     _config = newConfig;
     MavlinkConfigStorage.saveConfig(newConfig);
-    _logDiagnostic("Config updated: localPort=${newConfig.localPort}, mode=${newConfig.connectionMode.name}, bind=${newConfig.bindAddress}, remote=${newConfig.remoteHost}:${newConfig.remotePort}");
+    _logDiagnostic(
+      "Config updated: localPort=${newConfig.localPort}, mode=${newConfig.connectionMode.name}, bind=${newConfig.bindAddress}, remote=${newConfig.remoteHost}:${newConfig.remotePort}",
+    );
     _updateDiagnostics();
   }
 
@@ -155,13 +168,15 @@ class MavlinkDroneService implements DroneService {
   DroneTelemetry get currentTelemetry => _currentTelemetry;
 
   @override
-  Stream<DroneConnectionState> get connectionStateStream => _connectionStateController.stream;
+  Stream<DroneConnectionState> get connectionStateStream =>
+      _connectionStateController.stream;
 
   @override
   DroneConnectionState get connectionState => _connectionState;
 
   @override
-  Stream<ConnectionDiagnostics> get diagnosticsStream => _diagnosticsController.stream;
+  Stream<ConnectionDiagnostics> get diagnosticsStream =>
+      _diagnosticsController.stream;
 
   @override
   ConnectionDiagnostics get currentDiagnostics => _currentDiagnostics;
@@ -232,10 +247,14 @@ class MavlinkDroneService implements DroneService {
         hasReceivedVfrHud: true,
       );
       _telemetryController.add(_currentTelemetry);
-      _logDiagnostic("Simulation mode active: simulated vehicle telemetry running");
+      _logDiagnostic(
+        "Simulation mode active: simulated vehicle telemetry running",
+      );
     }
 
-    _telemetryTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+    _telemetryTimer = Timer.periodic(const Duration(milliseconds: 500), (
+      timer,
+    ) {
       if (_connectionMode == DroneConnectionMode.real) {
         _checkMavlinkLiveness();
       } else {
@@ -282,22 +301,31 @@ class MavlinkDroneService implements DroneService {
 
   void _cleanupCompletersOnDisconnect() {
     if (_modeChangeCompleter != null && !_modeChangeCompleter!.isCompleted) {
-      _modeChangeCompleter!.completeError(StateError("MAVLink link was disconnected."));
+      _modeChangeCompleter!.completeError(
+        StateError("MAVLink link was disconnected."),
+      );
     }
     _cleanupModeChange();
 
     if (_armCompleter != null && !_armCompleter!.isCompleted) {
-      _armCompleter!.completeError(StateError("MAVLink link was disconnected."));
+      _armCompleter!.completeError(
+        StateError("MAVLink link was disconnected."),
+      );
     }
     _cleanupArmChange();
 
     if (_takeoffCompleter != null && !_takeoffCompleter!.isCompleted) {
-      _takeoffCompleter!.completeError(StateError("MAVLink link was disconnected."));
+      _takeoffCompleter!.completeError(
+        StateError("MAVLink link was disconnected."),
+      );
     }
     _cleanupTakeoff();
 
-    if (_missionUploadCompleter != null && !_missionUploadCompleter!.isCompleted) {
-      _missionUploadCompleter!.completeError(StateError("MAVLink link was disconnected."));
+    if (_missionUploadCompleter != null &&
+        !_missionUploadCompleter!.isCompleted) {
+      _missionUploadCompleter!.completeError(
+        StateError("MAVLink link was disconnected."),
+      );
     }
     _cleanupMissionUpload();
   }
@@ -306,7 +334,9 @@ class MavlinkDroneService implements DroneService {
     if (_connectionState != newState) {
       _connectionState = newState;
       _connectionStateController.add(_connectionState);
-      _logDiagnostic("Connection state changed: ${_currentDiagnostics.connectionStateLabel}");
+      _logDiagnostic(
+        "Connection state changed: ${_currentDiagnostics.connectionStateLabel}",
+      );
       _updateDiagnostics();
     }
   }
@@ -323,7 +353,9 @@ class MavlinkDroneService implements DroneService {
     }
 
     if (_socket != null) {
-      _logDiagnostic("[SOCKET REBIND] Closing existing UDP socket before rebinding...");
+      _logDiagnostic(
+        "[SOCKET REBIND] Closing existing UDP socket before rebinding...",
+      );
       _socket?.close();
       _socket = null;
     }
@@ -340,34 +372,48 @@ class MavlinkDroneService implements DroneService {
         }
       }
 
-      _logDiagnostic("[SOCKET BINDING] Binding local UDP socket on ${bindAddr.address}:${_config.localPort} (reuseAddress: true)...");
-      _socket = await RawDatagramSocket.bind(bindAddr, _config.localPort, reuseAddress: true);
+      _logDiagnostic(
+        "[SOCKET BINDING] Binding local UDP socket on ${bindAddr.address}:${_config.localPort} (reuseAddress: true)...",
+      );
+      _socket = await RawDatagramSocket.bind(
+        bindAddr,
+        _config.localPort,
+        reuseAddress: true,
+      );
       _socketStatus = 'BOUND';
-      _logDiagnostic("[SOCKET BOUND] Local UDP socket successfully bound on ${_socket!.address.address}:${_socket!.port}");
+      _logDiagnostic(
+        "[SOCKET BOUND] Local UDP socket successfully bound on ${_socket!.address.address}:${_socket!.port}",
+      );
 
       if (_connectionState == DroneConnectionState.connecting) {
         _setConnectionState(DroneConnectionState.socketBoundWaiting);
       }
 
-      _socket?.listen((event) {
-        if (event == RawSocketEvent.read) {
-          while (true) {
-            final datagram = _socket?.receive();
-            if (datagram == null) break;
-            _onDatagramReceived(datagram);
+      _socket?.listen(
+        (event) {
+          if (event == RawSocketEvent.read) {
+            while (true) {
+              final datagram = _socket?.receive();
+              if (datagram == null) break;
+              _onDatagramReceived(datagram);
+            }
           }
-        }
-      }, onError: (error) {
-        _socketStatus = 'ERROR';
-        _logDiagnostic("[SOCKET ERROR] Local UDP Socket error: $error");
-        _setConnectionState(DroneConnectionState.error);
-      }, onDone: () {
-        _socketStatus = 'CLOSED';
-        _logDiagnostic("[SOCKET CLOSED] Local UDP Socket closed by system");
-      });
+        },
+        onError: (error) {
+          _socketStatus = 'ERROR';
+          _logDiagnostic("[SOCKET ERROR] Local UDP Socket error: $error");
+          _setConnectionState(DroneConnectionState.error);
+        },
+        onDone: () {
+          _socketStatus = 'CLOSED';
+          _logDiagnostic("[SOCKET CLOSED] Local UDP Socket closed by system");
+        },
+      );
     } catch (e) {
       _socketStatus = 'ERROR';
-      _logDiagnostic("[SOCKET ERROR] Local UDP socket bind failed on port ${_config.localPort}: $e");
+      _logDiagnostic(
+        "[SOCKET ERROR] Local UDP socket bind failed on port ${_config.localPort}: $e",
+      );
       _setConnectionState(DroneConnectionState.error);
     }
   }
@@ -407,7 +453,10 @@ class MavlinkDroneService implements DroneService {
     // Build ASCII preview for logging & diagnostics UI
     String asciiPreview = '';
     if (data.isNotEmpty) {
-      final previewChars = data.take(64).map((b) => (b >= 32 && b <= 126) ? String.fromCharCode(b) : '.').join();
+      final previewChars = data
+          .take(64)
+          .map((b) => (b >= 32 && b <= 126) ? String.fromCharCode(b) : '.')
+          .join();
       asciiPreview = previewChars;
     }
 
@@ -415,7 +464,9 @@ class MavlinkDroneService implements DroneService {
     _lastRawDatagramPreview = asciiPreview;
     _lastRawSender = '$srcIp:$srcPort';
 
-    _logDiagnostic("[UDP RX #$_rawDatagramsReceived] $srcIp:$srcPort -> $byteLength bytes ($protoLabel) | Content: \"$asciiPreview\"");
+    _logDiagnostic(
+      "[UDP RX #$_rawDatagramsReceived] $srcIp:$srcPort -> $byteLength bytes ($protoLabel) | Content: \"$asciiPreview\"",
+    );
 
     // Keep MAVLink parsing separate from UDP transport
     if (isMavlink) {
@@ -430,11 +481,13 @@ class MavlinkDroneService implements DroneService {
     // Update intermediate granular states
     if (_heartbeatCount == 0) {
       if (_mavlinkFramesReceived > 0) {
-        if (_connectionState == DroneConnectionState.socketBoundWaiting || _connectionState == DroneConnectionState.connecting) {
+        if (_connectionState == DroneConnectionState.socketBoundWaiting ||
+            _connectionState == DroneConnectionState.connecting) {
           _setConnectionState(DroneConnectionState.mavlinkNoHeartbeat);
         }
       } else if (_rawDatagramsReceived > 0) {
-        if (_connectionState == DroneConnectionState.socketBoundWaiting || _connectionState == DroneConnectionState.connecting) {
+        if (_connectionState == DroneConnectionState.socketBoundWaiting ||
+            _connectionState == DroneConnectionState.connecting) {
           _setConnectionState(DroneConnectionState.udpPacketsNoMavlink);
         }
       }
@@ -462,7 +515,9 @@ class MavlinkDroneService implements DroneService {
         // Heartbeat was received previously but is now timed out
         if (_connectionState == DroneConnectionState.connected) {
           _setConnectionState(DroneConnectionState.telemetryStale);
-          _logDiagnostic("Heartbeat timed out (${diff.inSeconds}s since last heartbeat). Link marked stale.");
+          _logDiagnostic(
+            "Heartbeat timed out (${diff.inSeconds}s since last heartbeat). Link marked stale.",
+          );
 
           _currentTelemetry = _currentTelemetry.copyWith(
             isConnected: false,
@@ -474,11 +529,15 @@ class MavlinkDroneService implements DroneService {
     } else {
       // No heartbeat has arrived yet.
       // Do NOT claim connectionLost if socket is still bound and waiting!
-      if (_mavlinkFramesReceived > 0 && _connectionState != DroneConnectionState.mavlinkNoHeartbeat) {
+      if (_mavlinkFramesReceived > 0 &&
+          _connectionState != DroneConnectionState.mavlinkNoHeartbeat) {
         _setConnectionState(DroneConnectionState.mavlinkNoHeartbeat);
-      } else if (_rawDatagramsReceived > 0 && _connectionState != DroneConnectionState.udpPacketsNoMavlink) {
+      } else if (_rawDatagramsReceived > 0 &&
+          _connectionState != DroneConnectionState.udpPacketsNoMavlink) {
         _setConnectionState(DroneConnectionState.udpPacketsNoMavlink);
-      } else if (_socket != null && _connectionState != DroneConnectionState.socketBoundWaiting && _connectionState != DroneConnectionState.connecting) {
+      } else if (_socket != null &&
+          _connectionState != DroneConnectionState.socketBoundWaiting &&
+          _connectionState != DroneConnectionState.connecting) {
         _setConnectionState(DroneConnectionState.socketBoundWaiting);
       }
     }
@@ -552,8 +611,12 @@ class MavlinkDroneService implements DroneService {
       packetsDropped: _packetsDropped,
       lastDatagramTime: _lastDatagramTime,
       lastPacketTime: _lastMavlinkFrameTime,
-      satellites: _currentTelemetry.hasReceivedGps ? _currentTelemetry.satellites : null,
-      batteryVoltage: _currentTelemetry.hasReceivedBattery ? _currentTelemetry.batteryVoltage : null,
+      satellites: _currentTelemetry.hasReceivedGps
+          ? _currentTelemetry.satellites
+          : null,
+      batteryVoltage: _currentTelemetry.hasReceivedBattery
+          ? _currentTelemetry.batteryVoltage
+          : null,
       lastStatusText: _currentDiagnostics.lastStatusText,
       lastGlobalPositionTime: _currentTelemetry.lastGlobalPosition,
       lastGpsRawTime: _currentTelemetry.lastGpsUpdate,
@@ -594,7 +657,8 @@ class MavlinkDroneService implements DroneService {
       longitude: _currentTelemetry.longitude + jitterLng,
       satellites: 15 + random.nextInt(5),
       rssi: (90.0 + random.nextDouble() * 10).clamp(0, 100),
-      heading: (_currentTelemetry.heading + (random.nextDouble() - 0.5) * 2) % 360,
+      heading:
+          (_currentTelemetry.heading + (random.nextDouble() - 0.5) * 2) % 360,
       hasReceivedGps: true,
       hasReceivedBattery: true,
       hasReceivedPosition: true,
@@ -636,7 +700,9 @@ class MavlinkDroneService implements DroneService {
 
       if (_connectionState != DroneConnectionState.connected) {
         _setConnectionState(DroneConnectionState.connected);
-        _logDiagnostic("Valid MAVLink heartbeat received: SysID=$sysId, CompID=$compId, Vehicle=$_detectedVehicleType, Mode=$mode, Armed=$isArmed");
+        _logDiagnostic(
+          "Valid MAVLink heartbeat received: SysID=$sysId, CompID=$compId, Vehicle=$_detectedVehicleType, Mode=$mode, Armed=$isArmed",
+        );
       }
 
       _currentTelemetry = _currentTelemetry.copyWith(
@@ -649,7 +715,9 @@ class MavlinkDroneService implements DroneService {
       );
       _telemetryController.add(_currentTelemetry);
 
-      if (_targetMode != null && _modeChangeCompleter != null && !_modeChangeCompleter!.isCompleted) {
+      if (_targetMode != null &&
+          _modeChangeCompleter != null &&
+          !_modeChangeCompleter!.isCompleted) {
         if (mode == _targetMode) {
           _logDiagnostic("[MODE CONFIRMED] mode=$_targetMode");
           _modeChangeCompleter!.complete(true);
@@ -657,7 +725,9 @@ class MavlinkDroneService implements DroneService {
         }
       }
 
-      if (_targetArmState != null && _armCompleter != null && !_armCompleter!.isCompleted) {
+      if (_targetArmState != null &&
+          _armCompleter != null &&
+          !_armCompleter!.isCompleted) {
         if (isArmed == _targetArmState) {
           _logDiagnostic("[ARM CONFIRMED] state=$_targetArmState");
           _armCompleter!.complete(true);
@@ -665,7 +735,9 @@ class MavlinkDroneService implements DroneService {
         }
       }
     } else if (msg is SysStatus) {
-      double volts = double.parse((msg.voltageBattery / 1000.0).toStringAsFixed(2));
+      double volts = double.parse(
+        (msg.voltageBattery / 1000.0).toStringAsFixed(2),
+      );
       double pct = msg.batteryRemaining >= 0 && msg.batteryRemaining <= 100
           ? msg.batteryRemaining / 100.0
           : _currentTelemetry.batteryPercent;
@@ -678,10 +750,14 @@ class MavlinkDroneService implements DroneService {
         lastBatteryUpdate: now,
       );
       _telemetryController.add(_currentTelemetry);
-      _logTelemetryThrottled("SYS_STATUS: voltage=${volts}V, percent=${(pct * 100).toStringAsFixed(0)}%");
+      _logTelemetryThrottled(
+        "SYS_STATUS: voltage=${volts}V, percent=${(pct * 100).toStringAsFixed(0)}%",
+      );
     } else if (msg is BatteryStatus) {
       int firstVoltMv = msg.voltages.isNotEmpty ? msg.voltages.first : 0;
-      double volts = firstVoltMv > 0 ? double.parse((firstVoltMv / 1000.0).toStringAsFixed(2)) : _currentTelemetry.batteryVoltage;
+      double volts = firstVoltMv > 0
+          ? double.parse((firstVoltMv / 1000.0).toStringAsFixed(2))
+          : _currentTelemetry.batteryVoltage;
       double pct = msg.batteryRemaining >= 0 && msg.batteryRemaining <= 100
           ? msg.batteryRemaining / 100.0
           : _currentTelemetry.batteryPercent;
@@ -702,15 +778,19 @@ class MavlinkDroneService implements DroneService {
         lastGpsUpdate: now,
       );
       _telemetryController.add(_currentTelemetry);
-      _logTelemetryThrottled("GPS_RAW_INT: satellites=${msg.satellitesVisible}, fix=${msg.fixType}");
+      _logTelemetryThrottled(
+        "GPS_RAW_INT: satellites=${msg.satellitesVisible}, fix=${msg.fixType}",
+      );
     } else if (msg is GlobalPositionInt) {
       double lat = msg.lat / 1E7;
       double lon = msg.lon / 1E7;
       double alt = msg.relativeAlt / 1000.0;
       double hdg = msg.hdg / 100.0;
 
-      final double? currentHomeLat = _currentTelemetry.homeLatitude ?? (lat != 0.0 ? lat : null);
-      final double? currentHomeLon = _currentTelemetry.homeLongitude ?? (lon != 0.0 ? lon : null);
+      final double? currentHomeLat =
+          _currentTelemetry.homeLatitude ?? (lat != 0.0 ? lat : null);
+      final double? currentHomeLon =
+          _currentTelemetry.homeLongitude ?? (lon != 0.0 ? lon : null);
 
       _currentTelemetry = _currentTelemetry.copyWith(
         latitude: lat,
@@ -724,8 +804,12 @@ class MavlinkDroneService implements DroneService {
         lastGlobalPosition: now,
       );
       _telemetryController.add(_currentTelemetry);
-      _logTelemetryThrottled("[TAKEOFF TELEMETRY] altitude=${alt.toStringAsFixed(1)}m");
-      _logTelemetryThrottled("GLOBAL_POSITION_INT: lat=$lat, lon=$lon, alt=${alt}m, hdg=$hdg°");
+      _logTelemetryThrottled(
+        "[TAKEOFF TELEMETRY] altitude=${alt.toStringAsFixed(1)}m",
+      );
+      _logTelemetryThrottled(
+        "GLOBAL_POSITION_INT: lat=$lat, lon=$lon, alt=${alt}m, hdg=$hdg°",
+      );
     } else if (msg is Attitude) {
       _currentTelemetry = _currentTelemetry.copyWith(
         roll: msg.roll * 180.0 / pi,
@@ -746,27 +830,39 @@ class MavlinkDroneService implements DroneService {
       );
       _telemetryController.add(_currentTelemetry);
     } else if (msg is CommandAck) {
-      _logDiagnostic("COMMAND_ACK received: command=${msg.command}, result=${msg.result}");
+      _logDiagnostic(
+        "COMMAND_ACK received: command=${msg.command}, result=${msg.result}",
+      );
 
-      if (msg.command == 176) { // MAV_CMD_DO_SET_MODE
+      if (msg.command == 176) {
+        // MAV_CMD_DO_SET_MODE
         if (msg.result == 0) {
           // Accepted, wait for heartbeat confirmation
         } else {
-          if (_modeChangeCompleter != null && !_modeChangeCompleter!.isCompleted) {
-            _modeChangeCompleter!.completeError(Exception("Mode change rejected: result code ${msg.result}"));
+          if (_modeChangeCompleter != null &&
+              !_modeChangeCompleter!.isCompleted) {
+            _modeChangeCompleter!.completeError(
+              Exception("Mode change rejected: result code ${msg.result}"),
+            );
           }
           _cleanupModeChange();
         }
-      } else if (msg.command == 400) { // MAV_CMD_COMPONENT_ARM_DISARM
+      } else if (msg.command == 400) {
+        // MAV_CMD_COMPONENT_ARM_DISARM
         if (msg.result == 0) {
           // Accepted, wait for heartbeat confirmation
         } else {
           if (_armCompleter != null && !_armCompleter!.isCompleted) {
-            _armCompleter!.completeError(Exception("Arm/Disarm rejected: result code ${msg.result} (Pre-arm check or state fault)"));
+            _armCompleter!.completeError(
+              Exception(
+                "Arm/Disarm rejected: result code ${msg.result} (Pre-arm check or state fault)",
+              ),
+            );
           }
           _cleanupArmChange();
         }
-      } else if (msg.command == 22) { // MAV_CMD_NAV_TAKEOFF
+      } else if (msg.command == 22) {
+        // MAV_CMD_NAV_TAKEOFF
         _logDiagnostic("[TAKEOFF ACK] result=${msg.result}");
         if (msg.result == 0) {
           if (_takeoffCompleter != null && !_takeoffCompleter!.isCompleted) {
@@ -774,30 +870,49 @@ class MavlinkDroneService implements DroneService {
           }
         } else {
           if (_takeoffCompleter != null && !_takeoffCompleter!.isCompleted) {
-            _takeoffCompleter!.completeError(Exception("Takeoff rejected: result code ${msg.result}"));
+            _takeoffCompleter!.completeError(
+              Exception("Takeoff rejected: result code ${msg.result}"),
+            );
           }
         }
         _cleanupTakeoff();
       }
     } else if (msg is Statustext) {
-      final textStr = String.fromCharCodes(msg.text.where((c) => c != 0)).trim();
+      final textStr = String.fromCharCodes(
+        msg.text.where((c) => c != 0),
+      ).trim();
       _logDiagnostic("STATUSTEXT (severity ${msg.severity}): $textStr");
-      _currentDiagnostics = _currentDiagnostics.copyWith(lastStatusText: textStr);
+      _currentDiagnostics = _currentDiagnostics.copyWith(
+        lastStatusText: textStr,
+      );
     } else if (msg is MissionRequest || msg is MissionRequestInt) {
-      final int requestedSeq = msg is MissionRequest ? msg.seq : (msg as MissionRequestInt).seq;
+      final int requestedSeq = msg is MissionRequest
+          ? msg.seq
+          : (msg as MissionRequestInt).seq;
       _logDiagnostic("[MISSION REQUEST] index=$requestedSeq");
-      if (_missionUploadCompleter != null && !_missionUploadCompleter!.isCompleted) {
+      if (_missionUploadCompleter != null &&
+          !_missionUploadCompleter!.isCompleted) {
         if (requestedSeq >= 0 && requestedSeq < _uploadingWaypoints.length) {
           final item = _uploadingWaypoints[requestedSeq];
-          final frame = MavlinkFrame.v2(_sequenceNumber++, _config.sourceSystemId, _config.sourceComponentId, item);
+          final frame = MavlinkFrame.v2(
+            _sequenceNumber++,
+            _config.sourceSystemId,
+            _config.sourceComponentId,
+            item,
+          );
           final packet = frame.serialize();
           _logDiagnostic("[MISSION TX] item=$requestedSeq");
           _sendMavlinkPacket(packet);
 
           _missionUploadTimeoutTimer?.cancel();
           _missionUploadTimeoutTimer = Timer(const Duration(seconds: 5), () {
-            if (_missionUploadCompleter != null && !_missionUploadCompleter!.isCompleted) {
-              _missionUploadCompleter!.completeError(TimeoutException("Mission upload timed out waiting for next request"));
+            if (_missionUploadCompleter != null &&
+                !_missionUploadCompleter!.isCompleted) {
+              _missionUploadCompleter!.completeError(
+                TimeoutException(
+                  "Mission upload timed out waiting for next request",
+                ),
+              );
             }
             _cleanupMissionUpload();
           });
@@ -805,11 +920,14 @@ class MavlinkDroneService implements DroneService {
       }
     } else if (msg is MissionAck) {
       _logDiagnostic("[MISSION ACK] result=${msg.type}");
-      if (_missionUploadCompleter != null && !_missionUploadCompleter!.isCompleted) {
+      if (_missionUploadCompleter != null &&
+          !_missionUploadCompleter!.isCompleted) {
         if (msg.type == 0) {
           _missionUploadCompleter!.complete(true);
         } else {
-          _missionUploadCompleter!.completeError(Exception("Mission upload rejected with error code: ${msg.type}"));
+          _missionUploadCompleter!.completeError(
+            Exception("Mission upload rejected with error code: ${msg.type}"),
+          );
         }
         _cleanupMissionUpload();
       }
@@ -828,7 +946,8 @@ class MavlinkDroneService implements DroneService {
 
   void _logTelemetryThrottled(String msg) {
     final now = DateTime.now();
-    if (_lastTelemetryLogTime == null || now.difference(_lastTelemetryLogTime!) >= const Duration(seconds: 3)) {
+    if (_lastTelemetryLogTime == null ||
+        now.difference(_lastTelemetryLogTime!) >= const Duration(seconds: 3)) {
       _lastTelemetryLogTime = now;
       _logDiagnostic(msg);
     }
@@ -854,58 +973,95 @@ class MavlinkDroneService implements DroneService {
 
   String _resolveFlightMode(int customMode) {
     switch (customMode) {
-      case 0: return 'STABILIZE';
-      case 1: return 'ACRO';
-      case 2: return 'ALT_HOLD';
-      case 3: return 'AUTO';
-      case 4: return 'GUIDED';
-      case 5: return 'LOITER';
-      case 6: return 'RTL';
-      case 7: return 'CIRCLE';
-      case 9: return 'LAND';
-      case 11: return 'DRIFT';
-      case 13: return 'SPORT';
-      case 14: return 'FLIP';
-      case 15: return 'AUTOTUNE';
-      case 16: return 'POSHOLD';
-      case 17: return 'BRAKE';
-      case 18: return 'THROW';
-      case 19: return 'AVOID_ADSB';
-      case 20: return 'GUIDED_NOGPS';
-      case 21: return 'SMART_RTL';
-      default: return 'MODE:$customMode';
+      case 0:
+        return 'STABILIZE';
+      case 1:
+        return 'ACRO';
+      case 2:
+        return 'ALT_HOLD';
+      case 3:
+        return 'AUTO';
+      case 4:
+        return 'GUIDED';
+      case 5:
+        return 'LOITER';
+      case 6:
+        return 'RTL';
+      case 7:
+        return 'CIRCLE';
+      case 9:
+        return 'LAND';
+      case 11:
+        return 'DRIFT';
+      case 13:
+        return 'SPORT';
+      case 14:
+        return 'FLIP';
+      case 15:
+        return 'AUTOTUNE';
+      case 16:
+        return 'POSHOLD';
+      case 17:
+        return 'BRAKE';
+      case 18:
+        return 'THROW';
+      case 19:
+        return 'AVOID_ADSB';
+      case 20:
+        return 'GUIDED_NOGPS';
+      case 21:
+        return 'SMART_RTL';
+      default:
+        return 'MODE:$customMode';
     }
   }
 
   String _resolveVehicleType(int type) {
     switch (type) {
-      case 1: return 'Fixed Wing';
-      case 2: return 'ArduCopter (Quad)';
-      case 3: return 'Coaxial Helicopter';
-      case 4: return 'Helicopter';
-      case 10: return 'Ground Rover';
-      case 11: return 'Surface Boat';
-      case 12: return 'Submarine';
-      case 13: return 'Hexarotor';
-      case 14: return 'Octorotor';
-      case 15: return 'Tricopter';
-      default: return 'Type $type';
+      case 1:
+        return 'Fixed Wing';
+      case 2:
+        return 'ArduCopter (Quad)';
+      case 3:
+        return 'Coaxial Helicopter';
+      case 4:
+        return 'Helicopter';
+      case 10:
+        return 'Ground Rover';
+      case 11:
+        return 'Surface Boat';
+      case 12:
+        return 'Submarine';
+      case 13:
+        return 'Hexarotor';
+      case 14:
+        return 'Octorotor';
+      case 15:
+        return 'Tricopter';
+      default:
+        return 'Type $type';
     }
   }
 
   String _resolveAutopilotType(int autopilot) {
     switch (autopilot) {
-      case 3: return 'ArduPilot';
-      case 12: return 'PX4';
-      case 0: return 'Generic';
-      default: return 'Autopilot $autopilot';
+      case 3:
+        return 'ArduPilot';
+      case 12:
+        return 'PX4';
+      case 0:
+        return 'Generic';
+      default:
+        return 'Autopilot $autopilot';
     }
   }
 
   // --- Step-by-Step Test Connection Feature ---
 
   @override
-  Future<MavlinkTestResult> testConnection(MavlinkConnectionConfig testConfig) async {
+  Future<MavlinkTestResult> testConnection(
+    MavlinkConnectionConfig testConfig,
+  ) async {
     final validationErrors = testConfig.validate();
     if (validationErrors.isNotEmpty) {
       return MavlinkTestResult(
@@ -926,44 +1082,63 @@ class MavlinkDroneService implements DroneService {
 
     try {
       InternetAddress bindAddr = InternetAddress.anyIPv4;
-      if (testConfig.bindAddress != '0.0.0.0' && 
-          testConfig.bindAddress.isNotEmpty && 
+      if (testConfig.bindAddress != '0.0.0.0' &&
+          testConfig.bindAddress.isNotEmpty &&
           testConfig.bindAddress.toLowerCase() != 'any') {
         final parsed = InternetAddress.tryParse(testConfig.bindAddress);
         if (parsed != null) bindAddr = parsed;
       }
 
-      testSocket = await RawDatagramSocket.bind(bindAddr, testConfig.localPort, reuseAddress: true);
+      testSocket = await RawDatagramSocket.bind(
+        bindAddr,
+        testConfig.localPort,
+        reuseAddress: true,
+      );
 
       timeoutTimer = Timer(Duration(seconds: testConfig.heartbeatTimeoutSeconds), () {
         if (!completer.isCompleted) {
           if (testDatagrams == 0) {
-            completer.complete(MavlinkTestResult(
-              success: false,
-              message: 'Diagnostic failure [B/C]: Socket bound on ${bindAddr.address}:${testConfig.localPort}, but 0 UDP packets arrived within ${testConfig.heartbeatTimeoutSeconds}s. Verify MAVProxy is forwarding to udp:<PHONE_IP>:${testConfig.localPort} or test with Windows PowerShell UDP sender.',
-              rawDatagramsReceived: 0,
-              mavlinkFramesReceived: 0,
-              protocolVersion: testProtocol,
-            ));
+            completer.complete(
+              MavlinkTestResult(
+                success: false,
+                message:
+                    'Diagnostic failure [B/C]: Socket bound on ${bindAddr.address}:${testConfig.localPort}, but 0 UDP packets arrived within ${testConfig.heartbeatTimeoutSeconds}s. Verify MAVProxy is forwarding to udp:<PHONE_IP>:${testConfig.localPort} or test with Windows PowerShell UDP sender.',
+                rawDatagramsReceived: 0,
+                mavlinkFramesReceived: 0,
+                protocolVersion: testProtocol,
+              ),
+            );
           } else if (testFrames == 0) {
-            final String senderInfo = testSenderAddr != null ? 'from ${testSenderAddr!.address}:$testSenderPort' : '';
-            completer.complete(MavlinkTestResult(
-              success: true,
-              message: 'UDP Transport SUCCESS [A-B Verified]: Received $testDatagrams raw UDP packets $senderInfo. UDP network path is open and functioning properly (Non-MAVLink payload detected).',
-              rawDatagramsReceived: testDatagrams,
-              mavlinkFramesReceived: 0,
-              protocolVersion: testProtocol,
-              remoteAddress: testSenderAddr != null ? '${testSenderAddr!.address}:$testSenderPort' : null,
-            ));
+            final String senderInfo = testSenderAddr != null
+                ? 'from ${testSenderAddr!.address}:$testSenderPort'
+                : '';
+            completer.complete(
+              MavlinkTestResult(
+                success: true,
+                message:
+                    'UDP Transport SUCCESS [A-B Verified]: Received $testDatagrams raw UDP packets $senderInfo. UDP network path is open and functioning properly (Non-MAVLink payload detected).',
+                rawDatagramsReceived: testDatagrams,
+                mavlinkFramesReceived: 0,
+                protocolVersion: testProtocol,
+                remoteAddress: testSenderAddr != null
+                    ? '${testSenderAddr!.address}:$testSenderPort'
+                    : null,
+              ),
+            );
           } else {
-            completer.complete(MavlinkTestResult(
-              success: false,
-              message: 'Diagnostic failure [E]: Received $testFrames MAVLink frames, but no HEARTBEAT was detected within ${testConfig.heartbeatTimeoutSeconds}s.',
-              rawDatagramsReceived: testDatagrams,
-              mavlinkFramesReceived: testFrames,
-              protocolVersion: testProtocol,
-              remoteAddress: testSenderAddr != null ? '${testSenderAddr!.address}:$testSenderPort' : null,
-            ));
+            completer.complete(
+              MavlinkTestResult(
+                success: false,
+                message:
+                    'Diagnostic failure [E]: Received $testFrames MAVLink frames, but no HEARTBEAT was detected within ${testConfig.heartbeatTimeoutSeconds}s.',
+                rawDatagramsReceived: testDatagrams,
+                mavlinkFramesReceived: testFrames,
+                protocolVersion: testProtocol,
+                remoteAddress: testSenderAddr != null
+                    ? '${testSenderAddr!.address}:$testSenderPort'
+                    : null,
+              ),
+            );
           }
         }
       });
@@ -973,18 +1148,23 @@ class MavlinkDroneService implements DroneService {
         if (frame.message is Heartbeat) {
           final hb = frame.message as Heartbeat;
           if (!completer.isCompleted) {
-            completer.complete(MavlinkTestResult(
-              success: true,
-              message: 'Diagnostic SUCCESS [A-E]: Live MAVLink heartbeat verified from Sys=${frame.systemId}, Comp=${frame.componentId} via ${testSenderAddr?.address ?? "remote"}:${testSenderPort ?? testConfig.localPort}.',
-              systemId: frame.systemId,
-              componentId: frame.componentId,
-              vehicleType: _resolveVehicleType(hb.type),
-              autopilotType: _resolveAutopilotType(hb.autopilot),
-              remoteAddress: testSenderAddr != null ? '${testSenderAddr!.address}:$testSenderPort' : 'Remote Host',
-              rawDatagramsReceived: testDatagrams,
-              mavlinkFramesReceived: testFrames,
-              protocolVersion: testProtocol,
-            ));
+            completer.complete(
+              MavlinkTestResult(
+                success: true,
+                message:
+                    'Diagnostic SUCCESS [A-E]: Live MAVLink heartbeat verified from Sys=${frame.systemId}, Comp=${frame.componentId} via ${testSenderAddr?.address ?? "remote"}:${testSenderPort ?? testConfig.localPort}.',
+                systemId: frame.systemId,
+                componentId: frame.componentId,
+                vehicleType: _resolveVehicleType(hb.type),
+                autopilotType: _resolveAutopilotType(hb.autopilot),
+                remoteAddress: testSenderAddr != null
+                    ? '${testSenderAddr!.address}:$testSenderPort'
+                    : 'Remote Host',
+                rawDatagramsReceived: testDatagrams,
+                mavlinkFramesReceived: testFrames,
+                protocolVersion: testProtocol,
+              ),
+            );
           }
         }
       });
@@ -1044,11 +1224,13 @@ class MavlinkDroneService implements DroneService {
       throw StateError("An arm/disarm command is already in progress.");
     }
 
-    _logDiagnostic("[ARM REQUEST] targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId");
+    _logDiagnostic(
+      "[ARM REQUEST] targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId",
+    );
 
     final command = CommandLong(
       command: 400, // MAV_CMD_COMPONENT_ARM_DISARM
-      param1: 1.0,  // Arm
+      param1: 1.0, // Arm
       param2: 0.0,
       param3: 0.0,
       param4: 0.0,
@@ -1060,7 +1242,12 @@ class MavlinkDroneService implements DroneService {
       confirmation: 0,
     );
 
-    final frame = MavlinkFrame.v2(_sequenceNumber++, _config.sourceSystemId, _config.sourceComponentId, command);
+    final frame = MavlinkFrame.v2(
+      _sequenceNumber++,
+      _config.sourceSystemId,
+      _config.sourceComponentId,
+      command,
+    );
     final packet = frame.serialize();
 
     _targetArmState = true;
@@ -1102,11 +1289,13 @@ class MavlinkDroneService implements DroneService {
       throw StateError("An arm/disarm command is already in progress.");
     }
 
-    _logDiagnostic("[DISARM REQUEST] targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId");
+    _logDiagnostic(
+      "[DISARM REQUEST] targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId",
+    );
 
     final command = CommandLong(
       command: 400, // MAV_CMD_COMPONENT_ARM_DISARM
-      param1: 0.0,  // Disarm
+      param1: 0.0, // Disarm
       param2: 0.0,
       param3: 0.0,
       param4: 0.0,
@@ -1118,7 +1307,12 @@ class MavlinkDroneService implements DroneService {
       confirmation: 0,
     );
 
-    final frame = MavlinkFrame.v2(_sequenceNumber++, _config.sourceSystemId, _config.sourceComponentId, command);
+    final frame = MavlinkFrame.v2(
+      _sequenceNumber++,
+      _config.sourceSystemId,
+      _config.sourceComponentId,
+      command,
+    );
     final packet = frame.serialize();
 
     _targetArmState = false;
@@ -1130,7 +1324,9 @@ class MavlinkDroneService implements DroneService {
     _armTimeoutTimer = Timer(const Duration(seconds: 3), () {
       if (_armCompleter != null && !_armCompleter!.isCompleted) {
         _logDiagnostic("[DISARM TIMEOUT] false");
-        _armCompleter!.completeError(TimeoutException("Disarm command timed out"));
+        _armCompleter!.completeError(
+          TimeoutException("Disarm command timed out"),
+        );
       }
       _cleanupArmChange();
     });
@@ -1147,7 +1343,14 @@ class MavlinkDroneService implements DroneService {
   @override
   Future<bool> setFlightMode(String mode) async {
     final modeUpper = mode.toUpperCase();
-    final supportedModes = ['STABILIZE', 'GUIDED', 'LOITER', 'AUTO', 'RTL', 'LAND'];
+    final supportedModes = [
+      'STABILIZE',
+      'GUIDED',
+      'LOITER',
+      'AUTO',
+      'RTL',
+      'LAND',
+    ];
     if (!supportedModes.contains(modeUpper)) {
       throw ArgumentError("Unsupported flight mode: $mode");
     }
@@ -1166,16 +1369,30 @@ class MavlinkDroneService implements DroneService {
       throw StateError("A mode change is already in progress.");
     }
 
-    _logDiagnostic("[MODE REQUEST] $modeUpper targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId");
+    _logDiagnostic(
+      "[MODE REQUEST] $modeUpper targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId",
+    );
 
     int? customModeVal;
     switch (modeUpper) {
-      case 'STABILIZE': customModeVal = 0; break;
-      case 'AUTO': customModeVal = 3; break;
-      case 'GUIDED': customModeVal = 4; break;
-      case 'LOITER': customModeVal = 5; break;
-      case 'RTL': customModeVal = 6; break;
-      case 'LAND': customModeVal = 9; break;
+      case 'STABILIZE':
+        customModeVal = 0;
+        break;
+      case 'AUTO':
+        customModeVal = 3;
+        break;
+      case 'GUIDED':
+        customModeVal = 4;
+        break;
+      case 'LOITER':
+        customModeVal = 5;
+        break;
+      case 'RTL':
+        customModeVal = 6;
+        break;
+      case 'LAND':
+        customModeVal = 9;
+        break;
     }
 
     if (customModeVal == null) {
@@ -1184,7 +1401,7 @@ class MavlinkDroneService implements DroneService {
 
     final command = CommandLong(
       command: 176, // MAV_CMD_DO_SET_MODE
-      param1: 1.0,  // Enable custom mode
+      param1: 1.0, // Enable custom mode
       param2: customModeVal.toDouble(),
       param3: 0.0,
       param4: 0.0,
@@ -1196,7 +1413,12 @@ class MavlinkDroneService implements DroneService {
       confirmation: 0,
     );
 
-    final frame = MavlinkFrame.v2(_sequenceNumber++, _config.sourceSystemId, _config.sourceComponentId, command);
+    final frame = MavlinkFrame.v2(
+      _sequenceNumber++,
+      _config.sourceSystemId,
+      _config.sourceComponentId,
+      command,
+    );
     final packet = frame.serialize();
 
     _targetMode = modeUpper;
@@ -1208,7 +1430,9 @@ class MavlinkDroneService implements DroneService {
     _modeTimeoutTimer = Timer(const Duration(seconds: 3), () {
       if (_modeChangeCompleter != null && !_modeChangeCompleter!.isCompleted) {
         _logDiagnostic("[MODE TIMEOUT] $modeUpper");
-        _modeChangeCompleter!.completeError(TimeoutException("Mode change timed out"));
+        _modeChangeCompleter!.completeError(
+          TimeoutException("Mode change timed out"),
+        );
       }
       _cleanupModeChange();
     });
@@ -1233,7 +1457,9 @@ class MavlinkDroneService implements DroneService {
   Future<bool> takeoff(double altitudeMeters) async {
     _logDiagnostic("[TAKEOFF REQUEST]");
 
-    final bool isConnected = _connectionState == DroneConnectionState.connected && _currentTelemetry.isConnected;
+    final bool isConnected =
+        _connectionState == DroneConnectionState.connected &&
+        _currentTelemetry.isConnected;
     _logDiagnostic("[TAKEOFF CHECK] connected=$isConnected");
 
     if (!isConnected) {
@@ -1266,7 +1492,9 @@ class MavlinkDroneService implements DroneService {
         relativeAltitude: altitudeMeters,
       );
       _telemetryController.add(_currentTelemetry);
-      _logDiagnostic("[TAKEOFF TELEMETRY] altitude=${_currentTelemetry.altitude}");
+      _logDiagnostic(
+        "[TAKEOFF TELEMETRY] altitude=${_currentTelemetry.altitude}",
+      );
       return true;
     }
 
@@ -1275,7 +1503,9 @@ class MavlinkDroneService implements DroneService {
       _logDiagnostic("[TAKEOFF MODE] requesting GUIDED");
       final modeSuccess = await setFlightMode('GUIDED');
       if (!modeSuccess || _currentTelemetry.flightMode != 'GUIDED') {
-        throw StateError("Failed to transition to GUIDED mode prior to takeoff.");
+        throw StateError(
+          "Failed to transition to GUIDED mode prior to takeoff.",
+        );
       }
       _logDiagnostic("[TAKEOFF MODE] GUIDED confirmed");
     }
@@ -1294,7 +1524,12 @@ class MavlinkDroneService implements DroneService {
       confirmation: 0,
     );
 
-    final frame = MavlinkFrame.v2(_sequenceNumber++, _config.sourceSystemId, _config.sourceComponentId, command);
+    final frame = MavlinkFrame.v2(
+      _sequenceNumber++,
+      _config.sourceSystemId,
+      _config.sourceComponentId,
+      command,
+    );
     final packet = frame.serialize();
 
     _takeoffCompleter = Completer<bool>();
@@ -1305,7 +1540,9 @@ class MavlinkDroneService implements DroneService {
     _takeoffTimeoutTimer = Timer(const Duration(seconds: 5), () {
       if (_takeoffCompleter != null && !_takeoffCompleter!.isCompleted) {
         _logDiagnostic("[TAKEOFF TIMEOUT] $altitudeMeters");
-        _takeoffCompleter!.completeError(TimeoutException("Takeoff command timed out waiting for COMMAND_ACK"));
+        _takeoffCompleter!.completeError(
+          TimeoutException("Takeoff command timed out waiting for COMMAND_ACK"),
+        );
       }
       _cleanupTakeoff();
     });
@@ -1381,23 +1618,25 @@ class MavlinkDroneService implements DroneService {
     final list = <MissionItemInt>[homeItem];
     for (int i = 0; i < waypoints.length; i++) {
       final wp = waypoints[i];
-      list.add(MissionItemInt(
-        seq: i + 1,
-        frame: 3, // MAV_FRAME_GLOBAL_RELATIVE_ALT
-        command: 16, // MAV_CMD_NAV_WAYPOINT
-        current: 0,
-        autocontinue: 1,
-        param1: wp.hoverTime.toDouble(),
-        param2: 2.0, // 2m acceptance radius
-        param3: 0.0,
-        param4: 0.0,
-        x: (wp.latitude * 1E7).toInt(),
-        y: (wp.longitude * 1E7).toInt(),
-        z: wp.altitude,
-        targetSystem: effectiveTargetSystemId,
-        targetComponent: effectiveTargetComponentId,
-        missionType: 0,
-      ));
+      list.add(
+        MissionItemInt(
+          seq: i + 1,
+          frame: 3, // MAV_FRAME_GLOBAL_RELATIVE_ALT
+          command: 16, // MAV_CMD_NAV_WAYPOINT
+          current: 0,
+          autocontinue: 1,
+          param1: wp.hoverTime.toDouble(),
+          param2: 2.0, // 2m acceptance radius
+          param3: 0.0,
+          param4: 0.0,
+          x: (wp.latitude * 1E7).toInt(),
+          y: (wp.longitude * 1E7).toInt(),
+          z: wp.altitude,
+          targetSystem: effectiveTargetSystemId,
+          targetComponent: effectiveTargetComponentId,
+          missionType: 0,
+        ),
+      );
     }
 
     _uploadingWaypoints = list;
@@ -1411,16 +1650,24 @@ class MavlinkDroneService implements DroneService {
       opaqueId: 0,
     );
 
-    final frame = MavlinkFrame.v2(_sequenceNumber++, _config.sourceSystemId, _config.sourceComponentId, countMsg);
+    final frame = MavlinkFrame.v2(
+      _sequenceNumber++,
+      _config.sourceSystemId,
+      _config.sourceComponentId,
+      countMsg,
+    );
     final packet = frame.serialize();
 
     _logDiagnostic("[MISSION TX] count=${_uploadingWaypoints.length}");
     _sendMavlinkPacket(packet);
 
     _missionUploadTimeoutTimer = Timer(const Duration(seconds: 5), () {
-      if (_missionUploadCompleter != null && !_missionUploadCompleter!.isCompleted) {
+      if (_missionUploadCompleter != null &&
+          !_missionUploadCompleter!.isCompleted) {
         _logDiagnostic("[MISSION TIMEOUT] upload");
-        _missionUploadCompleter!.completeError(TimeoutException("Mission upload timed out"));
+        _missionUploadCompleter!.completeError(
+          TimeoutException("Mission upload timed out"),
+        );
       }
       _cleanupMissionUpload();
     });
@@ -1464,7 +1711,12 @@ class MavlinkDroneService implements DroneService {
       targetComponent: effectiveTargetComponentId,
       missionType: 0,
     );
-    final frame = MavlinkFrame.v2(_sequenceNumber++, _config.sourceSystemId, _config.sourceComponentId, clearMsg);
+    final frame = MavlinkFrame.v2(
+      _sequenceNumber++,
+      _config.sourceSystemId,
+      _config.sourceComponentId,
+      clearMsg,
+    );
     final packet = frame.serialize();
     _sendMavlinkPacket(packet);
 
@@ -1556,7 +1808,10 @@ class MavlinkDroneService implements DroneService {
     }
     if (!_isUsingHardware) {
       _isMissionActive = false;
-      _currentTelemetry = _currentTelemetry.copyWith(flightMode: 'LOITER', speed: 0.0);
+      _currentTelemetry = _currentTelemetry.copyWith(
+        flightMode: 'LOITER',
+        speed: 0.0,
+      );
       _telemetryController.add(_currentTelemetry);
       return true;
     }
@@ -1571,7 +1826,10 @@ class MavlinkDroneService implements DroneService {
     if (!_isUsingHardware) {
       if (_activeWaypoints.isNotEmpty) {
         _isMissionActive = true;
-        _currentTelemetry = _currentTelemetry.copyWith(flightMode: 'AUTO', speed: 5.0);
+        _currentTelemetry = _currentTelemetry.copyWith(
+          flightMode: 'AUTO',
+          speed: 5.0,
+        );
         _telemetryController.add(_currentTelemetry);
         return true;
       }
@@ -1588,7 +1846,10 @@ class MavlinkDroneService implements DroneService {
     if (!_isUsingHardware) {
       _isMissionActive = false;
       _missionTimer?.cancel();
-      _currentTelemetry = _currentTelemetry.copyWith(flightMode: 'RTL', speed: 8.0);
+      _currentTelemetry = _currentTelemetry.copyWith(
+        flightMode: 'RTL',
+        speed: 8.0,
+      );
       _telemetryController.add(_currentTelemetry);
 
       Timer(const Duration(seconds: 6), () {
@@ -1614,7 +1875,10 @@ class MavlinkDroneService implements DroneService {
     if (!_isUsingHardware) {
       _isMissionActive = false;
       _missionTimer?.cancel();
-      _currentTelemetry = _currentTelemetry.copyWith(flightMode: 'LAND', speed: 1.2);
+      _currentTelemetry = _currentTelemetry.copyWith(
+        flightMode: 'LAND',
+        speed: 1.2,
+      );
       _telemetryController.add(_currentTelemetry);
 
       Timer(const Duration(seconds: 5), () {
@@ -1641,7 +1905,9 @@ class MavlinkDroneService implements DroneService {
           final destination = InternetAddress(_config.remoteHost);
           _socket!.send(packet, destination, _config.remotePort);
         } catch (e) {
-          _logDiagnostic("Error sending UDP packet to direct host ${_config.remoteHost}: $e");
+          _logDiagnostic(
+            "Error sending UDP packet to direct host ${_config.remoteHost}: $e",
+          );
         }
       }
     } else {
@@ -1653,12 +1919,18 @@ class MavlinkDroneService implements DroneService {
           final destination = InternetAddress(_config.remoteHost);
           _socket!.send(packet, destination, _config.remotePort);
         } catch (e) {
-          _logDiagnostic("Error sending UDP packet to fallback host ${_config.remoteHost}: $e");
+          _logDiagnostic(
+            "Error sending UDP packet to fallback host ${_config.remoteHost}: $e",
+          );
         }
       } else {
         // Fallback before any remote packet has arrived (e.g. testing / local loopback)
         try {
-          _socket!.send(packet, InternetAddress.loopbackIPv4, _config.localPort);
+          _socket!.send(
+            packet,
+            InternetAddress.loopbackIPv4,
+            _config.localPort,
+          );
         } catch (e) {
           _logDiagnostic("Error sending UDP packet: $e");
         }

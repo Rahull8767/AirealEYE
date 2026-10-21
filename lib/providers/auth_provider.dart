@@ -6,12 +6,7 @@ class AuthState {
   final String? name;
   final String? role;
 
-  AuthState({
-    required this.isAuthenticated,
-    this.email,
-    this.name,
-    this.role,
-  });
+  AuthState({required this.isAuthenticated, this.email, this.name, this.role});
 
   factory AuthState.initial() => AuthState(isAuthenticated: false);
 }

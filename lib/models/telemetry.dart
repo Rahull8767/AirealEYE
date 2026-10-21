@@ -135,13 +135,23 @@ class DroneTelemetry {
   }
 
   // Formatting helpers to prevent fake zeroes when data hasn't arrived
-  String get altitudeDisplay => hasReceivedPosition || isConnected ? '${altitude.toStringAsFixed(1)} m' : '--';
-  String get speedDisplay => hasReceivedVfrHud || isConnected ? '${speed.toStringAsFixed(1)} m/s' : '--';
-  String get headingDisplay => hasReceivedPosition || isConnected ? '${heading.toStringAsFixed(0)}°' : '--';
-  String get batteryVoltageDisplay => hasReceivedBattery ? '${batteryVoltage.toStringAsFixed(1)} V' : '--';
-  String get batteryPercentDisplay => hasReceivedBattery ? '${batteryPercentage.toStringAsFixed(0)}%' : '--';
-  String get satellitesDisplay => hasReceivedGps ? '$satellites Sats' : 'Waiting...';
-  String get waypointProgressDisplay => totalWaypoints > 0 ? 'WP $currentWaypoint / $totalWaypoints' : '--';
+  String get altitudeDisplay => hasReceivedPosition || isConnected
+      ? '${altitude.toStringAsFixed(1)} m'
+      : '--';
+  String get speedDisplay => hasReceivedVfrHud || isConnected
+      ? '${speed.toStringAsFixed(1)} m/s'
+      : '--';
+  String get headingDisplay => hasReceivedPosition || isConnected
+      ? '${heading.toStringAsFixed(0)}°'
+      : '--';
+  String get batteryVoltageDisplay =>
+      hasReceivedBattery ? '${batteryVoltage.toStringAsFixed(1)} V' : '--';
+  String get batteryPercentDisplay =>
+      hasReceivedBattery ? '${batteryPercentage.toStringAsFixed(0)}%' : '--';
+  String get satellitesDisplay =>
+      hasReceivedGps ? '$satellites Sats' : 'Waiting...';
+  String get waypointProgressDisplay =>
+      totalWaypoints > 0 ? 'WP $currentWaypoint / $totalWaypoints' : '--';
 
   DroneTelemetry copyWith({
     double? altitude,

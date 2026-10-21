@@ -106,6 +106,7 @@ final userLocationServiceProvider = Provider<UserLocationService>((ref) {
   return UserLocationService();
 });
 
-final userLocationProvider = StateNotifierProvider<UserLocationNotifier, UserLocationState>((ref) {
-  return UserLocationNotifier();
-});
+final userLocationProvider =
+    StateNotifierProvider<UserLocationNotifier, UserLocationState>((ref) {
+      return UserLocationNotifier();
+    });

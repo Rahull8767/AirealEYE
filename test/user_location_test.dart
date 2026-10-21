@@ -5,21 +5,24 @@ import 'package:aerial_eye/providers/user_location_provider.dart';
 
 void main() {
   group('User Location Service & State Tests', () {
-    test('UserLocationResult correctly represents successful phone GPS acquisition', () {
-      const result = UserLocationResult(
-        position: LatLng(12.9716, 77.5946),
-        accuracy: 5.0,
-        altitude: 920.0,
-        heading: 180.0,
-      );
+    test(
+      'UserLocationResult correctly represents successful phone GPS acquisition',
+      () {
+        const result = UserLocationResult(
+          position: LatLng(12.9716, 77.5946),
+          accuracy: 5.0,
+          altitude: 920.0,
+          heading: 180.0,
+        );
 
-      expect(result.isSuccess, isTrue);
-      expect(result.position?.latitude, 12.9716);
-      expect(result.position?.longitude, 77.5946);
-      expect(result.accuracy, 5.0);
-      expect(result.isPermissionDenied, isFalse);
-      expect(result.isServiceDisabled, isFalse);
-    });
+        expect(result.isSuccess, isTrue);
+        expect(result.position?.latitude, 12.9716);
+        expect(result.position?.longitude, 77.5946);
+        expect(result.accuracy, 5.0);
+        expect(result.isPermissionDenied, isFalse);
+        expect(result.isServiceDisabled, isFalse);
+      },
+    );
 
     test('UserLocationResult gracefully handles permission denied state', () {
       const deniedResult = UserLocationResult(
@@ -33,15 +36,18 @@ void main() {
       expect(deniedResult.errorMessage, contains('denied'));
     });
 
-    test('UserLocationResult gracefully handles disabled location services', () {
-      const disabledResult = UserLocationResult(
-        errorMessage: 'Location services are disabled on this device.',
-        isServiceDisabled: true,
-      );
+    test(
+      'UserLocationResult gracefully handles disabled location services',
+      () {
+        const disabledResult = UserLocationResult(
+          errorMessage: 'Location services are disabled on this device.',
+          isServiceDisabled: true,
+        );
 
-      expect(disabledResult.isSuccess, isFalse);
-      expect(disabledResult.isServiceDisabled, isTrue);
-    });
+        expect(disabledResult.isSuccess, isFalse);
+        expect(disabledResult.isServiceDisabled, isTrue);
+      },
+    );
 
     test('UserLocationState copyWith functions correctly', () {
       var state = UserLocationState.initial();

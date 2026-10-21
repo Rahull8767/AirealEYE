@@ -31,7 +31,8 @@ class FlightTrackService {
   });
 
   List<FlightBreadcrumb> get breadcrumbs => List.unmodifiable(_breadcrumbs);
-  List<LatLng> get polylinePoints => _breadcrumbs.map((b) => b.position).toList();
+  List<LatLng> get polylinePoints =>
+      _breadcrumbs.map((b) => b.position).toList();
 
   int get pointCount => _breadcrumbs.length;
 
@@ -41,35 +42,47 @@ class FlightTrackService {
     if (!telemetry.isConnected) return false;
     if (telemetry.latitude == 0.0 && telemetry.longitude == 0.0) return false;
     if (telemetry.latitude < -90.0 || telemetry.latitude > 90.0) return false;
-    if (telemetry.longitude < -180.0 || telemetry.longitude > 180.0) return false;
+    if (telemetry.longitude < -180.0 || telemetry.longitude > 180.0)
+      return false;
 
     final LatLng newPos = LatLng(telemetry.latitude, telemetry.longitude);
 
     if (_breadcrumbs.isNotEmpty) {
       final FlightBreadcrumb last = _breadcrumbs.last;
       const Distance distanceCalculator = Distance();
-      final double distanceMeters = distanceCalculator.as(LengthUnit.Meter, last.position, newPos);
+      final double distanceMeters = distanceCalculator.as(
+        LengthUnit.Meter,
+        last.position,
+        newPos,
+      );
 
       final double headingDiff = (last.heading - telemetry.heading).abs();
-      final double normalizedHeadingDiff = headingDiff > 180 ? 360 - headingDiff : headingDiff;
+      final double normalizedHeadingDiff = headingDiff > 180
+          ? 360 - headingDiff
+          : headingDiff;
 
       // Filter stationary jitter unless there's meaningful movement (>1.5m) or heading change while in motion
-      if (distanceMeters < minDistanceThresholdMeters && (normalizedHeadingDiff < 20 || telemetry.speed < 0.5)) {
+      if (distanceMeters < minDistanceThresholdMeters &&
+          (normalizedHeadingDiff < 20 || telemetry.speed < 0.5)) {
         return false;
       }
     }
 
     if (_breadcrumbs.length >= maxPoints) {
-      _breadcrumbs.removeAt(0); // Evict oldest point to keep memory strictly bounded
+      _breadcrumbs.removeAt(
+        0,
+      ); // Evict oldest point to keep memory strictly bounded
     }
 
-    _breadcrumbs.add(FlightBreadcrumb(
-      position: newPos,
-      altitude: telemetry.altitude,
-      heading: telemetry.heading,
-      speed: telemetry.speed,
-      timestamp: DateTime.now(),
-    ));
+    _breadcrumbs.add(
+      FlightBreadcrumb(
+        position: newPos,
+        altitude: telemetry.altitude,
+        heading: telemetry.heading,
+        speed: telemetry.speed,
+        timestamp: DateTime.now(),
+      ),
+    );
 
     return true;
   }
@@ -85,7 +98,11 @@ class FlightTrackService {
     const Distance dist = Distance();
     double sum = 0.0;
     for (int i = 0; i < _breadcrumbs.length - 1; i++) {
-      sum += dist.as(LengthUnit.Meter, _breadcrumbs[i].position, _breadcrumbs[i + 1].position);
+      sum += dist.as(
+        LengthUnit.Meter,
+        _breadcrumbs[i].position,
+        _breadcrumbs[i + 1].position,
+      );
     }
     return sum;
   }

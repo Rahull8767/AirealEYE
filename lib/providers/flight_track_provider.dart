@@ -77,6 +77,7 @@ class FlightTrackNotifier extends StateNotifier<FlightTrackState> {
   }
 }
 
-final flightTrackProvider = StateNotifierProvider<FlightTrackNotifier, FlightTrackState>((ref) {
-  return FlightTrackNotifier(ref);
-});
+final flightTrackProvider =
+    StateNotifierProvider<FlightTrackNotifier, FlightTrackState>((ref) {
+      return FlightTrackNotifier(ref);
+    });

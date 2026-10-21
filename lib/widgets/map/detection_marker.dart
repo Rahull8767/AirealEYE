@@ -7,24 +7,23 @@ class DetectionMarkerWidget extends StatelessWidget {
   final AiDetection detection;
   final VoidCallback? onTap;
 
-  const DetectionMarkerWidget({
-    super.key,
-    required this.detection,
-    this.onTap,
-  });
+  const DetectionMarkerWidget({super.key, required this.detection, this.onTap});
 
   IconData _iconForType(DetectionType type) {
     switch (type) {
-      case DetectionType.pothole:
-        return LucideIcons.circle;
-      case DetectionType.roadCrack:
-        return LucideIcons.gitCommit;
-      case DetectionType.garbage:
-        return LucideIcons.trash2;
-      case DetectionType.waterLogging:
-        return LucideIcons.droplets;
+      case DetectionType.person:
+        return LucideIcons.user;
       case DetectionType.animal:
         return LucideIcons.dog;
+      case DetectionType.pothole:
+        return LucideIcons.circle;
+      case DetectionType.waste:
+      case DetectionType.garbage:
+        return LucideIcons.trash2;
+      case DetectionType.roadCrack:
+        return LucideIcons.gitCommit;
+      case DetectionType.waterLogging:
+        return LucideIcons.droplets;
       case DetectionType.obstacle:
         return LucideIcons.construction;
       case DetectionType.brokenRoadSign:

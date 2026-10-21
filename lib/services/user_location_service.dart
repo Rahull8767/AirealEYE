@@ -48,7 +48,8 @@ class UserLocationService {
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       return const UserLocationResult(
-        errorMessage: 'Location services are disabled on this device. Please turn on GPS.',
+        errorMessage:
+            'Location services are disabled on this device. Please turn on GPS.',
         isServiceDisabled: true,
       );
     }
@@ -67,7 +68,8 @@ class UserLocationService {
 
     if (permission == LocationPermission.deniedForever) {
       return const UserLocationResult(
-        errorMessage: 'Location permission is permanently denied. Enable in device App Settings.',
+        errorMessage:
+            'Location permission is permanently denied. Enable in device App Settings.',
         isPermissionDenied: true,
       );
     }

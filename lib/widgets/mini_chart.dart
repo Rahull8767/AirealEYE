@@ -23,7 +23,9 @@ class MiniChart extends StatelessWidget {
 
     final double minVal = dataPoints.reduce((a, b) => a < b ? a : b);
     final double maxVal = dataPoints.reduce((a, b) => a > b ? a : b);
-    final double padding = (maxVal - minVal) == 0 ? 1.0 : (maxVal - minVal) * 0.15;
+    final double padding = (maxVal - minVal) == 0
+        ? 1.0
+        : (maxVal - minVal) * 0.15;
 
     return SizedBox(
       height: 32,

@@ -19,12 +19,18 @@ class PiCameraService {
   final _frameController = StreamController<Uint8List>.broadcast();
   final _diagnosticsController =
       StreamController<CameraDiagnosticsResult>.broadcast();
+  final _detectionsController =
+      StreamController<List<Map<String, dynamic>>>.broadcast();
 
   HttpClient? _httpClient;
   StreamSubscription<List<int>>? _streamSubscription;
   Timer? _reconnectTimer;
   bool _isDisposed = false;
   bool _userExplicitlyDisconnected = false;
+
+  /// Callback when a frame arrives with synchronized X-Detections headers
+  void Function(List<Map<String, dynamic>> detections, Uint8List frameBytes)?
+  onFrameDetectionsReceived;
 
   // Stream performance tracking
   int _framesInCurrentSecond = 0;
@@ -40,6 +46,8 @@ class PiCameraService {
   Stream<Uint8List> get frameStream => _frameController.stream;
   Stream<CameraDiagnosticsResult> get diagnosticsStream =>
       _diagnosticsController.stream;
+  Stream<List<Map<String, dynamic>>> get detectionsStream =>
+      _detectionsController.stream;
 
   // Getters
   CameraStreamState get currentState => _currentState;
@@ -214,12 +222,19 @@ class PiCameraService {
 
         if (frames.isNotEmpty) {
           // Take the newest frame to render, keeping latency minimal
-          final latestDecoded = frames.last.bytes;
+          final newest = frames.last;
+          final latestDecoded = newest.bytes;
           _onNewFrameReceived(latestDecoded, actualUrl, frames.length);
+
+          // If frame carries synchronized X-Detections header, notify listeners
+          if (newest.detections != null && newest.detections!.isNotEmpty) {
+            _detectionsController.add(newest.detections!);
+            onFrameDetectionsReceived?.call(newest.detections!, latestDecoded);
+          }
 
           // Keep remaining unparsed bytes (if any)
           buffer.clear();
-          final remainingIndex = frames.last.endIndex;
+          final remainingIndex = newest.endIndex;
           if (remainingIndex < bytes.length) {
             buffer.add(bytes.sublist(remainingIndex));
           }
@@ -696,11 +711,39 @@ class PiCameraService {
 
         if (endIndex != -1) {
           final frameBytes = data.sublist(startIndex, endIndex);
+
+          // Check if frame was preceded by multipart X-Detections header
+          List<Map<String, dynamic>>? frameDetections;
+          if (startIndex > 0) {
+            final headerLookback = max(0, startIndex - 1024);
+            try {
+              final headerStr = ascii.decode(
+                data.sublist(headerLookback, startIndex),
+                allowInvalid: true,
+              );
+              final match = RegExp(
+                r'X-Detections:\s*([^\r\n]+)',
+                caseSensitive: false,
+              ).firstMatch(headerStr);
+              if (match != null) {
+                final jsonStr = match.group(1)!.trim();
+                final decoded = jsonDecode(jsonStr);
+                if (decoded is List) {
+                  frameDetections = decoded.cast<Map<String, dynamic>>();
+                } else if (decoded is Map && decoded['detections'] is List) {
+                  frameDetections = (decoded['detections'] as List)
+                      .cast<Map<String, dynamic>>();
+                }
+              }
+            } catch (_) {}
+          }
+
           frames.add(
             ParsedJpegFrame(
               bytes: frameBytes,
               startIndex: startIndex,
               endIndex: endIndex,
+              detections: frameDetections,
             ),
           );
           i = endIndex;
@@ -745,6 +788,7 @@ class PiCameraService {
     _stateController.close();
     _frameController.close();
     _diagnosticsController.close();
+    _detectionsController.close();
   }
 }
 
@@ -752,11 +796,13 @@ class ParsedJpegFrame {
   final Uint8List bytes;
   final int startIndex;
   final int endIndex;
+  final List<Map<String, dynamic>>? detections;
 
   const ParsedJpegFrame({
     required this.bytes,
     required this.startIndex,
     required this.endIndex,
+    this.detections,
   });
 }
 

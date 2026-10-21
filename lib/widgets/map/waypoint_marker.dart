@@ -37,7 +37,9 @@ class WaypointMarkerWidget extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: isActive ? Colors.amber.withValues(alpha: 0.5) : Colors.black45,
+                  color: isActive
+                      ? Colors.amber.withValues(alpha: 0.5)
+                      : Colors.black45,
                   blurRadius: isActive ? 8 : 4,
                   spreadRadius: isActive ? 2 : 0,
                 ),
@@ -98,11 +100,7 @@ class HomeMarkerWidget extends StatelessWidget {
             BoxShadow(color: Colors.black45, blurRadius: 6, spreadRadius: 1),
           ],
         ),
-        child: const Icon(
-          LucideIcons.home,
-          color: Colors.white,
-          size: 18,
-        ),
+        child: const Icon(LucideIcons.home, color: Colors.white, size: 18),
       ),
     );
   }

@@ -88,7 +88,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
@@ -105,14 +108,8 @@ class AppTheme {
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: danger, width: 1.5),
         ),
-        hintStyle: GoogleFonts.inter(
-          color: textSecondary,
-          fontSize: 14,
-        ),
-        labelStyle: GoogleFonts.inter(
-          color: textSecondary,
-          fontSize: 14,
-        ),
+        hintStyle: GoogleFonts.inter(color: textSecondary, fontSize: 14),
+        labelStyle: GoogleFonts.inter(color: textSecondary, fontSize: 14),
       ),
       textTheme: TextTheme(
         displayLarge: GoogleFonts.inter(

@@ -51,21 +51,48 @@ class FlightHudOverlayWidget extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
-          _buildSpecRow('MAVLink Link', isConnected ? 'CONNECTED' : 'OFFLINE',
-              isConnected ? AppTheme.success : AppTheme.danger),
-          _buildSpecRow('Flight Mode', telemetry.flightMode, AppTheme.secondary),
-          _buildSpecRow('Motors', telemetry.armed ? 'ARMED' : 'DISARMED',
-              telemetry.armed ? AppTheme.warning : AppTheme.textSecondary),
-          _buildSpecRow('Altitude AGL', telemetry.altitudeDisplay, AppTheme.textPrimary),
-          _buildSpecRow('Ground Speed', telemetry.speedDisplay, AppTheme.textPrimary),
-          _buildSpecRow('GPS Fix', telemetry.satellitesDisplay,
-              telemetry.satellites >= 6 ? AppTheme.success : AppTheme.warning),
+          _buildSpecRow(
+            'MAVLink Link',
+            isConnected ? 'CONNECTED' : 'OFFLINE',
+            isConnected ? AppTheme.success : AppTheme.danger,
+          ),
+          _buildSpecRow(
+            'Flight Mode',
+            telemetry.flightMode,
+            AppTheme.secondary,
+          ),
+          _buildSpecRow(
+            'Motors',
+            telemetry.armed ? 'ARMED' : 'DISARMED',
+            telemetry.armed ? AppTheme.warning : AppTheme.textSecondary,
+          ),
+          _buildSpecRow(
+            'Altitude AGL',
+            telemetry.altitudeDisplay,
+            AppTheme.textPrimary,
+          ),
+          _buildSpecRow(
+            'Ground Speed',
+            telemetry.speedDisplay,
+            AppTheme.textPrimary,
+          ),
+          _buildSpecRow(
+            'GPS Fix',
+            telemetry.satellitesDisplay,
+            telemetry.satellites >= 6 ? AppTheme.success : AppTheme.warning,
+          ),
           if (trackDistanceMeters > 0)
-            _buildSpecRow('Track Dist', '${(trackDistanceMeters / 1000).toStringAsFixed(2)} km',
-                AppTheme.textSecondary),
+            _buildSpecRow(
+              'Track Dist',
+              '${(trackDistanceMeters / 1000).toStringAsFixed(2)} km',
+              AppTheme.textSecondary,
+            ),
           if (waypointCount > 0)
-            _buildSpecRow('Target WP', 'WP ${telemetry.currentWaypoint} / $waypointCount',
-                AppTheme.primary),
+            _buildSpecRow(
+              'Target WP',
+              'WP ${telemetry.currentWaypoint} / $waypointCount',
+              AppTheme.primary,
+            ),
         ],
       ),
     );
@@ -77,10 +104,17 @@ class FlightHudOverlayWidget extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+          ),
           Text(
             value,
-            style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),

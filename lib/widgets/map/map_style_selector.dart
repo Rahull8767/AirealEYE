@@ -34,7 +34,9 @@ class MapStyleSelectorWidget extends ConsumerWidget {
                 height: 36,
                 margin: const EdgeInsets.symmetric(vertical: 2),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.secondary.withValues(alpha: 0.25) : Colors.transparent,
+                  color: isSelected
+                      ? AppTheme.secondary.withValues(alpha: 0.25)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: isSelected ? AppTheme.secondary : Colors.transparent,
@@ -44,7 +46,9 @@ class MapStyleSelectorWidget extends ConsumerWidget {
                 child: Icon(
                   config.icon,
                   size: 18,
-                  color: isSelected ? AppTheme.secondary : AppTheme.textSecondary,
+                  color: isSelected
+                      ? AppTheme.secondary
+                      : AppTheme.textSecondary,
                 ),
               ),
             ),

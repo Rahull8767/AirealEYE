@@ -37,10 +37,11 @@ class DashboardScreen extends ConsumerWidget {
     final int crossAxisCount = screenWidth < 600
         ? 2
         : screenWidth < 960
-            ? 3
-            : 4;
+        ? 3
+        : 4;
 
-    final String localTime = '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
+    final String localTime =
+        '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
     final String welcomeName = authState.name?.split(' ').last ?? 'Operator';
 
     return Scaffold(
@@ -63,10 +64,10 @@ class DashboardScreen extends ConsumerWidget {
               Text(
                 'LIVE TELEMETRY',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
               ),
               const SizedBox(height: 12),
               GridView.count(
@@ -80,51 +81,90 @@ class DashboardScreen extends ConsumerWidget {
                   TelemetryCard(
                     icon: LucideIcons.planeTakeoff,
                     title: 'Autopilot Status',
-                    value: telemetry.isConnected ? telemetry.flightMode : 'DISCONNECTED',
-                    statusColor: telemetry.isConnected ? AppTheme.success : AppTheme.danger,
+                    value: telemetry.isConnected
+                        ? telemetry.flightMode
+                        : 'DISCONNECTED',
+                    statusColor: telemetry.isConnected
+                        ? AppTheme.success
+                        : AppTheme.danger,
                     subWidget: Text(
-                      telemetry.isConnected ? 'MAVLink arm checklist OK' : 'Check Pixhawk power & USB/IP',
-                      style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+                      telemetry.isConnected
+                          ? 'MAVLink arm checklist OK'
+                          : 'Check Pixhawk power & USB/IP',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ),
                   TelemetryCard(
                     icon: LucideIcons.batteryCharging,
                     title: 'Battery Cell',
-                    value: telemetry.isConnected 
+                    value: telemetry.isConnected
                         ? '${(telemetry.batteryPercent * 100).toStringAsFixed(0)}% (${telemetry.batteryVoltage}V)'
                         : '0.0V',
-                    statusColor: telemetry.isConnected 
-                        ? (telemetry.batteryPercent > 0.3 ? AppTheme.success : AppTheme.danger)
+                    statusColor: telemetry.isConnected
+                        ? (telemetry.batteryPercent > 0.3
+                              ? AppTheme.success
+                              : AppTheme.danger)
                         : AppTheme.textSecondary,
                     subWidget: telemetry.isConnected
                         ? MiniChart(
-                            dataPoints: const [16.8, 16.6, 16.3, 16.0, 15.7, 15.3, 14.8],
-                            lineColor: telemetry.batteryPercent > 0.3 ? AppTheme.success : AppTheme.danger,
+                            dataPoints: const [
+                              16.8,
+                              16.6,
+                              16.3,
+                              16.0,
+                              15.7,
+                              15.3,
+                              14.8,
+                            ],
+                            lineColor: telemetry.batteryPercent > 0.3
+                                ? AppTheme.success
+                                : AppTheme.danger,
                           )
                         : null,
                   ),
                   TelemetryCard(
                     icon: LucideIcons.satellite,
                     title: 'GPS Satellites',
-                    value: telemetry.isConnected ? '${telemetry.satellites} Sats' : 'No Signal',
-                    statusColor: telemetry.isConnected && telemetry.satellites >= 10
+                    value: telemetry.isConnected
+                        ? '${telemetry.satellites} Sats'
+                        : 'No Signal',
+                    statusColor:
+                        telemetry.isConnected && telemetry.satellites >= 10
                         ? AppTheme.success
                         : telemetry.isConnected
-                            ? AppTheme.warning
-                            : AppTheme.danger,
+                        ? AppTheme.warning
+                        : AppTheme.danger,
                     subWidget: Text(
-                      telemetry.isConnected ? 'Lock type: RTK Float' : 'Check GPS antenna line',
-                      style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+                      telemetry.isConnected
+                          ? 'Lock type: RTK Float'
+                          : 'Check GPS antenna line',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ),
                   TelemetryCard(
                     icon: LucideIcons.arrowUpRight,
                     title: 'Altitude (AGL)',
-                    value: telemetry.isConnected ? '${telemetry.altitude.toStringAsFixed(1)} m' : '0.0 m',
+                    value: telemetry.isConnected
+                        ? '${telemetry.altitude.toStringAsFixed(1)} m'
+                        : '0.0 m',
                     statusColor: AppTheme.secondary,
                     subWidget: telemetry.isConnected
                         ? MiniChart(
-                            dataPoints: const [0.0, 10.0, 20.0, 30.0, 30.0, 29.5, 30.0],
+                            dataPoints: const [
+                              0.0,
+                              10.0,
+                              20.0,
+                              30.0,
+                              30.0,
+                              29.5,
+                              30.0,
+                            ],
                             lineColor: AppTheme.secondary,
                           )
                         : null,
@@ -132,11 +172,21 @@ class DashboardScreen extends ConsumerWidget {
                   TelemetryCard(
                     icon: LucideIcons.gauge,
                     title: 'Ground Speed',
-                    value: telemetry.isConnected ? '${telemetry.speed.toStringAsFixed(1)} m/s' : '0.0 m/s',
+                    value: telemetry.isConnected
+                        ? '${telemetry.speed.toStringAsFixed(1)} m/s'
+                        : '0.0 m/s',
                     statusColor: AppTheme.warning,
                     subWidget: telemetry.isConnected
                         ? MiniChart(
-                            dataPoints: const [0.0, 2.5, 4.8, 5.0, 5.0, 4.2, 5.0],
+                            dataPoints: const [
+                              0.0,
+                              2.5,
+                              4.8,
+                              5.0,
+                              5.0,
+                              4.2,
+                              5.0,
+                            ],
                             lineColor: AppTheme.warning,
                           )
                         : null,
@@ -145,12 +195,17 @@ class DashboardScreen extends ConsumerWidget {
                     icon: LucideIcons.scanFace,
                     title: 'AI Detections',
                     value: '${detections.length} Defects',
-                    statusColor: detections.isNotEmpty ? AppTheme.warning : AppTheme.success,
+                    statusColor: detections.isNotEmpty
+                        ? AppTheme.warning
+                        : AppTheme.success,
                     subWidget: Text(
-                      detections.isNotEmpty 
+                      detections.isNotEmpty
                           ? '${detections.where((d) => d.severity == 'Critical').length} critical issues flag'
                           : 'No road defects spotted',
-                      style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ),
                   TelemetryCard(
@@ -160,17 +215,27 @@ class DashboardScreen extends ConsumerWidget {
                     statusColor: AppTheme.secondary,
                     subWidget: const Text(
                       'SD Card: 90% capacity left',
-                      style: TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ),
                   TelemetryCard(
                     icon: LucideIcons.camera,
                     title: 'Camera Payload',
                     value: telemetry.isConnected ? 'STREAMING' : 'OFFLINE',
-                    statusColor: telemetry.isConnected ? AppTheme.success : AppTheme.danger,
+                    statusColor: telemetry.isConnected
+                        ? AppTheme.success
+                        : AppTheme.danger,
                     subWidget: Text(
-                      telemetry.isConnected ? 'FPS: 30 | Latency: 42ms' : 'Payload not ready',
-                      style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+                      telemetry.isConnected
+                          ? 'FPS: 30 | Latency: 42ms'
+                          : 'Payload not ready',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ),
                 ],
@@ -181,34 +246,55 @@ class DashboardScreen extends ConsumerWidget {
               Text(
                 'QUICK OPERATIONS CONTROL',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
               ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  _buildQuickActionBtn(context, LucideIcons.link, 'Connect MAVLink', () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ConnectScreen()),
-                    );
-                  }),
-                  _buildQuickActionBtn(context, LucideIcons.scanFace, 'Inspect Feed', () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AiDetectionsScreen()),
-                    );
-                  }),
-                  _buildQuickActionBtn(context, LucideIcons.history, 'Logs History', () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const MissionHistoryScreen()),
-                    );
-                  }),
+                  _buildQuickActionBtn(
+                    context,
+                    LucideIcons.link,
+                    'Connect MAVLink',
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ConnectScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildQuickActionBtn(
+                    context,
+                    LucideIcons.scanFace,
+                    'Inspect Feed',
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AiDetectionsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildQuickActionBtn(
+                    context,
+                    LucideIcons.history,
+                    'Logs History',
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MissionHistoryScreen(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -224,7 +310,8 @@ class DashboardScreen extends ConsumerWidget {
                       children: [
                         Text(
                           'RECENT INSPECTION RUNS',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
                                 color: AppTheme.textSecondary,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.2,
@@ -237,18 +324,25 @@ class DashboardScreen extends ConsumerWidget {
                           ListView.separated(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            itemCount: missionState.missionHistory.take(3).length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 8),
+                            itemCount: missionState.missionHistory
+                                .take(3)
+                                .length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 8),
                             itemBuilder: (context, idx) {
                               final m = missionState.missionHistory[idx];
                               return GlassPanel(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
                                 child: Row(
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: m.status == MissionStatus.completed
+                                        color:
+                                            m.status == MissionStatus.completed
                                             ? AppTheme.success.withOpacity(0.12)
                                             : AppTheme.danger.withOpacity(0.12),
                                         borderRadius: BorderRadius.circular(10),
@@ -257,7 +351,8 @@ class DashboardScreen extends ConsumerWidget {
                                         m.status == MissionStatus.completed
                                             ? LucideIcons.checkCircle
                                             : LucideIcons.alertTriangle,
-                                        color: m.status == MissionStatus.completed
+                                        color:
+                                            m.status == MissionStatus.completed
                                             ? AppTheme.success
                                             : AppTheme.danger,
                                         size: 18,
@@ -266,7 +361,8 @@ class DashboardScreen extends ConsumerWidget {
                                     const SizedBox(width: 14),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             m.name,
@@ -303,7 +399,8 @@ class DashboardScreen extends ConsumerWidget {
                         children: [
                           Text(
                             'RECENT SAFETY ALERTS',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
                                   color: AppTheme.textSecondary,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.2,
@@ -314,11 +411,15 @@ class DashboardScreen extends ConsumerWidget {
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: notifications.take(3).length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 8),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 8),
                             itemBuilder: (context, idx) {
                               final n = notifications[idx];
                               return GlassPanel(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
                                 child: Row(
                                   children: [
                                     Icon(
@@ -334,7 +435,10 @@ class DashboardScreen extends ConsumerWidget {
                                     Expanded(
                                       child: Text(
                                         n.title,
-                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -347,7 +451,7 @@ class DashboardScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                  ]
+                  ],
                 ],
               ),
             ],
@@ -357,7 +461,12 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWelcomeCard(BuildContext context, String name, String localTime, MissionPlannerState mState) {
+  Widget _buildWelcomeCard(
+    BuildContext context,
+    String name,
+    String localTime,
+    MissionPlannerState mState,
+  ) {
     return GlassPanel(
       padding: const EdgeInsets.all(20),
       color: AppTheme.primary.withOpacity(0.08),
@@ -370,21 +479,25 @@ class DashboardScreen extends ConsumerWidget {
               children: [
                 Text(
                   'Hello, $name',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(LucideIcons.cloudSun, color: AppTheme.secondary, size: 16),
+                    const Icon(
+                      LucideIcons.cloudSun,
+                      color: AppTheme.secondary,
+                      size: 16,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'Clear sky • 24°C • 3.2 m/s Wind',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textSecondary,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        color: AppTheme.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
@@ -397,17 +510,17 @@ class DashboardScreen extends ConsumerWidget {
               Text(
                 localTime,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.secondary,
-                    ),
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.secondary,
+                ),
               ),
               Text(
                 'SYSTEM OK',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.success,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
+                  color: AppTheme.success,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
               ),
             ],
           ),
@@ -416,7 +529,12 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickActionBtn(BuildContext context, IconData icon, String label, VoidCallback onTap) {
+  Widget _buildQuickActionBtn(
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) {
     return AnimatedButton(
       color: AppTheme.surface,
       onTap: onTap,
@@ -424,7 +542,9 @@ class DashboardScreen extends ConsumerWidget {
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -433,7 +553,11 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(width: 8),
             Text(
               label,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+              ),
             ),
           ],
         ),

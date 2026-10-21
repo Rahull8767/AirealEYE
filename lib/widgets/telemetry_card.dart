@@ -35,11 +35,7 @@ class TelemetryCard extends StatelessWidget {
                   color: statusColor.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  icon,
-                  color: statusColor,
-                  size: 20,
-                ),
+                child: Icon(icon, color: statusColor, size: 20),
               ),
               Container(
                 width: 8,
@@ -52,7 +48,7 @@ class TelemetryCard extends StatelessWidget {
                       color: statusColor.withOpacity(0.5),
                       blurRadius: 6,
                       spreadRadius: 1,
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -65,10 +61,10 @@ class TelemetryCard extends StatelessWidget {
               Text(
                 title.toUpperCase(),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                    ),
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
+                ),
               ),
               const SizedBox(height: 4),
               FittedBox(
@@ -76,17 +72,14 @@ class TelemetryCard extends StatelessWidget {
                 child: Text(
                   value,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
                 ),
               ),
             ],
           ),
-          if (subWidget != null) ...[
-            const SizedBox(height: 8),
-            subWidget!,
-          ],
+          if (subWidget != null) ...[const SizedBox(height: 8), subWidget!],
         ],
       ),
     );

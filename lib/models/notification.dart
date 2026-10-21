@@ -1,9 +1,4 @@
-enum NotificationType {
-  info,
-  warning,
-  critical,
-  success,
-}
+enum NotificationType { info, warning, critical, success }
 
 class AppNotification {
   final String id;

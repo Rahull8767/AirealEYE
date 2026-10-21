@@ -1,11 +1,6 @@
 import 'package:aerial_eye/services/drone_service.dart';
 
-enum LinkHealth {
-  live,
-  stale,
-  notAvailable,
-  error,
-}
+enum LinkHealth { live, stale, notAvailable, error }
 
 class ConnectionDiagnostics {
   final DroneConnectionState connectionState;
@@ -21,7 +16,8 @@ class ConnectionDiagnostics {
   final int sourceComponentId;
   final int commandTargetSystemId;
   final int commandTargetComponentId;
-  final String mavlinkProtocolVersion; // 'MAVLink v2 (0xFD)', 'MAVLink v1 (0xFE)', 'None'
+  final String
+  mavlinkProtocolVersion; // 'MAVLink v2 (0xFD)', 'MAVLink v1 (0xFE)', 'None'
   final int? lastReceivedSourceSystemId;
   final int? lastReceivedSourceComponentId;
   final String? lastReceivedMessageType;
@@ -167,7 +163,9 @@ class ConnectionDiagnostics {
     buffer.writeln('Socket Status: $socketStatus');
     buffer.writeln('Local Endpoint: $localAddress:$localPort');
     if (configuredRemoteHost != null && configuredRemoteHost!.isNotEmpty) {
-      buffer.writeln('Configured Remote: $configuredRemoteHost:$configuredRemotePort');
+      buffer.writeln(
+        'Configured Remote: $configuredRemoteHost:$configuredRemotePort',
+      );
     }
     buffer.writeln('Discovered Remote Sender: ${remoteAddress ?? "None"}');
     buffer.writeln('');
@@ -176,29 +174,49 @@ class ConnectionDiagnostics {
     buffer.writeln('Valid MAVLink Frames: $mavlinkFramesReceived');
     buffer.writeln('Malformed / Non-MAVLink: $malformedFramesCount');
     buffer.writeln('Packets / Sec: ${packetsPerSecond.toStringAsFixed(1)} PPS');
-    buffer.writeln('Last Datagram: ${lastDatagramTime?.toIso8601String() ?? "Never"}');
+    buffer.writeln(
+      'Last Datagram: ${lastDatagramTime?.toIso8601String() ?? "Never"}',
+    );
     if (lastRawSender != null) {
-      buffer.writeln('Last Datagram Sender: $lastRawSender (${lastRawDatagramSize ?? 0} bytes)');
+      buffer.writeln(
+        'Last Datagram Sender: $lastRawSender (${lastRawDatagramSize ?? 0} bytes)',
+      );
     }
     if (lastRawDatagramPreview != null && lastRawDatagramPreview!.isNotEmpty) {
       buffer.writeln('Last Raw Payload (ASCII): "$lastRawDatagramPreview"');
     }
-    buffer.writeln('Last Valid Frame: ${lastMavlinkFrameTime?.toIso8601String() ?? "Never"}');
+    buffer.writeln(
+      'Last Valid Frame: ${lastMavlinkFrameTime?.toIso8601String() ?? "Never"}',
+    );
     buffer.writeln('Detected Protocol: $mavlinkProtocolVersion');
     buffer.writeln('');
     buffer.writeln('--- MAVLink Addressing & Identity ---');
-    buffer.writeln('GCS Source ID: Sys=$sourceSystemId, Comp=$sourceComponentId');
-    buffer.writeln('Discovered Vehicle ID: Sys=${discoveredSystemId ?? "None"}, Comp=${discoveredComponentId ?? "None"}');
-    buffer.writeln('Command Target ID: Sys=$commandTargetSystemId, Comp=$commandTargetComponentId');
-    buffer.writeln('Last Received Msg: ${lastReceivedMessageType ?? "None"} (from Sys=${lastReceivedSourceSystemId ?? "?"}, Comp=${lastReceivedSourceComponentId ?? "?"})');
+    buffer.writeln(
+      'GCS Source ID: Sys=$sourceSystemId, Comp=$sourceComponentId',
+    );
+    buffer.writeln(
+      'Discovered Vehicle ID: Sys=${discoveredSystemId ?? "None"}, Comp=${discoveredComponentId ?? "None"}',
+    );
+    buffer.writeln(
+      'Command Target ID: Sys=$commandTargetSystemId, Comp=$commandTargetComponentId',
+    );
+    buffer.writeln(
+      'Last Received Msg: ${lastReceivedMessageType ?? "None"} (from Sys=${lastReceivedSourceSystemId ?? "?"}, Comp=${lastReceivedSourceComponentId ?? "?"})',
+    );
     buffer.writeln('Vehicle Type: $vehicleType');
     buffer.writeln('Autopilot Type: $autopilotType');
     buffer.writeln('');
     buffer.writeln('--- Link Health ---');
-    buffer.writeln('Heartbeat Status: ${heartbeatHealth.name.toUpperCase()} (Total: $heartbeatCount, Last: ${lastHeartbeatTime?.toIso8601String() ?? "Never"})');
-    buffer.writeln('Telemetry Status: ${telemetryHealth.name.toUpperCase()} (Last: ${lastTelemetryTime?.toIso8601String() ?? "Never"})');
+    buffer.writeln(
+      'Heartbeat Status: ${heartbeatHealth.name.toUpperCase()} (Total: $heartbeatCount, Last: ${lastHeartbeatTime?.toIso8601String() ?? "Never"})',
+    );
+    buffer.writeln(
+      'Telemetry Status: ${telemetryHealth.name.toUpperCase()} (Last: ${lastTelemetryTime?.toIso8601String() ?? "Never"})',
+    );
     buffer.writeln('Flight Mode: $flightMode | Armed: $armed');
-    buffer.writeln('Satellites: ${satellites ?? "N/A"} | Battery: ${batteryVoltage != null ? "${batteryVoltage}V" : "N/A"}');
+    buffer.writeln(
+      'Satellites: ${satellites ?? "N/A"} | Battery: ${batteryVoltage != null ? "${batteryVoltage}V" : "N/A"}',
+    );
     if (lastStatusText != null && lastStatusText!.isNotEmpty) {
       buffer.writeln('Last Autopilot STATUSTEXT: $lastStatusText');
     }
@@ -274,21 +292,29 @@ class ConnectionDiagnostics {
       configuredRemotePort: configuredRemotePort ?? this.configuredRemotePort,
       remoteAddress: remoteAddress ?? this.remoteAddress,
       discoveredSystemId: discoveredSystemId ?? this.discoveredSystemId,
-      discoveredComponentId: discoveredComponentId ?? this.discoveredComponentId,
+      discoveredComponentId:
+          discoveredComponentId ?? this.discoveredComponentId,
       sourceSystemId: sourceSystemId ?? this.sourceSystemId,
       sourceComponentId: sourceComponentId ?? this.sourceComponentId,
-      commandTargetSystemId: commandTargetSystemId ?? this.commandTargetSystemId,
-      commandTargetComponentId: commandTargetComponentId ?? this.commandTargetComponentId,
-      mavlinkProtocolVersion: mavlinkProtocolVersion ?? this.mavlinkProtocolVersion,
-      lastReceivedSourceSystemId: lastReceivedSourceSystemId ?? this.lastReceivedSourceSystemId,
-      lastReceivedSourceComponentId: lastReceivedSourceComponentId ?? this.lastReceivedSourceComponentId,
-      lastReceivedMessageType: lastReceivedMessageType ?? this.lastReceivedMessageType,
+      commandTargetSystemId:
+          commandTargetSystemId ?? this.commandTargetSystemId,
+      commandTargetComponentId:
+          commandTargetComponentId ?? this.commandTargetComponentId,
+      mavlinkProtocolVersion:
+          mavlinkProtocolVersion ?? this.mavlinkProtocolVersion,
+      lastReceivedSourceSystemId:
+          lastReceivedSourceSystemId ?? this.lastReceivedSourceSystemId,
+      lastReceivedSourceComponentId:
+          lastReceivedSourceComponentId ?? this.lastReceivedSourceComponentId,
+      lastReceivedMessageType:
+          lastReceivedMessageType ?? this.lastReceivedMessageType,
       vehicleType: vehicleType ?? this.vehicleType,
       autopilotType: autopilotType ?? this.autopilotType,
       flightMode: flightMode ?? this.flightMode,
       armed: armed ?? this.armed,
       lastRawDatagramSize: lastRawDatagramSize ?? this.lastRawDatagramSize,
-      lastRawDatagramPreview: lastRawDatagramPreview ?? this.lastRawDatagramPreview,
+      lastRawDatagramPreview:
+          lastRawDatagramPreview ?? this.lastRawDatagramPreview,
       lastRawSender: lastRawSender ?? this.lastRawSender,
       heartbeatHealth: heartbeatHealth ?? this.heartbeatHealth,
       lastHeartbeatTime: lastHeartbeatTime ?? this.lastHeartbeatTime,
@@ -296,7 +322,8 @@ class ConnectionDiagnostics {
       telemetryHealth: telemetryHealth ?? this.telemetryHealth,
       lastTelemetryTime: lastTelemetryTime ?? this.lastTelemetryTime,
       rawDatagramsReceived: rawDatagramsReceived ?? this.rawDatagramsReceived,
-      mavlinkFramesReceived: mavlinkFramesReceived ?? this.mavlinkFramesReceived,
+      mavlinkFramesReceived:
+          mavlinkFramesReceived ?? this.mavlinkFramesReceived,
       malformedFramesCount: malformedFramesCount ?? this.malformedFramesCount,
       packetsReceived: packetsReceived ?? this.packetsReceived,
       packetsPerSecond: packetsPerSecond ?? this.packetsPerSecond,
@@ -306,7 +333,8 @@ class ConnectionDiagnostics {
       satellites: satellites ?? this.satellites,
       batteryVoltage: batteryVoltage ?? this.batteryVoltage,
       lastStatusText: lastStatusText ?? this.lastStatusText,
-      lastGlobalPositionTime: lastGlobalPositionTime ?? this.lastGlobalPositionTime,
+      lastGlobalPositionTime:
+          lastGlobalPositionTime ?? this.lastGlobalPositionTime,
       lastGpsRawTime: lastGpsRawTime ?? this.lastGpsRawTime,
       lastAttitudeTime: lastAttitudeTime ?? this.lastAttitudeTime,
       lastVfrHudTime: lastVfrHudTime ?? this.lastVfrHudTime,

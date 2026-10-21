@@ -13,10 +13,12 @@ class MavlinkConnectionScreen extends ConsumerStatefulWidget {
   const MavlinkConnectionScreen({super.key});
 
   @override
-  ConsumerState<MavlinkConnectionScreen> createState() => _MavlinkConnectionScreenState();
+  ConsumerState<MavlinkConnectionScreen> createState() =>
+      _MavlinkConnectionScreenState();
 }
 
-class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScreen> {
+class _MavlinkConnectionScreenState
+    extends ConsumerState<MavlinkConnectionScreen> {
   late MavlinkTransport _transport;
   late MavlinkConnectionMode _connectionMode;
   late TextEditingController _bindAddressCtrl;
@@ -53,13 +55,27 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
     _localPortCtrl = TextEditingController(text: config.localPort.toString());
     _remoteHostCtrl = TextEditingController(text: config.remoteHost);
     _remotePortCtrl = TextEditingController(text: config.remotePort.toString());
-    _sourceSysIdCtrl = TextEditingController(text: config.sourceSystemId.toString());
-    _sourceCompIdCtrl = TextEditingController(text: config.sourceComponentId.toString());
-    _targetSysIdCtrl = TextEditingController(text: config.targetSystemId.toString());
-    _targetCompIdCtrl = TextEditingController(text: config.targetComponentId.toString());
-    _hbTimeoutCtrl = TextEditingController(text: config.heartbeatTimeoutSeconds.toString());
-    _telTimeoutCtrl = TextEditingController(text: config.telemetryTimeoutSeconds.toString());
-    _telRateCtrl = TextEditingController(text: config.telemetryRateHz.toString());
+    _sourceSysIdCtrl = TextEditingController(
+      text: config.sourceSystemId.toString(),
+    );
+    _sourceCompIdCtrl = TextEditingController(
+      text: config.sourceComponentId.toString(),
+    );
+    _targetSysIdCtrl = TextEditingController(
+      text: config.targetSystemId.toString(),
+    );
+    _targetCompIdCtrl = TextEditingController(
+      text: config.targetComponentId.toString(),
+    );
+    _hbTimeoutCtrl = TextEditingController(
+      text: config.heartbeatTimeoutSeconds.toString(),
+    );
+    _telTimeoutCtrl = TextEditingController(
+      text: config.telemetryTimeoutSeconds.toString(),
+    );
+    _telRateCtrl = TextEditingController(
+      text: config.telemetryRateHz.toString(),
+    );
     _autoTargetSys = config.autoTargetSystem;
     _autoTargetComp = config.autoTargetComponent;
     _debugLogging = config.debugLogging;
@@ -85,7 +101,9 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
     return MavlinkConnectionConfig(
       transport: _transport,
       connectionMode: _connectionMode,
-      bindAddress: _bindAddressCtrl.text.trim().isEmpty ? '0.0.0.0' : _bindAddressCtrl.text.trim(),
+      bindAddress: _bindAddressCtrl.text.trim().isEmpty
+          ? '0.0.0.0'
+          : _bindAddressCtrl.text.trim(),
       localPort: int.tryParse(_localPortCtrl.text) ?? 14550,
       remoteHost: _remoteHostCtrl.text.trim(),
       remotePort: int.tryParse(_remotePortCtrl.text) ?? 14550,
@@ -139,7 +157,9 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Reset Settings'),
-        content: const Text('Are you sure you want to reset all MAVLink connection settings to default values?'),
+        content: const Text(
+          'Are you sure you want to reset all MAVLink connection settings to default values?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -156,7 +176,10 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
               });
               ref.read(droneServiceProvider).updateConfig(def);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Settings restored to defaults.'), backgroundColor: AppTheme.secondary),
+                const SnackBar(
+                  content: Text('Settings restored to defaults.'),
+                  backgroundColor: AppTheme.secondary,
+                ),
               );
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
@@ -172,7 +195,9 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
     Clipboard.setData(ClipboardData(text: report));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('MAVLink network diagnostics report copied to clipboard!'),
+        content: Text(
+          'MAVLink network diagnostics report copied to clipboard!',
+        ),
         backgroundColor: AppTheme.secondary,
         duration: Duration(seconds: 2),
       ),
@@ -219,7 +244,9 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
   @override
   Widget build(BuildContext context) {
     final diagnosticsAsync = ref.watch(droneDiagnosticsProvider);
-    final diagnostics = diagnosticsAsync.value ?? ref.read(droneServiceProvider).currentDiagnostics;
+    final diagnostics =
+        diagnosticsAsync.value ??
+        ref.read(droneServiceProvider).currentDiagnostics;
 
     return Scaffold(
       appBar: AppBar(
@@ -253,10 +280,20 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                 ),
                 child: Row(
                   children: [
-                    const Icon(LucideIcons.alertTriangle, color: AppTheme.danger, size: 20),
+                    const Icon(
+                      LucideIcons.alertTriangle,
+                      color: AppTheme.danger,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(_validationError!, style: const TextStyle(color: AppTheme.danger, fontSize: 13)),
+                      child: Text(
+                        _validationError!,
+                        style: const TextStyle(
+                          color: AppTheme.danger,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -279,41 +316,94 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                             height: 8,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: diagnostics.socketStatus == 'BOUND' ? AppTheme.success : AppTheme.danger,
+                              color: diagnostics.socketStatus == 'BOUND'
+                                  ? AppTheme.success
+                                  : AppTheme.danger,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Socket: ${diagnostics.socketStatus}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: Colors.white,
+                            ),
                           ),
                         ],
                       ),
                       TextButton.icon(
                         onPressed: () => _copyDiagnostics(diagnostics),
-                        icon: const Icon(LucideIcons.copy, size: 13, color: AppTheme.secondary),
-                        label: const Text('Copy Diagnostics', style: TextStyle(color: AppTheme.secondary, fontSize: 11, fontWeight: FontWeight.bold)),
+                        icon: const Icon(
+                          LucideIcons.copy,
+                          size: 13,
+                          color: AppTheme.secondary,
+                        ),
+                        label: const Text(
+                          'Copy Diagnostics',
+                          style: TextStyle(
+                            color: AppTheme.secondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'State: ${diagnostics.connectionStateLabel}',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                   const Divider(color: AppTheme.border, height: 16),
-                  _buildDiagItem('Local Endpoint:', '${diagnostics.localAddress}:${diagnostics.localPort}'),
-                  _buildDiagItem('Remote Sender:', diagnostics.remoteAddress ?? 'Waiting for datagrams...'),
-                  _buildDiagItem('Raw UDP Datagrams:', '${diagnostics.rawDatagramsReceived} pkts'),
+                  _buildDiagItem(
+                    'Local Endpoint:',
+                    '${diagnostics.localAddress}:${diagnostics.localPort}',
+                  ),
+                  _buildDiagItem(
+                    'Remote Sender:',
+                    diagnostics.remoteAddress ?? 'Waiting for datagrams...',
+                  ),
+                  _buildDiagItem(
+                    'Raw UDP Datagrams:',
+                    '${diagnostics.rawDatagramsReceived} pkts',
+                  ),
                   if (diagnostics.lastRawSender != null)
-                    _buildDiagItem('Last UDP Packet:', '${diagnostics.lastRawSender} (${diagnostics.lastRawDatagramSize ?? 0} B)'),
-                  if (diagnostics.lastRawDatagramPreview != null && diagnostics.lastRawDatagramPreview!.isNotEmpty)
-                    _buildDiagItem('Last Raw Payload:', '"${diagnostics.lastRawDatagramPreview}"'),
-                  _buildDiagItem('Valid MAVLink Frames:', '${diagnostics.mavlinkFramesReceived} frames (${diagnostics.packetsPerSecond.toStringAsFixed(1)} pps)'),
-                  _buildDiagItem('Malformed / Non-MAVLink:', '${diagnostics.malformedFramesCount} pkts'),
-                  _buildDiagItem('Detected Protocol:', diagnostics.mavlinkProtocolVersion),
-                  _buildDiagItem('Target Vehicle:', diagnostics.vehicleType != 'Unknown' ? '${diagnostics.vehicleType} (Sys ${diagnostics.discoveredSystemId ?? "--"}, Comp ${diagnostics.discoveredComponentId ?? "--"})' : 'Auto-discovering...'),
-                  _buildDiagItem('Heartbeat Status:', diagnostics.heartbeatHealth.name.toUpperCase()),
+                    _buildDiagItem(
+                      'Last UDP Packet:',
+                      '${diagnostics.lastRawSender} (${diagnostics.lastRawDatagramSize ?? 0} B)',
+                    ),
+                  if (diagnostics.lastRawDatagramPreview != null &&
+                      diagnostics.lastRawDatagramPreview!.isNotEmpty)
+                    _buildDiagItem(
+                      'Last Raw Payload:',
+                      '"${diagnostics.lastRawDatagramPreview}"',
+                    ),
+                  _buildDiagItem(
+                    'Valid MAVLink Frames:',
+                    '${diagnostics.mavlinkFramesReceived} frames (${diagnostics.packetsPerSecond.toStringAsFixed(1)} pps)',
+                  ),
+                  _buildDiagItem(
+                    'Malformed / Non-MAVLink:',
+                    '${diagnostics.malformedFramesCount} pkts',
+                  ),
+                  _buildDiagItem(
+                    'Detected Protocol:',
+                    diagnostics.mavlinkProtocolVersion,
+                  ),
+                  _buildDiagItem(
+                    'Target Vehicle:',
+                    diagnostics.vehicleType != 'Unknown'
+                        ? '${diagnostics.vehicleType} (Sys ${diagnostics.discoveredSystemId ?? "--"}, Comp ${diagnostics.discoveredComponentId ?? "--"})'
+                        : 'Auto-discovering...',
+                  ),
+                  _buildDiagItem(
+                    'Heartbeat Status:',
+                    diagnostics.heartbeatHealth.name.toUpperCase(),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -321,8 +411,10 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                         child: ElevatedButton.icon(
                           onPressed: () {
                             final droneService = ref.read(droneServiceProvider);
-                            if (droneService.connectionState == DroneConnectionState.disconnected ||
-                                droneService.connectionState == DroneConnectionState.socketNotBound) {
+                            if (droneService.connectionState ==
+                                    DroneConnectionState.disconnected ||
+                                droneService.connectionState ==
+                                    DroneConnectionState.socketNotBound) {
                               droneService.updateConfig(_buildCurrentConfig());
                               droneService.connect();
                             } else {
@@ -330,15 +422,24 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                             }
                           },
                           icon: Icon(
-                            diagnostics.socketStatus == 'BOUND' ? LucideIcons.radioTower : LucideIcons.play,
+                            diagnostics.socketStatus == 'BOUND'
+                                ? LucideIcons.radioTower
+                                : LucideIcons.play,
                             size: 15,
                           ),
                           label: Text(
-                            diagnostics.socketStatus == 'BOUND' ? 'Stop UDP Listener' : 'Start UDP Listener',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            diagnostics.socketStatus == 'BOUND'
+                                ? 'Stop UDP Listener'
+                                : 'Start UDP Listener',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: diagnostics.socketStatus == 'BOUND' ? AppTheme.danger.withOpacity(0.8) : AppTheme.primary,
+                            backgroundColor: diagnostics.socketStatus == 'BOUND'
+                                ? AppTheme.danger.withOpacity(0.8)
+                                : AppTheme.primary,
                             padding: const EdgeInsets.symmetric(vertical: 10),
                           ),
                         ),
@@ -347,15 +448,28 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                   ),
                   const SizedBox(height: 10),
                   InkWell(
-                    onTap: () => setState(() => _showLogBuffer = !_showLogBuffer),
+                    onTap: () =>
+                        setState(() => _showLogBuffer = !_showLogBuffer),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          _showLogBuffer ? 'Hide Diagnostic Log Buffer' : 'Show Diagnostic Log Buffer (${diagnostics.recentLogs.length} events)',
-                          style: const TextStyle(fontSize: 11, color: AppTheme.secondary, fontWeight: FontWeight.bold),
+                          _showLogBuffer
+                              ? 'Hide Diagnostic Log Buffer'
+                              : 'Show Diagnostic Log Buffer (${diagnostics.recentLogs.length} events)',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.secondary,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        Icon(_showLogBuffer ? LucideIcons.chevronUp : LucideIcons.chevronDown, size: 14, color: AppTheme.secondary),
+                        Icon(
+                          _showLogBuffer
+                              ? LucideIcons.chevronUp
+                              : LucideIcons.chevronDown,
+                          size: 14,
+                          color: AppTheme.secondary,
+                        ),
                       ],
                     ),
                   ),
@@ -370,13 +484,33 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                         border: Border.all(color: AppTheme.border),
                       ),
                       child: diagnostics.recentLogs.isEmpty
-                          ? const Center(child: Text('No diagnostic events recorded yet.', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)))
+                          ? const Center(
+                              child: Text(
+                                'No diagnostic events recorded yet.',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            )
                           : ListView.builder(
                               reverse: true,
                               itemCount: diagnostics.recentLogs.length,
                               itemBuilder: (context, index) {
-                                final log = diagnostics.recentLogs[diagnostics.recentLogs.length - 1 - index];
-                                return Text(log, style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: AppTheme.textSecondary));
+                                final log =
+                                    diagnostics.recentLogs[diagnostics
+                                            .recentLogs
+                                            .length -
+                                        1 -
+                                        index];
+                                return Text(
+                                  log,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontFamily: 'monospace',
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                );
                               },
                             ),
                     ),
@@ -395,7 +529,10 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                 children: [
                   const Text(
                     'To test UDP connectivity from your Windows laptop to this phone:',
-                    style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Container(
@@ -408,7 +545,11 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                     ),
                     child: Text(
                       '\$u = New-Object System.Net.Sockets.UdpClient; \$u.Send([Text.Encoding]::ASCII.GetBytes("TEST-WINDOWS-UDP"), 16, "<PHONE_IP>", ${_localPortCtrl.text.trim()}); \$u.Close()',
-                      style: const TextStyle(fontFamily: 'monospace', fontSize: 10.5, color: AppTheme.secondary),
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 10.5,
+                        color: AppTheme.secondary,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -418,25 +559,44 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                       const Expanded(
                         child: Text(
                           'Replace <PHONE_IP> with phone\'s Wi-Fi IP (e.g. 192.168.1.9).',
-                          style: TextStyle(fontSize: 10.5, color: AppTheme.textSecondary),
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                       ),
                       TextButton.icon(
                         onPressed: () {
                           final port = _localPortCtrl.text.trim();
-                          Clipboard.setData(ClipboardData(
-                            text: '\$u = New-Object System.Net.Sockets.UdpClient; \$u.Send([Text.Encoding]::ASCII.GetBytes("TEST-WINDOWS-UDP"), 16, "192.168.1.9", $port); \$u.Close()',
-                          ));
+                          Clipboard.setData(
+                            ClipboardData(
+                              text:
+                                  '\$u = New-Object System.Net.Sockets.UdpClient; \$u.Send([Text.Encoding]::ASCII.GetBytes("TEST-WINDOWS-UDP"), 16, "192.168.1.9", $port); \$u.Close()',
+                            ),
+                          );
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('PowerShell UDP test command copied to clipboard!'),
+                              content: Text(
+                                'PowerShell UDP test command copied to clipboard!',
+                              ),
                               backgroundColor: AppTheme.secondary,
                               duration: Duration(seconds: 2),
                             ),
                           );
                         },
-                        icon: const Icon(LucideIcons.copy, size: 13, color: AppTheme.secondary),
-                        label: const Text('Copy Command', style: TextStyle(color: AppTheme.secondary, fontSize: 11, fontWeight: FontWeight.bold)),
+                        icon: const Icon(
+                          LucideIcons.copy,
+                          size: 13,
+                          color: AppTheme.secondary,
+                        ),
+                        label: const Text(
+                          'Copy Command',
+                          style: TextStyle(
+                            color: AppTheme.secondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -454,22 +614,50 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Transport Protocol', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      const Text(
+                        'Transport Protocol',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.secondary.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text('UDP (Standard)', style: TextStyle(color: AppTheme.secondary, fontWeight: FontWeight.bold, fontSize: 13)),
+                        child: const Text(
+                          'UDP (Standard)',
+                          style: TextStyle(
+                            color: AppTheme.secondary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                   const Divider(color: AppTheme.border, height: 24),
                   RadioListTile<MavlinkConnectionMode>(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('UDP Listener Mode (Recommended for SITL & Drone)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Binds socket on 0.0.0.0:<port> and receives forwarded UDP packets from MAVProxy / Drone.', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                    title: const Text(
+                      'UDP Listener Mode (Recommended for SITL & Drone)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Binds socket on 0.0.0.0:<port> and receives forwarded UDP packets from MAVProxy / Drone.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
                     value: MavlinkConnectionMode.listener,
                     groupValue: _connectionMode,
                     activeColor: AppTheme.secondary,
@@ -480,8 +668,20 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                   const SizedBox(height: 8),
                   RadioListTile<MavlinkConnectionMode>(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('UDP Direct Mode', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Sends UDP packets directly to a target remote IP/port.', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                    title: const Text(
+                      'UDP Direct Mode',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Sends UDP packets directly to a target remote IP/port.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
                     value: MavlinkConnectionMode.direct,
                     groupValue: _connectionMode,
                     activeColor: AppTheme.secondary,
@@ -581,8 +781,20 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     value: _autoTargetSys,
-                    title: const Text('Auto-Discover Target Vehicle System ID', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Automatically targets first discovered drone heartbeat', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                    title: const Text(
+                      'Auto-Discover Target Vehicle System ID',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Automatically targets first discovered drone heartbeat',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
                     activeThumbColor: AppTheme.secondary,
                     onChanged: (val) => setState(() => _autoTargetSys = val),
                   ),
@@ -599,8 +811,20 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     value: _autoTargetComp,
-                    title: const Text('Auto-Discover Target Component ID', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Automatically targets autopilot component ID (usually 1)', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                    title: const Text(
+                      'Auto-Discover Target Component ID',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Automatically targets autopilot component ID (usually 1)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
                     activeThumbColor: AppTheme.secondary,
                     onChanged: (val) => setState(() => _autoTargetComp = val),
                   ),
@@ -608,7 +832,8 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                     const SizedBox(height: 8),
                     _buildTextField(
                       label: 'Manual Target Component ID',
-                      helper: 'Usually 1 for autopilot (MAV_COMP_ID_AUTOPILOT1)',
+                      helper:
+                          'Usually 1 for autopilot (MAV_COMP_ID_AUTOPILOT1)',
                       controller: _targetCompIdCtrl,
                       keyboardType: TextInputType.number,
                     ),
@@ -656,8 +881,20 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     value: _debugLogging,
-                    title: const Text('MAVLink Debug Logging', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Prints structured [MAVLINK] logs in developer console', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                    title: const Text(
+                      'MAVLink Debug Logging',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Prints structured [MAVLINK] logs in developer console',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
                     activeThumbColor: AppTheme.secondary,
                     onChanged: (val) => setState(() => _debugLogging = val),
                   ),
@@ -676,35 +913,67 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                     Row(
                       children: [
                         Icon(
-                          _testResult!.success ? LucideIcons.checkCircle : LucideIcons.alertCircle,
-                          color: _testResult!.success ? AppTheme.success : AppTheme.danger,
+                          _testResult!.success
+                              ? LucideIcons.checkCircle
+                              : LucideIcons.alertCircle,
+                          color: _testResult!.success
+                              ? AppTheme.success
+                              : AppTheme.danger,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          _testResult!.success ? 'Connection Test Succeeded' : 'Connection Test Diagnostic Assessment',
+                          _testResult!.success
+                              ? 'Connection Test Succeeded'
+                              : 'Connection Test Diagnostic Assessment',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
-                            color: _testResult!.success ? AppTheme.success : AppTheme.danger,
+                            color: _testResult!.success
+                                ? AppTheme.success
+                                : AppTheme.danger,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text(_testResult!.message, style: const TextStyle(fontSize: 12, color: Colors.white)),
+                    Text(
+                      _testResult!.message,
+                      style: const TextStyle(fontSize: 12, color: Colors.white),
+                    ),
                     const Divider(color: AppTheme.border, height: 16),
-                    _buildDiagItem('Raw Datagrams Received:', '${_testResult!.rawDatagramsReceived} pkts'),
-                    _buildDiagItem('Valid MAVLink Frames:', '${_testResult!.mavlinkFramesReceived} frames'),
-                    _buildDiagItem('Protocol Detected:', _testResult!.protocolVersion),
+                    _buildDiagItem(
+                      'Raw Datagrams Received:',
+                      '${_testResult!.rawDatagramsReceived} pkts',
+                    ),
+                    _buildDiagItem(
+                      'Valid MAVLink Frames:',
+                      '${_testResult!.mavlinkFramesReceived} frames',
+                    ),
+                    _buildDiagItem(
+                      'Protocol Detected:',
+                      _testResult!.protocolVersion,
+                    ),
                     if (_testResult!.remoteAddress != null)
-                      _buildDiagItem('Remote Endpoint:', _testResult!.remoteAddress!),
+                      _buildDiagItem(
+                        'Remote Endpoint:',
+                        _testResult!.remoteAddress!,
+                      ),
                     if (_testResult!.systemId != null)
-                      _buildDiagItem('Vehicle System ID:', '${_testResult!.systemId}'),
+                      _buildDiagItem(
+                        'Vehicle System ID:',
+                        '${_testResult!.systemId}',
+                      ),
                     if (_testResult!.componentId != null)
-                      _buildDiagItem('Component ID:', '${_testResult!.componentId}'),
+                      _buildDiagItem(
+                        'Component ID:',
+                        '${_testResult!.componentId}',
+                      ),
                     if (_testResult!.vehicleType != null)
-                      _buildDiagItem('Vehicle Type:', _testResult!.vehicleType!),
+                      _buildDiagItem(
+                        'Vehicle Type:',
+                        _testResult!.vehicleType!,
+                      ),
                     if (_testResult!.autopilotType != null)
                       _buildDiagItem('Autopilot:', _testResult!.autopilotType!),
                   ],
@@ -727,9 +996,20 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                         ? const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppTheme.secondary)),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppTheme.secondary,
+                              ),
+                            ),
                           )
-                        : const Text('Test Connection', style: TextStyle(color: AppTheme.secondary, fontWeight: FontWeight.bold)),
+                        : const Text(
+                            'Test Connection',
+                            style: TextStyle(
+                              color: AppTheme.secondary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -740,7 +1020,10 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
                       backgroundColor: AppTheme.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Save Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Save Settings',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
@@ -749,8 +1032,15 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
             Center(
               child: TextButton.icon(
                 onPressed: _resetDefaults,
-                icon: const Icon(LucideIcons.rotateCcw, size: 16, color: AppTheme.textSecondary),
-                label: const Text('Reset to Defaults', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                icon: const Icon(
+                  LucideIcons.rotateCcw,
+                  size: 16,
+                  color: AppTheme.textSecondary,
+                ),
+                label: const Text(
+                  'Reset to Defaults',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                ),
               ),
             ),
             const SizedBox(height: 32),
@@ -765,7 +1055,12 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textSecondary, letterSpacing: 0.8),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.textSecondary,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
@@ -779,7 +1074,14 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
+          ),
+        ),
         const SizedBox(height: 4),
         TextField(
           controller: controller,
@@ -787,16 +1089,31 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
           style: const TextStyle(fontSize: 13, color: Colors.white),
           decoration: InputDecoration(
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
             filled: true,
             fillColor: AppTheme.surface,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppTheme.border)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppTheme.border)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppTheme.secondary)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppTheme.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppTheme.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppTheme.secondary),
+            ),
           ),
         ),
         const SizedBox(height: 4),
-        Text(helper, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
+        Text(
+          helper,
+          style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+        ),
       ],
     );
   }
@@ -807,8 +1124,18 @@ class _MavlinkConnectionScreenState extends ConsumerState<MavlinkConnectionScree
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
         ],
       ),
     );

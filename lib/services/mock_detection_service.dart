@@ -12,7 +12,7 @@ class MockDetectionService implements DetectionService {
   List<AiDetection> generateInitialDetections() {
     _allDetections.clear();
     final now = DateTime.now();
-    
+
     // Seed initial historical inspections
     final list = [
       AiDetection(
@@ -107,19 +107,24 @@ class MockDetectionService implements DetectionService {
         imagePath: 'sign',
       ),
     ];
-    
+
     _allDetections.addAll(list);
     return _allDetections;
   }
 
   @override
-  AiDetection generateRandomDetection(double lat, double lng, String missionId, double altitude) {
+  AiDetection generateRandomDetection(
+    double lat,
+    double lng,
+    String missionId,
+    double altitude,
+  ) {
     final now = DateTime.now();
     final id = 'det_${now.millisecondsSinceEpoch}';
     final typeIndex = _random.nextInt(DetectionType.values.length);
     final type = DetectionType.values[typeIndex];
     final confidence = 0.75 + _random.nextDouble() * 0.23; // 75% to 98%
-    
+
     String severity = 'Low';
     if (confidence > 0.92) {
       severity = 'Critical';
@@ -131,14 +136,18 @@ class MockDetectionService implements DetectionService {
 
     String img = 'pothole';
     switch (type) {
+      case DetectionType.person:
+        img = 'person';
+        break;
       case DetectionType.pothole:
         img = 'pothole';
         break;
-      case DetectionType.roadCrack:
-        img = 'crack';
-        break;
+      case DetectionType.waste:
       case DetectionType.garbage:
         img = 'garbage';
+        break;
+      case DetectionType.roadCrack:
+        img = 'crack';
         break;
       case DetectionType.waterLogging:
         img = 'water';

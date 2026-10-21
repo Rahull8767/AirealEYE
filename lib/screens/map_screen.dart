@@ -40,11 +40,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     super.initState();
     // On map screen open, check location and center on phone if drone is not active
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final userPos = await ref.read(userLocationProvider.notifier).fetchCurrentLocation(silent: true);
+      final userPos = await ref
+          .read(userLocationProvider.notifier)
+          .fetchCurrentLocation(silent: true);
       final telemetry = ref.read(droneTelemetryProvider).value;
       if (userPos != null && mounted) {
         // If drone GPS is not actively streaming, initial focus on user's real phone location!
-        if (telemetry == null || !telemetry.isConnected || (telemetry.latitude == 0.0 && telemetry.longitude == 0.0)) {
+        if (telemetry == null ||
+            !telemetry.isConnected ||
+            (telemetry.latitude == 0.0 && telemetry.longitude == 0.0)) {
           _mapController.move(userPos, 16.0);
         }
       }
@@ -66,8 +70,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _recenterOnDrone(DroneTelemetry telemetry) {
-    if (telemetry.isConnected && (telemetry.latitude != 0.0 || telemetry.longitude != 0.0)) {
-      _mapController.move(LatLng(telemetry.latitude, telemetry.longitude), 16.5);
+    if (telemetry.isConnected &&
+        (telemetry.latitude != 0.0 || telemetry.longitude != 0.0)) {
+      _mapController.move(
+        LatLng(telemetry.latitude, telemetry.longitude),
+        16.5,
+      );
     } else {
       // Fallback to user phone location if available, otherwise configurable default center
       final userLoc = ref.read(userLocationProvider).userPosition;
@@ -86,7 +94,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Drone GPS offline. Centered on default operations zone.'),
+            content: Text(
+              'Drone GPS offline. Centered on default operations zone.',
+            ),
             duration: Duration(seconds: 2),
           ),
         );
@@ -98,14 +108,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     // Disable follow drone so map focuses on user phone
     ref.read(mapProvider.notifier).toggleFollowDrone(false);
 
-    final pos = await ref.read(userLocationProvider.notifier).fetchCurrentLocation();
+    final pos = await ref
+        .read(userLocationProvider.notifier)
+        .fetchCurrentLocation();
     final userLocState = ref.read(userLocationProvider);
 
     if (pos != null && mounted) {
       _mapController.move(pos, 16.5);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Centered on Phone GPS [${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}]'),
+          content: Text(
+            'Centered on Phone GPS [${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}]',
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -114,11 +128,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         SnackBar(
           content: Text(userLocState.errorMessage!),
           backgroundColor: AppTheme.warning,
-          action: (userLocState.isPermissionDenied || userLocState.isServiceDisabled)
+          action:
+              (userLocState.isPermissionDenied ||
+                  userLocState.isServiceDisabled)
               ? SnackBarAction(
                   label: 'Settings',
                   textColor: Colors.black,
-                  onPressed: () => ref.read(userLocationProvider.notifier).openSettings(),
+                  onPressed: () =>
+                      ref.read(userLocationProvider.notifier).openSettings(),
                 )
               : null,
         ),
@@ -155,7 +172,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     children: [
                       const Text(
                         'Survey Grid Parameters',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(LucideIcons.x, size: 20),
@@ -173,7 +193,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     activeColor: AppTheme.secondary,
                     onChanged: (val) {
                       setSheetState(() => alt = val);
-                      ref.read(surveyProvider.notifier).updateParameters(
+                      ref
+                          .read(surveyProvider.notifier)
+                          .updateParameters(
                             params.copyWith(flightAltitude: val),
                           );
                     },
@@ -187,12 +209,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     activeColor: AppTheme.warning,
                     onChanged: (val) {
                       setSheetState(() => speed = val);
-                      ref.read(surveyProvider.notifier).updateParameters(
-                            params.copyWith(flightSpeed: val),
-                          );
+                      ref
+                          .read(surveyProvider.notifier)
+                          .updateParameters(params.copyWith(flightSpeed: val));
                     },
                   ),
-                  Text('Side Overlap: ${sideOverlap.toStringAsFixed(0)}% (Transect Spacing)'),
+                  Text(
+                    'Side Overlap: ${sideOverlap.toStringAsFixed(0)}% (Transect Spacing)',
+                  ),
                   Slider(
                     value: sideOverlap,
                     min: 30,
@@ -201,12 +225,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     activeColor: AppTheme.primary,
                     onChanged: (val) {
                       setSheetState(() => sideOverlap = val);
-                      ref.read(surveyProvider.notifier).updateParameters(
+                      ref
+                          .read(surveyProvider.notifier)
+                          .updateParameters(
                             params.copyWith(sideOverlapPercent: val),
                           );
                     },
                   ),
-                  Text('Forward Overlap: ${forwardOverlap.toStringAsFixed(0)}%'),
+                  Text(
+                    'Forward Overlap: ${forwardOverlap.toStringAsFixed(0)}%',
+                  ),
                   Slider(
                     value: forwardOverlap,
                     min: 40,
@@ -215,7 +243,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     activeColor: AppTheme.success,
                     onChanged: (val) {
                       setSheetState(() => forwardOverlap = val);
-                      ref.read(surveyProvider.notifier).updateParameters(
+                      ref
+                          .read(surveyProvider.notifier)
+                          .updateParameters(
                             params.copyWith(forwardOverlapPercent: val),
                           );
                     },
@@ -270,9 +300,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
 
     // Determine initial center coordinates (Drone -> User Phone -> Config Default)
-    final LatLng centerCoord = telemetry.isConnected && telemetry.latitude != 0.0
+    final LatLng centerCoord =
+        telemetry.isConnected && telemetry.latitude != 0.0
         ? LatLng(telemetry.latitude, telemetry.longitude)
-        : (userLocation.userPosition ?? LatLng(MapConfig.defaultLatitude, MapConfig.defaultLongitude));
+        : (userLocation.userPosition ??
+              LatLng(MapConfig.defaultLatitude, MapConfig.defaultLongitude));
 
     // Prepare Markers
     final List<Marker> markers = [];
@@ -314,7 +346,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (mapState.showMissionRoute) {
       for (int i = 0; i < plannedPoints.length; i++) {
         final wp = plannedPoints[i];
-        final bool isActive = missionState.activeMission != null &&
+        final bool isActive =
+            missionState.activeMission != null &&
             (telemetry.currentWaypoint == wp.id ||
                 missionState.activeMission!.currentWaypointIndex == wp.id);
 
@@ -323,10 +356,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             point: LatLng(wp.latitude, wp.longitude),
             width: isActive ? 36 : 30,
             height: isActive ? 46 : 30,
-            child: WaypointMarkerWidget(
-              waypoint: wp,
-              isActive: isActive,
-            ),
+            child: WaypointMarkerWidget(waypoint: wp, isActive: isActive),
           ),
         );
       }
@@ -347,7 +377,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
 
     // 5. Live Drone Marker (MAVLink Telemetry GPS)
-    if (telemetry.isConnected && (telemetry.latitude != 0.0 || telemetry.longitude != 0.0)) {
+    if (telemetry.isConnected &&
+        (telemetry.latitude != 0.0 || telemetry.longitude != 0.0)) {
       markers.add(
         Marker(
           point: LatLng(telemetry.latitude, telemetry.longitude),
@@ -413,7 +444,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (mapState.showMissionRoute && plannedPoints.length > 1) {
       polylines.add(
         Polyline(
-          points: plannedPoints.map((wp) => LatLng(wp.latitude, wp.longitude)).toList(),
+          points: plannedPoints
+              .map((wp) => LatLng(wp.latitude, wp.longitude))
+              .toList(),
           color: Colors.amber.withValues(alpha: 0.85),
           strokeWidth: 2.5,
         ),
@@ -458,7 +491,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               maxZoom: MapConfig.maxZoom,
               onTap: (tapPosition, point) {
                 if (_surveyModeActive) {
-                  ref.read(surveyProvider.notifier).addVertex(point.latitude, point.longitude);
+                  ref
+                      .read(surveyProvider.notifier)
+                      .addVertex(point.latitude, point.longitude);
                 }
               },
             ),
@@ -471,7 +506,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     ? RetinaMode.isHighDensity(context)
                     : null,
                 errorTileCallback: (tile, error, stackTrace) {
-                  ref.read(mapProvider.notifier).setTileStatus(MapTileLoadingStatus.networkError);
+                  ref
+                      .read(mapProvider.notifier)
+                      .setTileStatus(MapTileLoadingStatus.networkError);
                 },
               ),
               if (polygons.isNotEmpty) PolygonLayer(polygons: polygons),
@@ -481,11 +518,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           ),
 
           // 2. Map Attribution Badge (Bottom Right)
-          const Positioned(
-            right: 12,
-            bottom: 6,
-            child: MapAttributionBadge(),
-          ),
+          const Positioned(right: 12, bottom: 6, child: MapAttributionBadge()),
 
           // 3. Tile Offline Warning Badge (if map tiles fail)
           if (mapState.tileStatus == MapTileLoadingStatus.networkError)
@@ -495,11 +528,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.warning.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(20),
-                    boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 8)],
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black45, blurRadius: 8),
+                    ],
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,

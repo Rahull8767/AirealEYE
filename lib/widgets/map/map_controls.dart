@@ -74,7 +74,9 @@ class MapControlsWidget extends ConsumerWidget {
           // Follow Drone Toggle
           _buildBtn(
             icon: LucideIcons.compass,
-            tooltip: mapState.followDrone ? 'Follow Drone (ON)' : 'Follow Drone (OFF)',
+            tooltip: mapState.followDrone
+                ? 'Follow Drone (ON)'
+                : 'Follow Drone (OFF)',
             isActive: mapState.followDrone,
             activeColor: AppTheme.secondary,
             onTap: () => ref.read(mapProvider.notifier).toggleFollowDrone(),
@@ -97,7 +99,8 @@ class MapControlsWidget extends ConsumerWidget {
           if (flightTrack.breadcrumbs.isNotEmpty) ...[
             _buildBtn(
               icon: LucideIcons.rotateCcw,
-              tooltip: 'Clear Flight Trail (${flightTrack.breadcrumbs.length} pts)',
+              tooltip:
+                  'Clear Flight Trail (${flightTrack.breadcrumbs.length} pts)',
               color: AppTheme.danger,
               onTap: () {
                 ref.read(flightTrackProvider.notifier).clearTrack();
@@ -114,8 +117,12 @@ class MapControlsWidget extends ConsumerWidget {
 
           // Fullscreen Toggle
           _buildBtn(
-            icon: mapState.isFullscreen ? LucideIcons.minimize2 : LucideIcons.maximize2,
-            tooltip: mapState.isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Map',
+            icon: mapState.isFullscreen
+                ? LucideIcons.minimize2
+                : LucideIcons.maximize2,
+            tooltip: mapState.isFullscreen
+                ? 'Exit Fullscreen'
+                : 'Fullscreen Map',
             isActive: mapState.isFullscreen,
             onTap: () => ref.read(mapProvider.notifier).toggleFullscreen(),
           ),
@@ -145,14 +152,12 @@ class MapControlsWidget extends ConsumerWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: isActive ? (activeColor ?? AppTheme.secondary).withValues(alpha: 0.22) : Colors.transparent,
+            color: isActive
+                ? (activeColor ?? AppTheme.secondary).withValues(alpha: 0.22)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: effectiveColor,
-          ),
+          child: Icon(icon, size: 18, color: effectiveColor),
         ),
       ),
     );

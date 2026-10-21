@@ -5,7 +5,8 @@ import 'package:latlong2/latlong.dart';
 class SurveyParameters {
   final double flightAltitude; // meters AGL (e.g. 30.0 - 120.0m)
   final double flightSpeed; // m/s (e.g. 5.0 m/s)
-  final double cameraFovHorizontal; // degrees (e.g. 78.0 for standard drone camera)
+  final double
+  cameraFovHorizontal; // degrees (e.g. 78.0 for standard drone camera)
   final double cameraFovVertical; // degrees (e.g. 54.0)
   final double forwardOverlapPercent; // e.g. 75%
   final double sideOverlapPercent; // e.g. 60%
@@ -35,7 +36,8 @@ class SurveyParameters {
       flightSpeed: flightSpeed ?? this.flightSpeed,
       cameraFovHorizontal: cameraFovHorizontal ?? this.cameraFovHorizontal,
       cameraFovVertical: cameraFovVertical ?? this.cameraFovVertical,
-      forwardOverlapPercent: forwardOverlapPercent ?? this.forwardOverlapPercent,
+      forwardOverlapPercent:
+          forwardOverlapPercent ?? this.forwardOverlapPercent,
       sideOverlapPercent: sideOverlapPercent ?? this.sideOverlapPercent,
       gridAngle: gridAngle ?? this.gridAngle,
     );
@@ -87,7 +89,8 @@ class SurveyArea {
     if (vertices.length < 3) return 0.0;
 
     const double earthRadius = 6378137.0; // WGS84 major radius in meters
-    final double centerLatRad = (center?.latitude ?? vertices.first.latitude) * (math.pi / 180.0);
+    final double centerLatRad =
+        (center?.latitude ?? vertices.first.latitude) * (math.pi / 180.0);
     final double cosCenterLat = math.cos(centerLatRad);
 
     double totalArea = 0.0;
@@ -98,10 +101,12 @@ class SurveyArea {
       final LatLng p2 = vertices[(i + 1) % len];
 
       // Project spherical coords to local metric tangent plane (x, y in meters)
-      final double x1 = p1.longitude * (math.pi / 180.0) * earthRadius * cosCenterLat;
+      final double x1 =
+          p1.longitude * (math.pi / 180.0) * earthRadius * cosCenterLat;
       final double y1 = p1.latitude * (math.pi / 180.0) * earthRadius;
 
-      final double x2 = p2.longitude * (math.pi / 180.0) * earthRadius * cosCenterLat;
+      final double x2 =
+          p2.longitude * (math.pi / 180.0) * earthRadius * cosCenterLat;
       final double y2 = p2.latitude * (math.pi / 180.0) * earthRadius;
 
       totalArea += (x1 * y2) - (x2 * y1);

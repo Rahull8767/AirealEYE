@@ -10,9 +10,11 @@ import 'package:dart_mavlink/mavlink.dart';
 import 'package:dart_mavlink/dialects/ardupilotmega.dart';
 
 // Spy socket to monitor MAVLink packets and feed fake Autopilot responses
-class SpyRawDatagramSocket extends Stream<RawSocketEvent> implements RawDatagramSocket {
+class SpyRawDatagramSocket extends Stream<RawSocketEvent>
+    implements RawDatagramSocket {
   final List<Uint8List> sentPackets = [];
-  final StreamController<RawSocketEvent> _controller = StreamController<RawSocketEvent>.broadcast();
+  final StreamController<RawSocketEvent> _controller =
+      StreamController<RawSocketEvent>.broadcast();
   Datagram? _nextDatagram;
 
   void injectDatagram(Uint8List data) {
@@ -33,7 +35,12 @@ class SpyRawDatagramSocket extends Stream<RawSocketEvent> implements RawDatagram
     void Function()? onDone,
     bool? cancelOnError,
   }) {
-    return _controller.stream.listen(onData, onError: onError, onDone: onDone, cancelOnError: cancelOnError);
+    return _controller.stream.listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
   }
 
   @override
@@ -97,95 +104,157 @@ void main() {
       service.disconnect();
     });
 
-    test('uploadMission initiates protocol sequence with MISSION_COUNT', () async {
-      final waypoints = [
-        Waypoint(id: 1, latitude: 37.7749, longitude: -122.4194, altitude: 30.0, speed: 5.0, hoverTime: 2),
-      ];
+    test(
+      'uploadMission initiates protocol sequence with MISSION_COUNT',
+      () async {
+        final waypoints = [
+          Waypoint(
+            id: 1,
+            latitude: 37.7749,
+            longitude: -122.4194,
+            altitude: 30.0,
+            speed: 5.0,
+            hoverTime: 2,
+          ),
+        ];
 
-      // Run upload as async
-      final future = service.uploadMission(waypoints);
+        // Run upload as async
+        final future = service.uploadMission(waypoints);
 
-      // Verify MISSION_COUNT was sent
-      expect(spySocket.sentPackets.isNotEmpty, isTrue);
+        // Verify MISSION_COUNT was sent
+        expect(spySocket.sentPackets.isNotEmpty, isTrue);
 
-      MavlinkFrame? countFrame;
-      parser.stream.listen((frame) {
-        countFrame = frame;
-      });
-      parser.parse(spySocket.sentPackets.first);
+        MavlinkFrame? countFrame;
+        parser.stream.listen((frame) {
+          countFrame = frame;
+        });
+        parser.parse(spySocket.sentPackets.first);
 
-      await Future.delayed(Duration.zero);
+        await Future.delayed(Duration.zero);
 
-      expect(countFrame, isNotNull);
-      expect(countFrame!.message, isA<MissionCount>());
-      
-      final countMsg = countFrame!.message as MissionCount;
-      expect(countMsg.count, equals(2)); // Home position (seq 0) + Waypoint 1 (seq 1)
-      expect(countMsg.missionType, equals(0));
+        expect(countFrame, isNotNull);
+        expect(countFrame!.message, isA<MissionCount>());
 
-      service.disconnect();
-      await expectLater(future, throwsA(isA<StateError>()));
-    });
+        final countMsg = countFrame!.message as MissionCount;
+        expect(
+          countMsg.count,
+          equals(2),
+        ); // Home position (seq 0) + Waypoint 1 (seq 1)
+        expect(countMsg.missionType, equals(0));
 
-    test('uploadMission responds to MISSION_REQUEST with waypoint data and succeeds on MISSION_ACK', () async {
-      final waypoints = [
-        Waypoint(id: 1, latitude: 37.7749, longitude: -122.4194, altitude: 30.0, speed: 5.0, hoverTime: 2),
-      ];
+        service.disconnect();
+        await expectLater(future, throwsA(isA<StateError>()));
+      },
+    );
 
-      final future = service.uploadMission(waypoints);
+    test(
+      'uploadMission responds to MISSION_REQUEST with waypoint data and succeeds on MISSION_ACK',
+      () async {
+        final waypoints = [
+          Waypoint(
+            id: 1,
+            latitude: 37.7749,
+            longitude: -122.4194,
+            altitude: 30.0,
+            speed: 5.0,
+            hoverTime: 2,
+          ),
+        ];
 
-      // Autopilot requests seq 0 (home position)
-      final request0 = MissionRequest(targetSystem: 255, targetComponent: 1, seq: 0, missionType: 0);
-      spySocket.injectDatagram(MavlinkFrame.v2(0, 1, 1, request0).serialize());
+        final future = service.uploadMission(waypoints);
 
-      await Future.delayed(const Duration(milliseconds: 100));
+        // Autopilot requests seq 0 (home position)
+        final request0 = MissionRequest(
+          targetSystem: 255,
+          targetComponent: 1,
+          seq: 0,
+          missionType: 0,
+        );
+        spySocket.injectDatagram(
+          MavlinkFrame.v2(0, 1, 1, request0).serialize(),
+        );
 
-      // Autopilot requests seq 1 (waypoint 1)
-      final request1 = MissionRequest(targetSystem: 255, targetComponent: 1, seq: 1, missionType: 0);
-      spySocket.injectDatagram(MavlinkFrame.v2(1, 1, 1, request1).serialize());
+        await Future.delayed(const Duration(milliseconds: 100));
 
-      await Future.delayed(const Duration(milliseconds: 100));
+        // Autopilot requests seq 1 (waypoint 1)
+        final request1 = MissionRequest(
+          targetSystem: 255,
+          targetComponent: 1,
+          seq: 1,
+          missionType: 0,
+        );
+        spySocket.injectDatagram(
+          MavlinkFrame.v2(1, 1, 1, request1).serialize(),
+        );
 
-      // Autopilot sends MISSION_ACK success
-      final ack = MissionAck(targetSystem: 255, targetComponent: 1, type: 0, missionType: 0, opaqueId: 0);
-      spySocket.injectDatagram(MavlinkFrame.v2(2, 1, 1, ack).serialize());
+        await Future.delayed(const Duration(milliseconds: 100));
 
-      final result = await future;
-      expect(result, isTrue);
-      expect(service.activeWaypoints.length, equals(1));
-    });
+        // Autopilot sends MISSION_ACK success
+        final ack = MissionAck(
+          targetSystem: 255,
+          targetComponent: 1,
+          type: 0,
+          missionType: 0,
+          opaqueId: 0,
+        );
+        spySocket.injectDatagram(MavlinkFrame.v2(2, 1, 1, ack).serialize());
 
-    test('uploadMission throws TimeoutException if Autopilot fails to respond', () async {
-      final waypoints = [
-        Waypoint(id: 1, latitude: 37.7749, longitude: -122.4194, altitude: 30.0, speed: 5.0, hoverTime: 2),
-      ];
+        final result = await future;
+        expect(result, isTrue);
+        expect(service.activeWaypoints.length, equals(1));
+      },
+    );
 
-      expect(
-        service.uploadMission(waypoints),
-        throwsA(isA<TimeoutException>()),
-      );
-    });
+    test(
+      'uploadMission throws TimeoutException if Autopilot fails to respond',
+      () async {
+        final waypoints = [
+          Waypoint(
+            id: 1,
+            latitude: 37.7749,
+            longitude: -122.4194,
+            altitude: 30.0,
+            speed: 5.0,
+            hoverTime: 2,
+          ),
+        ];
+
+        expect(
+          service.uploadMission(waypoints),
+          throwsA(isA<TimeoutException>()),
+        );
+      },
+    );
   });
 
   group('AI Detection & Geolocation Suite', () {
-    test('MockDetectionService produces detections with required properties', () {
-      final service = MockDetectionService();
-      final list = service.generateInitialDetections();
+    test(
+      'MockDetectionService produces detections with required properties',
+      () {
+        final service = MockDetectionService();
+        final list = service.generateInitialDetections();
 
-      expect(list.isNotEmpty, isTrue);
-      for (var d in list) {
-        expect(d.id.isNotEmpty, isTrue);
-        expect(d.altitude, greaterThan(0.0));
-        expect(d.boundingBox, isNotNull);
-        expect(d.boundingBox!.length, equals(4));
-        expect(d.severity.isNotEmpty, isTrue);
-      }
-    });
+        expect(list.isNotEmpty, isTrue);
+        for (var d in list) {
+          expect(d.id.isNotEmpty, isTrue);
+          expect(d.altitude, greaterThan(0.0));
+          expect(d.boundingBox, isNotNull);
+          expect(d.boundingBox!.length, equals(4));
+          expect(d.severity.isNotEmpty, isTrue);
+        }
+      },
+    );
 
     test('GeolocationServiceImpl returns current coordinates', () {
       final geoService = GeolocationServiceImpl();
-      final geotag = geoService.calculateGeotag(37.7749, -122.4194, 90.0, -45.0, 30.0);
-      
+      final geotag = geoService.calculateGeotag(
+        37.7749,
+        -122.4194,
+        90.0,
+        -45.0,
+        30.0,
+      );
+
       expect(geotag.latitude, equals(37.7749));
       expect(geotag.longitude, equals(-122.4194));
     });

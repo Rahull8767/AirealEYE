@@ -9,11 +9,7 @@ class DroneMarkerWidget extends StatelessWidget {
   final DroneTelemetry telemetry;
   final VoidCallback? onTap;
 
-  const DroneMarkerWidget({
-    super.key,
-    required this.telemetry,
-    this.onTap,
-  });
+  const DroneMarkerWidget({super.key, required this.telemetry, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -85,12 +81,7 @@ class DroneMarkerWidget extends StatelessWidget {
                   LucideIcons.plane,
                   color: isArmed ? AppTheme.secondary : Colors.white,
                   size: 26,
-                  shadows: const [
-                    Shadow(
-                      color: Colors.black87,
-                      blurRadius: 6,
-                    ),
-                  ],
+                  shadows: const [Shadow(color: Colors.black87, blurRadius: 6)],
                 ),
               ),
 
@@ -102,7 +93,9 @@ class DroneMarkerWidget extends StatelessWidget {
                   height: 6,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: telemetry.satellites >= 6 ? AppTheme.success : AppTheme.warning,
+                    color: telemetry.satellites >= 6
+                        ? AppTheme.success
+                        : AppTheme.warning,
                     border: Border.all(color: Colors.white, width: 1),
                   ),
                 ),

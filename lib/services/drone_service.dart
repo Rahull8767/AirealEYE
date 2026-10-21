@@ -17,13 +17,10 @@ enum DroneConnectionState {
   stale, // Backward compatible alias for telemetryStale
   connectionLost, // Backward compatible alias for telemetryStale
   reconnecting,
-  error
+  error,
 }
 
-enum DroneConnectionMode {
-  real,
-  simulation
-}
+enum DroneConnectionMode { real, simulation }
 
 class MavlinkTestResult {
   final bool success;
@@ -54,7 +51,7 @@ class MavlinkTestResult {
 abstract class DroneService {
   Stream<DroneTelemetry> get telemetryStream;
   DroneTelemetry get currentTelemetry;
-  
+
   Stream<DroneConnectionState> get connectionStateStream;
   DroneConnectionState get connectionState;
 
@@ -69,7 +66,7 @@ abstract class DroneService {
 
   void connect();
   void disconnect();
-  
+
   Future<MavlinkTestResult> testConnection(MavlinkConnectionConfig testConfig);
 
   Future<bool> arm();
@@ -78,7 +75,7 @@ abstract class DroneService {
   Future<bool> takeoff(double altitudeMeters);
   Future<bool> land();
   Future<bool> returnToLaunch();
-  
+
   List<Waypoint> get activeWaypoints;
   Future<bool> uploadMission(List<Waypoint> waypoints);
   Future<bool> startMission();

@@ -29,14 +29,21 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(LucideIcons.fileBarChart, size: 48, color: AppTheme.textSecondary),
+              const Icon(
+                LucideIcons.fileBarChart,
+                size: 48,
+                color: AppTheme.textSecondary,
+              ),
               const SizedBox(height: 16),
               Text(
                 'No inspection reports compiled yet',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
-              const Text('Complete an autonomous flight to log road data.', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+              const Text(
+                'Complete an autonomous flight to log road data.',
+                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+              ),
             ],
           ),
         ),
@@ -59,13 +66,20 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   value: _activeReportIndex,
                   dropdownColor: AppTheme.card,
                   underline: const SizedBox(),
-                  icon: const Icon(LucideIcons.chevronDown, color: AppTheme.secondary),
+                  icon: const Icon(
+                    LucideIcons.chevronDown,
+                    color: AppTheme.secondary,
+                  ),
                   items: List.generate(reports.length, (index) {
                     return DropdownMenuItem(
                       value: index,
                       child: Text(
                         reports[index].missionName,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: AppTheme.textPrimary,
+                        ),
                       ),
                     );
                   }),
@@ -77,7 +91,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 ),
                 Text(
                   '${activeRep.date.month}/${activeRep.date.day}/${activeRep.date.year}',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold, fontSize: 13),
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
@@ -91,10 +109,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             Text(
               'ANOMALY RATIO DISTRIBUTION',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
             ),
             const SizedBox(height: 12),
             GlassPanel(
@@ -130,10 +148,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             Text(
               'ANOMALIES COUNT COMPARATIVE',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
             ),
             const SizedBox(height: 12),
             GlassPanel(
@@ -144,9 +162,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   borderData: FlBorderData(show: false),
                   gridData: const FlGridData(show: false),
                   titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
@@ -155,8 +179,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                           if (idx >= 0 && idx < reports.length) {
                             // Shortened names
                             final words = reports[idx].missionName.split(' ');
-                            final shortName = words.isNotEmpty ? words.first : '';
-                            return Text(shortName, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary));
+                            final shortName = words.isNotEmpty
+                                ? words.first
+                                : '';
+                            return Text(
+                              shortName,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: AppTheme.textSecondary,
+                              ),
+                            );
                           }
                           return const Text('');
                         },
@@ -188,7 +220,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   child: AnimatedButton(
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Generating PDF Report... Saved to Documents/AerialEye')),
+                        const SnackBar(
+                          content: Text(
+                            'Generating PDF Report... Saved to Documents/AerialEye',
+                          ),
+                        ),
                       );
                     },
                     child: ElevatedButton.icon(
@@ -204,7 +240,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     color: AppTheme.surface,
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Report details shared successfully.')),
+                        const SnackBar(
+                          content: Text('Report details shared successfully.'),
+                        ),
                       );
                     },
                     child: OutlinedButton.icon(
@@ -231,8 +269,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       mainAxisSpacing: 10,
       childAspectRatio: 2.2,
       children: [
-        _buildMetricTile('Inspection Area', '${activeRep.totalDistanceKm.toStringAsFixed(1)} km²'),
-        _buildMetricTile('Path Coverage', '${activeRep.coveragePercent.toStringAsFixed(1)}%'),
+        _buildMetricTile(
+          'Inspection Area',
+          '${activeRep.totalDistanceKm.toStringAsFixed(1)} km²',
+        ),
+        _buildMetricTile(
+          'Path Coverage',
+          '${activeRep.coveragePercent.toStringAsFixed(1)}%',
+        ),
         _buildMetricTile('Flight Time', '${activeRep.duration.inMinutes} mins'),
         _buildMetricTile('Images Saved', '${activeRep.totalImages} Frames'),
       ],
@@ -251,9 +295,23 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(val, style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold)),
+          Text(
+            val,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -271,11 +329,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           title: 'Clean',
           radius: 20,
           titleStyle: const TextStyle(color: Colors.white, fontSize: 10),
-        )
+        ),
       ];
     }
 
-    final colors = [Colors.red, Colors.orange, Colors.green, Colors.blue, Colors.purple, Colors.cyan, Colors.yellow];
+    final colors = [
+      Colors.red,
+      Colors.orange,
+      Colors.green,
+      Colors.blue,
+      Colors.purple,
+      Colors.cyan,
+      Colors.yellow,
+    ];
     int colorIdx = 0;
 
     return counts.entries.where((e) => e.value > 0).map((entry) {
@@ -287,7 +353,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         value: entry.value.toDouble(),
         title: '${percent.toStringAsFixed(0)}%',
         radius: 22,
-        titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+        titleStyle: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
       );
     }).toList();
   }
@@ -300,7 +370,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       return [const Text('No issues identified.')];
     }
 
-    final colors = [Colors.red, Colors.orange, Colors.green, Colors.blue, Colors.purple, Colors.cyan, Colors.yellow];
+    final colors = [
+      Colors.red,
+      Colors.orange,
+      Colors.green,
+      Colors.blue,
+      Colors.purple,
+      Colors.cyan,
+      Colors.yellow,
+    ];
     int colorIdx = 0;
 
     return counts.entries.where((e) => e.value > 0).map((entry) {
@@ -310,9 +388,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(
           children: [
-            Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
             const SizedBox(width: 8),
-            Text('${entry.key}: ${entry.value}', style: const TextStyle(fontSize: 11, color: AppTheme.textPrimary)),
+            Text(
+              '${entry.key}: ${entry.value}',
+              style: const TextStyle(fontSize: 11, color: AppTheme.textPrimary),
+            ),
           ],
         ),
       );

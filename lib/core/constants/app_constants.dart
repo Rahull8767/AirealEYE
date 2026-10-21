@@ -14,15 +14,16 @@ class AppConstants {
 
   // Custom Elevation Shadow
   static List<BoxShadow> get premiumShadow => [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.3),
-          blurRadius: 12,
-          offset: const Offset(0, 4),
-        )
-      ];
+    BoxShadow(
+      color: Colors.black.withOpacity(0.3),
+      blurRadius: 12,
+      offset: const Offset(0, 4),
+    ),
+  ];
 
   // Map settings
-  static const double defaultLat = 37.7749; // Default focus (e.g. San Francisco or central area)
+  static const double defaultLat =
+      37.7749; // Default focus (e.g. San Francisco or central area)
   static const double defaultLng = -122.4194;
   static const double defaultZoom = 15.0;
 }

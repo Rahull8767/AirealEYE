@@ -5,11 +5,7 @@ import 'package:aerial_eye/core/config/app_config.dart';
 import 'package:aerial_eye/screens/splash_screen.dart';
 
 void main() {
-  runApp(
-    const ProviderScope(
-      child: AerialEyeApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: AerialEyeApp()));
 }
 
 class AerialEyeApp extends ConsumerWidget {

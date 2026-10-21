@@ -5,7 +5,9 @@ import 'package:aerial_eye/main.dart';
 import 'package:aerial_eye/screens/splash_screen.dart';
 
 void main() {
-  testWidgets('AerialEye App builds and loads SplashScreen', (WidgetTester tester) async {
+  testWidgets('AerialEye App builds and loads SplashScreen', (
+    WidgetTester tester,
+  ) async {
     // Set a standard responsive screen size to prevent layout overflows during testing
     tester.view.physicalSize = const Size(1200, 800);
     tester.view.devicePixelRatio = 1.0;

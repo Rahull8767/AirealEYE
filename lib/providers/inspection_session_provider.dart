@@ -8,10 +8,7 @@ class InspectionSessionState {
   final InspectionSession? activeSession;
   final List<InspectionSession> sessionHistory;
 
-  InspectionSessionState({
-    this.activeSession,
-    required this.sessionHistory,
-  });
+  InspectionSessionState({this.activeSession, required this.sessionHistory});
 
   InspectionSessionState copyWith({
     InspectionSession? activeSession,
@@ -19,7 +16,9 @@ class InspectionSessionState {
     bool clearActiveSession = false,
   }) {
     return InspectionSessionState(
-      activeSession: clearActiveSession ? null : (activeSession ?? this.activeSession),
+      activeSession: clearActiveSession
+          ? null
+          : (activeSession ?? this.activeSession),
       sessionHistory: sessionHistory ?? this.sessionHistory,
     );
   }
@@ -29,9 +28,7 @@ class InspectionSessionNotifier extends StateNotifier<InspectionSessionState> {
   final Ref ref;
 
   InspectionSessionNotifier(this.ref)
-      : super(InspectionSessionState(
-          sessionHistory: [],
-        )) {
+    : super(InspectionSessionState(sessionHistory: [])) {
     // Watch telemetry to update active session distance
     ref.listen(droneTelemetryProvider, (previous, next) {
       final telemetry = next.value;
@@ -47,15 +44,15 @@ class InspectionSessionNotifier extends StateNotifier<InspectionSessionState> {
     // Watch detections to update active session typeCounts
     ref.listen(detectionProvider, (previous, next) {
       if (state.activeSession != null) {
-        final currentDetections = next.detections.where((d) => d.missionId == state.activeSession!.id).toList();
+        final currentDetections = next.detections
+            .where((d) => d.missionId == state.activeSession!.id)
+            .toList();
         final Map<DetectionType, int> counts = {};
         for (var d in currentDetections) {
           counts[d.type] = (counts[d.type] ?? 0) + 1;
         }
         state = state.copyWith(
-          activeSession: state.activeSession!.copyWith(
-            typeCounts: counts,
-          ),
+          activeSession: state.activeSession!.copyWith(typeCounts: counts),
         );
       }
     });
@@ -85,6 +82,9 @@ class InspectionSessionNotifier extends StateNotifier<InspectionSessionState> {
   }
 }
 
-final inspectionSessionProvider = StateNotifierProvider<InspectionSessionNotifier, InspectionSessionState>((ref) {
-  return InspectionSessionNotifier(ref);
-});
+final inspectionSessionProvider =
+    StateNotifierProvider<InspectionSessionNotifier, InspectionSessionState>((
+      ref,
+    ) {
+      return InspectionSessionNotifier(ref);
+    });

@@ -42,7 +42,13 @@ class SystemSettings {
       cameraResolution: AppConfig.cameraResolution,
       videoFps: AppConfig.videoFps,
       aiConfidenceThreshold: AppConfig.defaultAiConfidenceThreshold,
-      enabledAiClasses: ['Pothole', 'Road Crack', 'Garbage', 'Water Logging', 'Obstacle'],
+      enabledAiClasses: [
+        'Pothole',
+        'Road Crack',
+        'Garbage',
+        'Water Logging',
+        'Obstacle',
+      ],
       firebaseSyncEnabled: true,
     );
   }
@@ -71,7 +77,8 @@ class SystemSettings {
       telemetryFreq: telemetryFreq ?? this.telemetryFreq,
       cameraResolution: cameraResolution ?? this.cameraResolution,
       videoFps: videoFps ?? this.videoFps,
-      aiConfidenceThreshold: aiConfidenceThreshold ?? this.aiConfidenceThreshold,
+      aiConfidenceThreshold:
+          aiConfidenceThreshold ?? this.aiConfidenceThreshold,
       enabledAiClasses: enabledAiClasses ?? this.enabledAiClasses,
       firebaseSyncEnabled: firebaseSyncEnabled ?? this.firebaseSyncEnabled,
     );
@@ -128,6 +135,7 @@ class SettingsNotifier extends StateNotifier<SystemSettings> {
   }
 }
 
-final settingsProvider = StateNotifierProvider<SettingsNotifier, SystemSettings>((ref) {
-  return SettingsNotifier();
-});
+final settingsProvider =
+    StateNotifierProvider<SettingsNotifier, SystemSettings>((ref) {
+      return SettingsNotifier();
+    });

@@ -90,11 +90,16 @@ class MissionPlannerState {
       undoHistory: undoHistory ?? this.undoHistory,
       redoHistory: redoHistory ?? this.redoHistory,
       missionHistory: missionHistory ?? this.missionHistory,
-      activeMission: clearActiveMission ? null : (activeMission ?? this.activeMission),
+      activeMission: clearActiveMission
+          ? null
+          : (activeMission ?? this.activeMission),
       isUploaded: isUploaded ?? this.isUploaded,
       missionStatus: missionStatus ?? this.missionStatus,
-      selectedInspectionType: selectedInspectionType ?? this.selectedInspectionType,
-      validationError: clearValidationError ? null : (validationError ?? this.validationError),
+      selectedInspectionType:
+          selectedInspectionType ?? this.selectedInspectionType,
+      validationError: clearValidationError
+          ? null
+          : (validationError ?? this.validationError),
     );
   }
 }
@@ -107,7 +112,8 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
     ref.listen(droneTelemetryProvider, (previous, next) {
       final telemetry = next.value;
       if (telemetry != null && state.activeMission != null) {
-        if (telemetry.currentWaypoint != state.activeMission!.currentWaypointIndex) {
+        if (telemetry.currentWaypoint !=
+            state.activeMission!.currentWaypointIndex) {
           state = state.copyWith(
             activeMission: state.activeMission!.copyWith(
               currentWaypointIndex: telemetry.currentWaypoint,
@@ -203,7 +209,9 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
       plannedWaypoints: reindexed,
       redoHistory: [],
       isUploaded: false,
-      missionStatus: reindexed.isEmpty ? MissionStatus.idle : MissionStatus.editing,
+      missionStatus: reindexed.isEmpty
+          ? MissionStatus.idle
+          : MissionStatus.editing,
       clearValidationError: true,
     );
   }
@@ -270,16 +278,16 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
   }
 
   void _saveToUndoHistory() {
-    state = state.copyWith(
-      undoHistory: List.from(state.plannedWaypoints),
-    );
+    state = state.copyWith(undoHistory: List.from(state.plannedWaypoints));
   }
 
   Future<bool> uploadMission() async {
     final validationError = validateMission();
     if (validationError != null) {
       state = state.copyWith(validationError: validationError);
-      ref.read(notificationProvider.notifier).addNotification(
+      ref
+          .read(notificationProvider.notifier)
+          .addNotification(
             'Mission Validation Failed',
             validationError,
             NotificationType.critical,
@@ -300,7 +308,9 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
           isUploaded: true,
           missionStatus: MissionStatus.uploaded,
         );
-        ref.read(notificationProvider.notifier).addNotification(
+        ref
+            .read(notificationProvider.notifier)
+            .addNotification(
               'Mission Uploaded',
               'Successfully uploaded ${state.plannedWaypoints.length} waypoints to ArduPilot buffer.',
               NotificationType.success,
@@ -315,7 +325,9 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
         missionStatus: MissionStatus.failed,
         validationError: 'Upload failed: $e',
       );
-      ref.read(notificationProvider.notifier).addNotification(
+      ref
+          .read(notificationProvider.notifier)
+          .addNotification(
             'Upload Failed',
             'Failed to upload mission: $e',
             NotificationType.critical,
@@ -326,7 +338,9 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
 
   Future<bool> startMission() async {
     if (!state.isUploaded || state.plannedWaypoints.isEmpty) {
-      ref.read(notificationProvider.notifier).addNotification(
+      ref
+          .read(notificationProvider.notifier)
+          .addNotification(
             'Mission Not Ready',
             'Upload waypoints to vehicle before starting.',
             NotificationType.warning,
@@ -336,7 +350,9 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
 
     final droneService = ref.read(droneServiceProvider);
     if (droneService.connectionState != DroneConnectionState.connected) {
-      ref.read(notificationProvider.notifier).addNotification(
+      ref
+          .read(notificationProvider.notifier)
+          .addNotification(
             'Vehicle Disconnected',
             'Cannot start mission: MAVLink connection lost.',
             NotificationType.critical,
@@ -348,7 +364,8 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
 
     final newMission = Mission(
       id: 'miss_${DateTime.now().millisecondsSinceEpoch}',
-      name: '${state.selectedInspectionType.label} ${state.missionHistory.length + 1}',
+      name:
+          '${state.selectedInspectionType.label} ${state.missionHistory.length + 1}',
       date: DateTime.now(),
       duration: Duration.zero,
       distance: 0.0,
@@ -365,12 +382,16 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
     try {
       final success = await droneService.startMission();
       if (success) {
-        ref.read(notificationProvider.notifier).addNotification(
+        ref
+            .read(notificationProvider.notifier)
+            .addNotification(
               'Mission Started',
               'Autopilot executing ${state.selectedInspectionType.label} at ${state.plannedWaypoints.first.altitude}m.',
               NotificationType.info,
             );
-        ref.read(detectionProvider.notifier).startSimulationForMission(newMission.id);
+        ref
+            .read(detectionProvider.notifier)
+            .startSimulationForMission(newMission.id);
         return true;
       } else {
         state = state.copyWith(missionStatus: MissionStatus.failed);
@@ -381,7 +402,9 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
         missionStatus: MissionStatus.failed,
         validationError: 'Start failed: $e',
       );
-      ref.read(notificationProvider.notifier).addNotification(
+      ref
+          .read(notificationProvider.notifier)
+          .addNotification(
             'Start Failed',
             'Failed to start mission: $e',
             NotificationType.critical,
@@ -395,17 +418,17 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
     try {
       await droneService.pauseMission();
       state = state.copyWith(missionStatus: MissionStatus.paused);
-      ref.read(notificationProvider.notifier).addNotification(
+      ref
+          .read(notificationProvider.notifier)
+          .addNotification(
             'Mission Paused',
             'Vehicle holding position in LOITER mode.',
             NotificationType.warning,
           );
     } catch (e) {
-      ref.read(notificationProvider.notifier).addNotification(
-            'Pause Failed',
-            '$e',
-            NotificationType.critical,
-          );
+      ref
+          .read(notificationProvider.notifier)
+          .addNotification('Pause Failed', '$e', NotificationType.critical);
     }
   }
 
@@ -414,17 +437,17 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
     try {
       await droneService.resumeMission();
       state = state.copyWith(missionStatus: MissionStatus.running);
-      ref.read(notificationProvider.notifier).addNotification(
+      ref
+          .read(notificationProvider.notifier)
+          .addNotification(
             'Mission Resumed',
             'Vehicle continuing mission route in AUTO mode.',
             NotificationType.info,
           );
     } catch (e) {
-      ref.read(notificationProvider.notifier).addNotification(
-            'Resume Failed',
-            '$e',
-            NotificationType.critical,
-          );
+      ref
+          .read(notificationProvider.notifier)
+          .addNotification('Resume Failed', '$e', NotificationType.critical);
     }
   }
 
@@ -439,25 +462,29 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
       final double currentLat = centerLat + (sweep * latSpacing);
       if (sweep % 2 == 0) {
         for (int p = -1; p <= 1; p++) {
-          gridWaypoints.add(Waypoint(
-            id: id++,
-            latitude: currentLat,
-            longitude: centerLng + (p * lngSpacing),
-            altitude: 30.0,
-            speed: 5.0,
-            hoverTime: 2,
-          ));
+          gridWaypoints.add(
+            Waypoint(
+              id: id++,
+              latitude: currentLat,
+              longitude: centerLng + (p * lngSpacing),
+              altitude: 30.0,
+              speed: 5.0,
+              hoverTime: 2,
+            ),
+          );
         }
       } else {
         for (int p = 1; p >= -1; p--) {
-          gridWaypoints.add(Waypoint(
-            id: id++,
-            latitude: currentLat,
-            longitude: centerLng + (p * lngSpacing),
-            altitude: 30.0,
-            speed: 5.0,
-            hoverTime: 2,
-          ));
+          gridWaypoints.add(
+            Waypoint(
+              id: id++,
+              latitude: currentLat,
+              longitude: centerLng + (p * lngSpacing),
+              altitude: 30.0,
+              speed: 5.0,
+              hoverTime: 2,
+            ),
+          );
         }
       }
     }
@@ -470,7 +497,9 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
       clearValidationError: true,
     );
 
-    ref.read(notificationProvider.notifier).addNotification(
+    ref
+        .read(notificationProvider.notifier)
+        .addNotification(
           'Grid Generated',
           'Lawnmower sweep grid generated with ${gridWaypoints.length} waypoints.',
           NotificationType.success,
@@ -489,10 +518,10 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
       inspectionType: state.selectedInspectionType,
       waypoints: List.from(state.plannedWaypoints),
     );
-    state = state.copyWith(
-      missionHistory: [newSaved, ...state.missionHistory],
-    );
-    ref.read(notificationProvider.notifier).addNotification(
+    state = state.copyWith(missionHistory: [newSaved, ...state.missionHistory]);
+    ref
+        .read(notificationProvider.notifier)
+        .addNotification(
           'Mission Saved',
           'Saved "$name" local mission template successfully.',
           NotificationType.success,
@@ -509,7 +538,9 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
       missionStatus: MissionStatus.editing,
       clearValidationError: true,
     );
-    ref.read(notificationProvider.notifier).addNotification(
+    ref
+        .read(notificationProvider.notifier)
+        .addNotification(
           'Mission Loaded',
           'Loaded "${mission.name}" template with ${mission.waypoints.length} points.',
           NotificationType.info,
@@ -526,8 +557,12 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
       await droneService.returnToLaunch();
     }
 
-    final double finalDistance = double.parse((droneService.currentTelemetry.distance / 1000).toStringAsFixed(2));
-    final Duration finalDuration = Duration(seconds: (droneService.currentTelemetry.distance ~/ 5).clamp(10, 3600));
+    final double finalDistance = double.parse(
+      (droneService.currentTelemetry.distance / 1000).toStringAsFixed(2),
+    );
+    final Duration finalDuration = Duration(
+      seconds: (droneService.currentTelemetry.distance ~/ 5).clamp(10, 3600),
+    );
 
     final finishedMission = state.activeMission!.copyWith(
       status: endStatus,
@@ -543,16 +578,23 @@ class MissionNotifier extends StateNotifier<MissionPlannerState> {
       missionHistory: [finishedMission, ...state.missionHistory],
     );
 
-    ref.read(notificationProvider.notifier).addNotification(
-          endStatus == MissionStatus.completed ? 'Mission Completed' : 'Mission Cancelled',
+    ref
+        .read(notificationProvider.notifier)
+        .addNotification(
+          endStatus == MissionStatus.completed
+              ? 'Mission Completed'
+              : 'Mission Cancelled',
           endStatus == MissionStatus.completed
               ? 'Drone successfully completed path. Data logged.'
               : 'RTL (Return to Launch) sequence active.',
-          endStatus == MissionStatus.completed ? NotificationType.success : NotificationType.warning,
+          endStatus == MissionStatus.completed
+              ? NotificationType.success
+              : NotificationType.warning,
         );
   }
 }
 
-final missionProvider = StateNotifierProvider<MissionNotifier, MissionPlannerState>((ref) {
-  return MissionNotifier(ref);
-});
+final missionProvider =
+    StateNotifierProvider<MissionNotifier, MissionPlannerState>((ref) {
+      return MissionNotifier(ref);
+    });

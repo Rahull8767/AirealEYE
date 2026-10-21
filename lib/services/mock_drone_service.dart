@@ -8,9 +8,11 @@ import 'package:aerial_eye/services/drone_service.dart';
 
 class MockDroneService implements DroneService {
   final _telemetryController = StreamController<DroneTelemetry>.broadcast();
-  final _connectionStateController = StreamController<DroneConnectionState>.broadcast();
-  final _diagnosticsController = StreamController<ConnectionDiagnostics>.broadcast();
-  
+  final _connectionStateController =
+      StreamController<DroneConnectionState>.broadcast();
+  final _diagnosticsController =
+      StreamController<ConnectionDiagnostics>.broadcast();
+
   MavlinkConnectionConfig _config = MavlinkConnectionConfig.defaultConfig();
   DroneTelemetry _currentTelemetry = DroneTelemetry.initial();
   DroneConnectionState _connectionState = DroneConnectionState.disconnected;
@@ -32,7 +34,7 @@ class MockDroneService implements DroneService {
   void updateConfig(MavlinkConnectionConfig newConfig) {
     _config = newConfig;
   }
-  
+
   Timer? _telemetryTimer;
   Timer? _missionTimer;
   int _currentWaypointIndex = 0;
@@ -41,24 +43,28 @@ class MockDroneService implements DroneService {
 
   @override
   Stream<DroneTelemetry> get telemetryStream => _telemetryController.stream;
-  
+
   @override
   DroneTelemetry get currentTelemetry => _currentTelemetry;
 
   @override
-  Stream<DroneConnectionState> get connectionStateStream => _connectionStateController.stream;
-  
+  Stream<DroneConnectionState> get connectionStateStream =>
+      _connectionStateController.stream;
+
   @override
   DroneConnectionState get connectionState => _connectionState;
 
   @override
-  Stream<ConnectionDiagnostics> get diagnosticsStream => _diagnosticsController.stream;
+  Stream<ConnectionDiagnostics> get diagnosticsStream =>
+      _diagnosticsController.stream;
 
   @override
   ConnectionDiagnostics get currentDiagnostics => _currentDiagnostics;
 
   @override
-  Future<MavlinkTestResult> testConnection(MavlinkConnectionConfig testConfig) async {
+  Future<MavlinkTestResult> testConnection(
+    MavlinkConnectionConfig testConfig,
+  ) async {
     await Future.delayed(const Duration(milliseconds: 600));
     return const MavlinkTestResult(
       success: true,
@@ -101,7 +107,9 @@ class MockDroneService implements DroneService {
       _telemetryController.add(_currentTelemetry);
       _updateMockDiagnostics();
 
-      _telemetryTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      _telemetryTimer = Timer.periodic(const Duration(milliseconds: 500), (
+        timer,
+      ) {
         if (!_currentTelemetry.isConnected) return;
 
         final random = Random();
@@ -130,7 +138,9 @@ class MockDroneService implements DroneService {
           longitude: _currentTelemetry.longitude + jitterLng,
           satellites: 15 + random.nextInt(5),
           rssi: (90.0 + random.nextDouble() * 10).clamp(0, 100),
-          heading: (_currentTelemetry.heading + (random.nextDouble() - 0.5) * 2) % 360,
+          heading:
+              (_currentTelemetry.heading + (random.nextDouble() - 0.5) * 2) %
+              360,
           hasReceivedGps: true,
           hasReceivedBattery: true,
           hasReceivedPosition: true,
@@ -145,7 +155,9 @@ class MockDroneService implements DroneService {
   void _updateMockDiagnostics() {
     _currentDiagnostics = ConnectionDiagnostics(
       connectionState: _connectionState,
-      socketStatus: _connectionState == DroneConnectionState.connected ? 'BOUND' : 'CLOSED',
+      socketStatus: _connectionState == DroneConnectionState.connected
+          ? 'BOUND'
+          : 'CLOSED',
       localAddress: _config.bindAddress,
       localPort: _config.localPort,
       remoteAddress: '127.0.0.1:14550 (Mock)',
@@ -155,9 +167,13 @@ class MockDroneService implements DroneService {
       autopilotType: 'ArduPilot',
       flightMode: _currentTelemetry.flightMode,
       armed: _currentTelemetry.armed,
-      heartbeatHealth: _connectionState == DroneConnectionState.connected ? LinkHealth.live : LinkHealth.notAvailable,
+      heartbeatHealth: _connectionState == DroneConnectionState.connected
+          ? LinkHealth.live
+          : LinkHealth.notAvailable,
       lastHeartbeatTime: DateTime.now(),
-      telemetryHealth: _connectionState == DroneConnectionState.connected ? LinkHealth.live : LinkHealth.notAvailable,
+      telemetryHealth: _connectionState == DroneConnectionState.connected
+          ? LinkHealth.live
+          : LinkHealth.notAvailable,
       lastTelemetryTime: DateTime.now(),
       packetsReceived: 420,
       packetsPerSecond: 10.0,
@@ -172,7 +188,7 @@ class MockDroneService implements DroneService {
     _telemetryTimer?.cancel();
     _missionTimer?.cancel();
     _isMissionActive = false;
-    
+
     _connectionState = DroneConnectionState.disconnected;
     _connectionStateController.add(_connectionState);
 
@@ -198,7 +214,14 @@ class MockDroneService implements DroneService {
   @override
   Future<bool> setFlightMode(String mode) async {
     final modeUpper = mode.toUpperCase();
-    final supportedModes = ['STABILIZE', 'GUIDED', 'LOITER', 'AUTO', 'RTL', 'LAND'];
+    final supportedModes = [
+      'STABILIZE',
+      'GUIDED',
+      'LOITER',
+      'AUTO',
+      'RTL',
+      'LAND',
+    ];
     if (!supportedModes.contains(modeUpper)) {
       throw ArgumentError("Unsupported flight mode: $mode");
     }
@@ -238,7 +261,8 @@ class MockDroneService implements DroneService {
 
   @override
   Future<bool> startMission() async {
-    if (!_currentTelemetry.isConnected || _activeWaypoints.isEmpty) return false;
+    if (!_currentTelemetry.isConnected || _activeWaypoints.isEmpty)
+      return false;
     _currentWaypointIndex = 0;
     _isMissionActive = true;
 
@@ -304,7 +328,10 @@ class MockDroneService implements DroneService {
   @override
   Future<bool> pauseMission() async {
     _isMissionActive = false;
-    _currentTelemetry = _currentTelemetry.copyWith(flightMode: 'LOITER', speed: 0.0);
+    _currentTelemetry = _currentTelemetry.copyWith(
+      flightMode: 'LOITER',
+      speed: 0.0,
+    );
     _telemetryController.add(_currentTelemetry);
     return true;
   }
@@ -313,7 +340,10 @@ class MockDroneService implements DroneService {
   Future<bool> resumeMission() async {
     if (_activeWaypoints.isNotEmpty) {
       _isMissionActive = true;
-      _currentTelemetry = _currentTelemetry.copyWith(flightMode: 'AUTO', speed: 5.0);
+      _currentTelemetry = _currentTelemetry.copyWith(
+        flightMode: 'AUTO',
+        speed: 5.0,
+      );
       _telemetryController.add(_currentTelemetry);
       return true;
     }
@@ -324,7 +354,10 @@ class MockDroneService implements DroneService {
   Future<bool> returnToLaunch() async {
     _isMissionActive = false;
     _missionTimer?.cancel();
-    _currentTelemetry = _currentTelemetry.copyWith(flightMode: 'RTL', speed: 8.0);
+    _currentTelemetry = _currentTelemetry.copyWith(
+      flightMode: 'RTL',
+      speed: 8.0,
+    );
     _telemetryController.add(_currentTelemetry);
 
     Timer(const Duration(seconds: 6), () {
@@ -344,7 +377,10 @@ class MockDroneService implements DroneService {
   Future<bool> land() async {
     _isMissionActive = false;
     _missionTimer?.cancel();
-    _currentTelemetry = _currentTelemetry.copyWith(flightMode: 'LAND', speed: 1.2);
+    _currentTelemetry = _currentTelemetry.copyWith(
+      flightMode: 'LAND',
+      speed: 1.2,
+    );
     _telemetryController.add(_currentTelemetry);
 
     Timer(const Duration(seconds: 5), () {

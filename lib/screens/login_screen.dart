@@ -31,10 +31,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _handleLogin() {
     if (_formKey.currentState!.validate()) {
-      ref.read(authProvider.notifier).login(
-            _emailController.text,
-            _passwordController.text,
-          );
+      ref
+          .read(authProvider.notifier)
+          .login(_emailController.text, _passwordController.text);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const NavigationShell()),
@@ -79,23 +78,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Text(
                 AppConfig.appName,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 AppConfig.appName + ' Operator Suite',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 32),
               SizedBox(
                 width: isMobile ? double.infinity : 420,
                 child: GlassPanel(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 32,
+                  ),
                   child: Form(
                     key: _formKey,
                     child: Column(
@@ -103,7 +105,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         Text(
                           'Authorized Log In',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                               ),
@@ -111,9 +114,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 4),
                         Text(
                           'Access Pixhawk controls & AI telemetry logs.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppTheme.textSecondary,
-                              ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppTheme.textSecondary),
                         ),
                         const SizedBox(height: 24),
                         TextFormField(
@@ -143,7 +145,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             prefixIcon: const Icon(LucideIcons.lock, size: 16),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscurePassword ? LucideIcons.eyeOff : LucideIcons.eye,
+                                _obscurePassword
+                                    ? LucideIcons.eyeOff
+                                    : LucideIcons.eye,
                                 size: 16,
                               ),
                               onPressed: () {
@@ -189,9 +193,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 const SizedBox(width: 6),
                                 Text(
                                   'Remember console',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppTheme.textPrimary,
-                                      ),
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: AppTheme.textPrimary),
                                 ),
                               ],
                             ),
@@ -199,7 +202,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               onPressed: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Recovery link sent to registration email.'),
+                                    content: Text(
+                                      'Recovery link sent to registration email.',
+                                    ),
                                     backgroundColor: AppTheme.primary,
                                   ),
                                 );
@@ -242,7 +247,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               onTap: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Registration locked. Admin credentials required.'),
+                                    content: Text(
+                                      'Registration locked. Admin credentials required.',
+                                    ),
                                     backgroundColor: AppTheme.danger,
                                   ),
                                 );
@@ -261,15 +268,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 24),
                         Row(
                           children: [
-                            Expanded(child: Divider(color: AppTheme.border.withOpacity(0.5))),
+                            Expanded(
+                              child: Divider(
+                                color: AppTheme.border.withOpacity(0.5),
+                              ),
+                            ),
                             const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
                                 'OR SSO SIGN IN',
-                                style: TextStyle(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: AppTheme.textSecondary,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                            Expanded(child: Divider(color: AppTheme.border.withOpacity(0.5))),
+                            Expanded(
+                              child: Divider(
+                                color: AppTheme.border.withOpacity(0.5),
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 20),
@@ -283,7 +302,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(LucideIcons.chrome, color: Colors.orange.shade400, size: 16),
+                                  Icon(
+                                    LucideIcons.chrome,
+                                    color: Colors.orange.shade400,
+                                    size: 16,
+                                  ),
                                   const SizedBox(width: 10),
                                   const Flexible(
                                     child: Text(

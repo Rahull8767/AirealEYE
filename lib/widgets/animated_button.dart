@@ -20,7 +20,8 @@ class AnimatedButton extends StatefulWidget {
   State<AnimatedButton> createState() => _AnimatedButtonState();
 }
 
-class _AnimatedButtonState extends State<AnimatedButton> with SingleTickerProviderStateMixin {
+class _AnimatedButtonState extends State<AnimatedButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   bool _isHovered = false;
 
@@ -46,7 +47,9 @@ class _AnimatedButtonState extends State<AnimatedButton> with SingleTickerProvid
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      cursor: widget.onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor: widget.onTap != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
       child: GestureDetector(
         onTapDown: (_) {
           if (widget.onTap != null) _controller.forward();
@@ -63,20 +66,26 @@ class _AnimatedButtonState extends State<AnimatedButton> with SingleTickerProvid
         child: AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
-            final scale = 1.0 - _controller.value + (_isHovered && widget.onTap != null ? 0.02 : 0.0);
+            final scale =
+                1.0 -
+                _controller.value +
+                (_isHovered && widget.onTap != null ? 0.02 : 0.0);
             return Transform.scale(
               scale: scale,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 decoration: BoxDecoration(
-                  borderRadius: widget.borderRadius ?? BorderRadius.circular(16),
+                  borderRadius:
+                      widget.borderRadius ?? BorderRadius.circular(16),
                   boxShadow: _isHovered && widget.onTap != null
                       ? [
                           BoxShadow(
-                            color: (widget.color ?? Theme.of(context).primaryColor).withOpacity(0.3),
+                            color:
+                                (widget.color ?? Theme.of(context).primaryColor)
+                                    .withOpacity(0.3),
                             blurRadius: 10,
                             spreadRadius: 1,
-                          )
+                          ),
                         ]
                       : [],
                 ),

@@ -52,11 +52,7 @@ class UserLocationMarkerWidget extends StatelessWidget {
               ],
             ),
             child: const Center(
-              child: Icon(
-                LucideIcons.user,
-                color: Colors.white,
-                size: 10,
-              ),
+              child: Icon(LucideIcons.user, color: Colors.white, size: 10),
             ),
           ),
         ],

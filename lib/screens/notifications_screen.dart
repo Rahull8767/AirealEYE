@@ -24,8 +24,15 @@ class NotificationsScreen extends ConsumerWidget {
         actions: [
           if (notifications.any((n) => !n.isRead))
             TextButton.icon(
-              icon: const Icon(LucideIcons.checkSquare, size: 16, color: AppTheme.secondary),
-              label: const Text('Mark all read', style: TextStyle(color: AppTheme.secondary, fontSize: 12)),
+              icon: const Icon(
+                LucideIcons.checkSquare,
+                size: 16,
+                color: AppTheme.secondary,
+              ),
+              label: const Text(
+                'Mark all read',
+                style: TextStyle(color: AppTheme.secondary, fontSize: 12),
+              ),
               onPressed: () => notifier.markAllAsRead(),
             ),
         ],
@@ -35,7 +42,11 @@ class NotificationsScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(LucideIcons.bellOff, size: 48, color: AppTheme.textSecondary),
+                  const Icon(
+                    LucideIcons.bellOff,
+                    size: 48,
+                    color: AppTheme.textSecondary,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'No new alerts or logs',
@@ -58,7 +69,11 @@ class NotificationsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildNotificationTile(BuildContext context, AppNotification n, NotificationNotifier notifier) {
+  Widget _buildNotificationTile(
+    BuildContext context,
+    AppNotification n,
+    NotificationNotifier notifier,
+  ) {
     final iconColor = _iconColor(n.type);
     final icon = _icon(n.type);
 
@@ -66,7 +81,9 @@ class NotificationsScreen extends ConsumerWidget {
       onTap: () => notifier.markAsRead(n.id),
       child: GlassPanel(
         padding: const EdgeInsets.all(16),
-        color: n.isRead ? AppTheme.card.withOpacity(0.5) : AppTheme.card.withOpacity(0.85),
+        color: n.isRead
+            ? AppTheme.card.withOpacity(0.5)
+            : AppTheme.card.withOpacity(0.85),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -93,9 +110,13 @@ class NotificationsScreen extends ConsumerWidget {
                         child: Text(
                           n.title,
                           style: TextStyle(
-                            fontWeight: n.isRead ? FontWeight.bold : FontWeight.w900,
+                            fontWeight: n.isRead
+                                ? FontWeight.bold
+                                : FontWeight.w900,
                             fontSize: 14,
-                            color: n.isRead ? AppTheme.textPrimary.withOpacity(0.8) : Colors.white,
+                            color: n.isRead
+                                ? AppTheme.textPrimary.withOpacity(0.8)
+                                : Colors.white,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -105,7 +126,10 @@ class NotificationsScreen extends ConsumerWidget {
                         Container(
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(color: AppTheme.secondary, shape: BoxShape.circle),
+                          decoration: const BoxDecoration(
+                            color: AppTheme.secondary,
+                            shape: BoxShape.circle,
+                          ),
                         ),
                     ],
                   ),
@@ -114,13 +138,19 @@ class NotificationsScreen extends ConsumerWidget {
                     n.body,
                     style: TextStyle(
                       fontSize: 12,
-                      color: n.isRead ? AppTheme.textSecondary : AppTheme.textPrimary.withOpacity(0.9),
+                      color: n.isRead
+                          ? AppTheme.textSecondary
+                          : AppTheme.textPrimary.withOpacity(0.9),
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     '${n.timestamp.hour.toString().padLeft(2, '0')}:${n.timestamp.minute.toString().padLeft(2, '0')}',
-                    style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),

@@ -11,7 +11,8 @@ class MissionHistoryScreen extends ConsumerStatefulWidget {
   const MissionHistoryScreen({super.key});
 
   @override
-  ConsumerState<MissionHistoryScreen> createState() => _MissionHistoryScreenState();
+  ConsumerState<MissionHistoryScreen> createState() =>
+      _MissionHistoryScreenState();
 }
 
 class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
@@ -25,7 +26,8 @@ class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
     // Apply Filter
     final filteredHistory = history.where((m) {
       if (_activeFilter == 'ALL') return true;
-      if (_activeFilter == 'COMPLETED') return m.status == MissionStatus.completed;
+      if (_activeFilter == 'COMPLETED')
+        return m.status == MissionStatus.completed;
       if (_activeFilter == 'FAILED') return m.status == MissionStatus.failed;
       if (_activeFilter == 'RUNNING') return m.status == MissionStatus.running;
       return true;
@@ -63,7 +65,11 @@ class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(LucideIcons.history, size: 48, color: AppTheme.textSecondary),
+                        const Icon(
+                          LucideIcons.history,
+                          size: 48,
+                          color: AppTheme.textSecondary,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'No matching missions found',
@@ -77,7 +83,11 @@ class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
                     itemCount: filteredHistory.length,
                     itemBuilder: (context, index) {
                       final m = filteredHistory[index];
-                      return _buildTimelineItem(context, m, index == filteredHistory.length - 1);
+                      return _buildTimelineItem(
+                        context,
+                        m,
+                        index == filteredHistory.length - 1,
+                      );
                     },
                   ),
           ),
@@ -89,7 +99,10 @@ class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
   Widget _buildFilterChip(String filter) {
     final isSelected = _activeFilter == filter;
     return ChoiceChip(
-      label: Text(filter, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+      label: Text(
+        filter,
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+      ),
       selected: isSelected,
       onSelected: (_) => setState(() => _activeFilter = filter),
       selectedColor: AppTheme.secondary.withOpacity(0.2),
@@ -101,7 +114,8 @@ class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
   }
 
   Widget _buildTimelineItem(BuildContext context, Mission m, bool isLast) {
-    final dateStr = '${m.date.month}/${m.date.day}/${m.date.year} • ${m.date.hour}:${m.date.minute.toString().padLeft(2, '0')}';
+    final dateStr =
+        '${m.date.month}/${m.date.day}/${m.date.year} • ${m.date.hour}:${m.date.minute.toString().padLeft(2, '0')}';
     final statusColor = _statusColor(m.status);
 
     return IntrinsicHeight(
@@ -117,16 +131,17 @@ class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
                 decoration: BoxDecoration(
                   color: statusColor,
                   shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: statusColor.withOpacity(0.4), blurRadius: 6, spreadRadius: 1)],
+                  boxShadow: [
+                    BoxShadow(
+                      color: statusColor.withOpacity(0.4),
+                      blurRadius: 6,
+                      spreadRadius: 1,
+                    ),
+                  ],
                 ),
               ),
               if (!isLast)
-                Expanded(
-                  child: Container(
-                    width: 2.0,
-                    color: AppTheme.border,
-                  ),
-                ),
+                Expanded(child: Container(width: 2.0, color: AppTheme.border)),
             ],
           ),
           const SizedBox(width: 16),
@@ -145,10 +160,16 @@ class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
                       children: [
                         Text(
                           m.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: statusColor.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(8),
@@ -167,14 +188,20 @@ class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
                     const SizedBox(height: 4),
                     Text(
                       dateStr,
-                      style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildStat('Distance', '${m.distance} km'),
-                        _buildStat('Duration', '${m.duration.inMinutes}m ${m.duration.inSeconds % 60}s'),
+                        _buildStat(
+                          'Duration',
+                          '${m.duration.inMinutes}m ${m.duration.inSeconds % 60}s',
+                        ),
                         _buildStat('Waypoints', '${m.waypoints.length} points'),
                       ],
                     ),
@@ -184,7 +211,11 @@ class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
                       children: [
                         _buildCardBtn('Replay', LucideIcons.rotateCcw, () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Simulating mission flight path...')),
+                            const SnackBar(
+                              content: Text(
+                                'Simulating mission flight path...',
+                              ),
+                            ),
                           );
                         }),
                         const SizedBox(width: 8),
@@ -208,9 +239,23 @@ class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label.toUpperCase(), style: const TextStyle(fontSize: 8, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 8,
+            color: AppTheme.textSecondary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(val, style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold)),
+        Text(
+          val,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }
@@ -222,7 +267,10 @@ class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
       child: OutlinedButton.icon(
         onPressed: onTap,
         icon: Icon(icon, size: 12, color: AppTheme.secondary),
-        label: Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.textPrimary)),
+        label: Text(
+          label,
+          style: const TextStyle(fontSize: 10, color: AppTheme.textPrimary),
+        ),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           minimumSize: Size.zero,

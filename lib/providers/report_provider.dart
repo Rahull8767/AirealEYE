@@ -40,18 +40,20 @@ final reportProvider = Provider<List<InspectionReport>>((ref) {
       coverage = 95.0 + (m.id.hashCode % 5);
     }
 
-    reports.add(InspectionReport(
-      id: 'rep_${m.id}',
-      missionId: m.id,
-      missionName: m.name,
-      date: m.date,
-      coveragePercent: coverage,
-      totalDistanceKm: m.distance > 0 ? m.distance : 1.2,
-      duration: m.duration,
-      totalImages: missionDets.length * 4 + 8,
-      totalDetections: missionDets.length,
-      anomalyDistribution: distribution,
-    ));
+    reports.add(
+      InspectionReport(
+        id: 'rep_${m.id}',
+        missionId: m.id,
+        missionName: m.name,
+        date: m.date,
+        coveragePercent: coverage,
+        totalDistanceKm: m.distance > 0 ? m.distance : 1.2,
+        duration: m.duration,
+        totalImages: missionDets.length * 4 + 8,
+        totalDetections: missionDets.length,
+        anomalyDistribution: distribution,
+      ),
+    );
   }
 
   return reports;
