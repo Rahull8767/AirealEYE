@@ -705,6 +705,10 @@ class MavlinkDroneService implements DroneService {
         );
       }
 
+      if (_mockSocketInstance == null && (_heartbeatCount == 1 || _heartbeatCount % 20 == 0)) {
+        requestDataStreams();
+      }
+
       _currentTelemetry = _currentTelemetry.copyWith(
         isConnected: true,
         isStale: false,
@@ -894,12 +898,7 @@ class MavlinkDroneService implements DroneService {
           !_missionUploadCompleter!.isCompleted) {
         if (requestedSeq >= 0 && requestedSeq < _uploadingWaypoints.length) {
           final item = _uploadingWaypoints[requestedSeq];
-          final frame = MavlinkFrame.v2(
-            _sequenceNumber++,
-            _config.sourceSystemId,
-            _config.sourceComponentId,
-            item,
-          );
+          final frame = _createOutFrame(item);
           final packet = frame.serialize();
           _logDiagnostic("[MISSION TX] item=$requestedSeq");
           _sendMavlinkPacket(packet);
@@ -1242,12 +1241,7 @@ class MavlinkDroneService implements DroneService {
       confirmation: 0,
     );
 
-    final frame = MavlinkFrame.v2(
-      _sequenceNumber++,
-      _config.sourceSystemId,
-      _config.sourceComponentId,
-      command,
-    );
+    final frame = _createOutFrame(command);
     final packet = frame.serialize();
 
     _targetArmState = true;
@@ -1307,12 +1301,7 @@ class MavlinkDroneService implements DroneService {
       confirmation: 0,
     );
 
-    final frame = MavlinkFrame.v2(
-      _sequenceNumber++,
-      _config.sourceSystemId,
-      _config.sourceComponentId,
-      command,
-    );
+    final frame = _createOutFrame(command);
     final packet = frame.serialize();
 
     _targetArmState = false;
@@ -1413,12 +1402,7 @@ class MavlinkDroneService implements DroneService {
       confirmation: 0,
     );
 
-    final frame = MavlinkFrame.v2(
-      _sequenceNumber++,
-      _config.sourceSystemId,
-      _config.sourceComponentId,
-      command,
-    );
+    final frame = _createOutFrame(command);
     final packet = frame.serialize();
 
     _targetMode = modeUpper;
@@ -1524,12 +1508,7 @@ class MavlinkDroneService implements DroneService {
       confirmation: 0,
     );
 
-    final frame = MavlinkFrame.v2(
-      _sequenceNumber++,
-      _config.sourceSystemId,
-      _config.sourceComponentId,
-      command,
-    );
+    final frame = _createOutFrame(command);
     final packet = frame.serialize();
 
     _takeoffCompleter = Completer<bool>();
@@ -1650,12 +1629,7 @@ class MavlinkDroneService implements DroneService {
       opaqueId: 0,
     );
 
-    final frame = MavlinkFrame.v2(
-      _sequenceNumber++,
-      _config.sourceSystemId,
-      _config.sourceComponentId,
-      countMsg,
-    );
+    final frame = _createOutFrame(countMsg);
     final packet = frame.serialize();
 
     _logDiagnostic("[MISSION TX] count=${_uploadingWaypoints.length}");
@@ -1711,12 +1685,7 @@ class MavlinkDroneService implements DroneService {
       targetComponent: effectiveTargetComponentId,
       missionType: 0,
     );
-    final frame = MavlinkFrame.v2(
-      _sequenceNumber++,
-      _config.sourceSystemId,
-      _config.sourceComponentId,
-      clearMsg,
-    );
+    final frame = _createOutFrame(clearMsg);
     final packet = frame.serialize();
     _sendMavlinkPacket(packet);
 
@@ -1936,5 +1905,80 @@ class MavlinkDroneService implements DroneService {
         }
       }
     }
+  }
+
+  MavlinkFrame _createOutFrame(MavlinkMessage message) {
+    if (_detectedProtocolVersion.contains('v1')) {
+      return MavlinkFrame.v1(
+        _sequenceNumber++,
+        _config.sourceSystemId,
+        _config.sourceComponentId,
+        message,
+      );
+    }
+    return MavlinkFrame.v2(
+      _sequenceNumber++,
+      _config.sourceSystemId,
+      _config.sourceComponentId,
+      message,
+    );
+  }
+
+  @override
+  void requestDataStreams({int? rateHz}) {
+    final rate = rateHz ?? _config.telemetryRateHz;
+    _logDiagnostic(
+      "[DATA STREAMS] Requesting telemetry streams at ${rate}Hz (targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId)",
+    );
+
+    // 0: MAV_DATA_STREAM_ALL
+    final reqAll = RequestDataStream(
+      reqMessageRate: rate,
+      targetSystem: effectiveTargetSystemId,
+      targetComponent: effectiveTargetComponentId,
+      reqStreamId: 0,
+      startStop: 1,
+    );
+    _sendMavlinkPacket(_createOutFrame(reqAll).serialize());
+
+    // 6: MAV_DATA_STREAM_POSITION (GLOBAL_POSITION_INT)
+    final reqPos = RequestDataStream(
+      reqMessageRate: rate,
+      targetSystem: effectiveTargetSystemId,
+      targetComponent: effectiveTargetComponentId,
+      reqStreamId: 6,
+      startStop: 1,
+    );
+    _sendMavlinkPacket(_createOutFrame(reqPos).serialize());
+
+    // 2: MAV_DATA_STREAM_EXTENDED_STATUS (SYS_STATUS, GPS_RAW_INT)
+    final reqExt = RequestDataStream(
+      reqMessageRate: rate > 2 ? 2 : rate,
+      targetSystem: effectiveTargetSystemId,
+      targetComponent: effectiveTargetComponentId,
+      reqStreamId: 2,
+      startStop: 1,
+    );
+    _sendMavlinkPacket(_createOutFrame(reqExt).serialize());
+
+    // 10: MAV_DATA_STREAM_EXTRA1 (Attitude)
+    final reqAtt = RequestDataStream(
+      reqMessageRate: rate,
+      targetSystem: effectiveTargetSystemId,
+      targetComponent: effectiveTargetComponentId,
+      reqStreamId: 10,
+      startStop: 1,
+    );
+    _sendMavlinkPacket(_createOutFrame(reqAtt).serialize());
+
+    // 11: MAV_DATA_STREAM_EXTRA2 (VFR_HUD)
+    final reqHud = RequestDataStream(
+      reqMessageRate: rate,
+      targetSystem: effectiveTargetSystemId,
+      targetComponent: effectiveTargetComponentId,
+      reqStreamId: 11,
+      startStop: 1,
+    );
+    _sendMavlinkPacket(_createOutFrame(reqHud).serialize());
   }
 }

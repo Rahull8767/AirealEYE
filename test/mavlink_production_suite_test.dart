@@ -876,5 +876,140 @@ void main() {
         expect(() => service.startMission(), throwsStateError);
       },
     );
+
+    test(
+      '5.7 MAVLink v1 (0xFE) protocol detection and APM 2.8 compatible frame creation',
+      () async {
+        final v1SpySocket = TestSpyDatagramSocket();
+        final v1Service = MavlinkDroneService();
+        v1Service.setMockSocket(v1SpySocket);
+
+        // Inject MAVLink v1 Heartbeat (0xFE)
+        final hb = Heartbeat(
+          customMode: 0, // STABILIZE
+          type: 2, // ArduCopter Quad
+          autopilot: 3, // ArduPilot
+          baseMode: 0, // Disarmed
+          systemStatus: 4,
+          mavlinkVersion: 1,
+        );
+        final v1Frame = MavlinkFrame.v1(0, 1, 1, hb);
+        final v1Bytes = v1Frame.serialize();
+        expect(v1Bytes[0], equals(0xFE)); // Magic byte for MAVLink v1
+
+        v1SpySocket.injectDatagram(v1Bytes);
+        await Future.delayed(const Duration(milliseconds: 50));
+
+        expect(
+          v1Service.connectionState,
+          equals(DroneConnectionState.connected),
+        );
+        expect(
+          v1Service.currentDiagnostics.mavlinkProtocolVersion,
+          contains('0xFE'),
+        );
+
+        // When sending a command, it should automatically use MAVLink v1 (0xFE)
+        v1SpySocket.sentPackets.clear();
+        v1Service.requestDataStreams(rateHz: 4);
+
+        expect(v1SpySocket.sentPackets, isNotEmpty);
+        // Verify outgoing frame starts with 0xFE (MAVLink v1) for APM 2.8 compatibility!
+        expect(v1SpySocket.sentPackets.first[0], equals(0xFE));
+
+        final parser = MavlinkParser(MavlinkDialectArdupilotmega());
+        MavlinkFrame? parsedStreamReq;
+        parser.stream.listen((frame) {
+          parsedStreamReq = frame;
+        });
+        parser.parse(v1SpySocket.sentPackets.first);
+        await Future.delayed(Duration.zero);
+
+        expect(parsedStreamReq, isNotNull);
+        expect(parsedStreamReq!.message, isA<RequestDataStream>());
+        final streamMsg = parsedStreamReq!.message as RequestDataStream;
+        expect(streamMsg.reqMessageRate, equals(4));
+
+        v1Service.disconnect();
+        v1SpySocket.close();
+      },
+    );
+
+    test(
+      '5.8 GPS telemetry reception and strict freshness without fabricated values',
+      () async {
+        final gpsSpySocket = TestSpyDatagramSocket();
+        final gpsService = MavlinkDroneService();
+        gpsService.setMockSocket(gpsSpySocket);
+
+        // Before any GPS packet, flags should be false and displays show '--'
+        expect(gpsService.currentTelemetry.hasReceivedGps, isFalse);
+        expect(gpsService.currentTelemetry.hasReceivedPosition, isFalse);
+        expect(
+          gpsService.currentTelemetry.satellitesDisplay,
+          equals('Waiting...'),
+        );
+        expect(gpsService.currentTelemetry.altitudeDisplay, equals('--'));
+
+        // Inject GPS_RAW_INT (Fix 3, 15 satellites)
+        final gpsRaw = GpsRawInt(
+          timeUsec: 1000000,
+          fixType: 3,
+          lat: 129715980,
+          lon: 775945620,
+          alt: 920000,
+          eph: 150,
+          epv: 200,
+          vel: 120,
+          cog: 18000,
+          satellitesVisible: 15,
+          altEllipsoid: 920000,
+          hAcc: 100,
+          vAcc: 150,
+          velAcc: 50,
+          hdgAcc: 1000,
+          yaw: 0,
+        );
+        gpsSpySocket.injectDatagram(
+          MavlinkFrame.v2(1, 1, 1, gpsRaw).serialize(),
+        );
+        await Future.delayed(const Duration(milliseconds: 50));
+
+        expect(gpsService.currentTelemetry.hasReceivedGps, isTrue);
+        expect(gpsService.currentTelemetry.gpsFix, equals(3));
+        expect(gpsService.currentTelemetry.satellites, equals(15));
+        expect(gpsService.currentTelemetry.satellitesDisplay, equals('15 Sats'));
+
+        // Inject GLOBAL_POSITION_INT (lat=12.971598, lon=77.594562, alt=12.5m)
+        final pos = GlobalPositionInt(
+          timeBootMs: 12000,
+          lat: 129715980,
+          lon: 775945620,
+          alt: 932500,
+          relativeAlt: 12500,
+          vx: 150,
+          vy: 0,
+          vz: 0,
+          hdg: 18000,
+        );
+        gpsSpySocket.injectDatagram(MavlinkFrame.v2(2, 1, 1, pos).serialize());
+        await Future.delayed(const Duration(milliseconds: 50));
+
+        expect(gpsService.currentTelemetry.hasReceivedPosition, isTrue);
+        expect(
+          gpsService.currentTelemetry.latitude,
+          closeTo(12.971598, 0.0001),
+        );
+        expect(
+          gpsService.currentTelemetry.longitude,
+          closeTo(77.594562, 0.0001),
+        );
+        expect(gpsService.currentTelemetry.relativeAltitude, closeTo(12.5, 0.1));
+        expect(gpsService.currentTelemetry.altitudeDisplay, equals('12.5 m'));
+
+        gpsService.disconnect();
+        gpsSpySocket.close();
+      },
+    );
   });
 }

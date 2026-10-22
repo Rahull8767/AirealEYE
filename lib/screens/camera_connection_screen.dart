@@ -7,6 +7,7 @@ import 'package:aerial_eye/models/camera_diagnostics.dart';
 import 'package:aerial_eye/models/camera_stream_state.dart';
 import 'package:aerial_eye/providers/pi_camera_provider.dart';
 import 'package:aerial_eye/widgets/glass_panel.dart';
+import 'package:aerial_eye/widgets/pi_shutdown_card.dart';
 
 class CameraConnectionScreen extends ConsumerStatefulWidget {
   const CameraConnectionScreen({super.key});
@@ -389,6 +390,11 @@ class _CameraConnectionScreenState
             _buildDiagnosticsCard(_latestDiagnostics!),
             const SizedBox(height: 20),
           ],
+
+          // Companion Computer Safe Power Control
+          _buildSectionHeader('Companion Computer Safe Power'),
+          const PiShutdownCard(),
+          const SizedBox(height: 20),
 
           // 6. Setup & Troubleshooting Guide
           _buildSectionHeader('One-Phone Hotspot Guide'),

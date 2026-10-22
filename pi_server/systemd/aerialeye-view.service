@@ -1,0 +1,17 @@
+[Unit]
+Description=AerialEYE Flask Video & Detection Streaming Server (Port 8080)
+After=aerialeye-live.service
+Wants=aerialeye-live.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi
+ExecStart=/usr/bin/python3 /home/pi/aerialeye_view.py
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

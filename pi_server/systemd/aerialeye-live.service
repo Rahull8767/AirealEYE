@@ -1,0 +1,17 @@
+[Unit]
+Description=AerialEYE Live Inference Engine (OV5647 Camera + YOLO NCNN)
+After=aerialeye-mavlink.service
+Wants=aerialeye-mavlink.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi
+ExecStart=/usr/bin/python3 /home/pi/aerialeye_live.py
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

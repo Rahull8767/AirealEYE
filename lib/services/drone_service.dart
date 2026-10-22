@@ -82,4 +82,5 @@ abstract class DroneService {
   Future<bool> pauseMission();
   Future<bool> resumeMission();
   Future<bool> clearMission();
+  void requestDataStreams({int? rateHz});
 }

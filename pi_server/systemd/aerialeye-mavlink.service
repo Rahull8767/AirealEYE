@@ -1,0 +1,16 @@
+[Unit]
+Description=AerialEYE MAVLink Router & Telemetry Bridge
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi
+ExecStart=/usr/bin/python3 /home/pi/aerialeye_mavlink.py --serial /dev/serial0 --baud 57600 --udp-port 14550 --stream-rate 4
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

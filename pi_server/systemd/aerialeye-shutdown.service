@@ -1,0 +1,23 @@
+[Unit]
+Description=AerialEYE Raspberry Pi Safe Shutdown Daemon
+Documentation=https://github.com/Rahull8767/AirealEYE
+After=network.target
+
+[Service]
+Type=simple
+User=rahul
+WorkingDirectory=/home/rahul
+EnvironmentFile=-/etc/aerialeye/shutdown.env
+ExecStart=/home/rahul/ncnn-env/bin/python3 /home/rahul/aerialeye_shutdown.py --port 5005
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+# Security sandbox: runs unprivileged; only systemctl poweroff is granted via sudoers
+NoNewPrivileges=false
+ProtectSystem=full
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

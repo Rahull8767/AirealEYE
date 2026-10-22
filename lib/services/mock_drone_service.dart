@@ -402,4 +402,7 @@ class MockDroneService implements DroneService {
     _currentWaypointIndex = 0;
     return true;
   }
+
+  @override
+  void requestDataStreams({int? rateHz}) {}
 }

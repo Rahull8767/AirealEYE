@@ -1,0 +1,10 @@
+# ==============================================================================
+# Sudoers configuration for AerialEYE Safe Shutdown
+# Install to: /etc/sudoers.d/010_aerialeye-shutdown
+# Permissions: 0440 (sudo chmod 0440 /etc/sudoers.d/010_aerialeye-shutdown)
+# ==============================================================================
+# Grants user 'rahul' permission to invoke ONLY clean system poweroff commands
+# without prompting for an interactive password.
+# Does NOT grant general root privileges.
+
+rahul ALL=(ALL) NOPASSWD: /bin/systemctl poweroff, /bin/systemctl reboot, /sbin/shutdown

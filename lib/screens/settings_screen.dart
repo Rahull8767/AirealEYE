@@ -11,6 +11,7 @@ import 'package:aerial_eye/providers/pi_camera_provider.dart';
 import 'package:aerial_eye/models/camera_connection_config.dart';
 import 'package:aerial_eye/widgets/glass_panel.dart';
 import 'package:aerial_eye/widgets/animated_button.dart';
+import 'package:aerial_eye/widgets/pi_shutdown_card.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -342,7 +343,12 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
 
-          // Section 5: AI Model specs
+          // Section 5: Companion Computer Power
+          _buildSectionHeader('Raspberry Pi Companion Power'),
+          const PiShutdownCard(),
+          const SizedBox(height: 20),
+
+          // Section 6: AI Model specs
           _buildSectionHeader('AI Detection Model Config'),
           GlassPanel(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
