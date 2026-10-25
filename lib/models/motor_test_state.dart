@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-/// Represents individual motor selection or sequential all-motors test.
+/// Represents individual motor selection or simultaneous all-motors test.
 enum MotorSelection {
   motor1,
   motor2,
@@ -22,7 +22,7 @@ extension MotorSelectionExtension on MotorSelection {
       case MotorSelection.motor4:
         return 4;
       case MotorSelection.allMotors:
-        return 1; // Starting motor for sequential test
+        return 1;
     }
   }
 
@@ -54,7 +54,7 @@ extension MotorSelectionExtension on MotorSelection {
       case MotorSelection.motor4:
         return 'Motor 4 (D) — Front-Left';
       case MotorSelection.allMotors:
-        return 'Test All Motors (1-4 Sequence)';
+        return 'Test All Motors (Simultaneous)';
     }
   }
 
@@ -70,7 +70,7 @@ extension MotorSelectionExtension on MotorSelection {
       case MotorSelection.motor4:
         return 'Servo Rail Out 3 (CCW)';
       case MotorSelection.allMotors:
-        return 'Outputs 1, 4, 2, 3 in sequence';
+        return 'Outputs 1, 4, 2, 3 simultaneously';
     }
   }
 
@@ -86,7 +86,7 @@ extension MotorSelectionExtension on MotorSelection {
       case MotorSelection.motor4:
         return 'CW';
       case MotorSelection.allMotors:
-        return 'Sequence (A->B->C->D)';
+        return 'All Motors Active (A, B, C, D)';
     }
   }
 

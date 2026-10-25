@@ -92,5 +92,10 @@ abstract class DroneService {
     bool testAll = false,
   });
 
+  Future<MotorTestResult> testAllMotors({
+    required double throttlePercent,
+    required int durationSeconds,
+  });
+
   Future<MotorTestResult> stopMotorTest();
 }

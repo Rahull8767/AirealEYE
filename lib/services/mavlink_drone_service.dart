@@ -2128,6 +2128,13 @@ class MavlinkDroneService implements DroneService {
     required int durationSeconds,
     bool testAll = false,
   }) async {
+    if (testAll) {
+      return testAllMotors(
+        throttlePercent: throttlePercent,
+        durationSeconds: durationSeconds,
+      );
+    }
+
     _assertCommandSupported('testMotor');
     if (_connectionState != DroneConnectionState.connected) {
       throw StateError("MAVLink link is not connected.");
@@ -2167,14 +2174,13 @@ class MavlinkDroneService implements DroneService {
       throw StateError("A motor test is already in progress.");
     }
 
-    _activeMotorTestInstance = motorInstance;
-    _activeMotorTestIsAll = testAll;
-    _lastMotorTestThrottle = throttlePercent;
-    _lastMotorTestDuration = durationSeconds;
-
     if (!_isUsingHardware) {
+      _activeMotorTestInstance = motorInstance;
+      _activeMotorTestIsAll = false;
+      _lastMotorTestThrottle = throttlePercent;
+      _lastMotorTestDuration = durationSeconds;
       _logDiagnostic(
-        "[SIMULATED MOTOR TEST] motor=$motorInstance, testAll=$testAll, throttle=$throttlePercent%, duration=${durationSeconds}s",
+        "[SIMULATED MOTOR TEST] motor=$motorInstance, throttle=$throttlePercent%, duration=${durationSeconds}s",
       );
       _motorTestDurationTimer?.cancel();
       _motorTestDurationTimer = Timer(Duration(seconds: durationSeconds), () {
@@ -2183,12 +2189,10 @@ class MavlinkDroneService implements DroneService {
       return MotorTestResult(
         success: true,
         ackResult: 0,
-        message: testAll
-            ? "Simulated Test All Motors (1-4 Sequence) accepted for ${durationSeconds}s"
-            : "Simulated Motor $motorInstance test accepted for ${durationSeconds}s",
+        message: "Simulated Motor $motorInstance test accepted for ${durationSeconds}s",
         commandId: 209,
         motorIndex: motorInstance,
-        testAll: testAll,
+        testAll: false,
         throttlePercent: throttlePercent,
         durationSeconds: durationSeconds,
         isSimulated: true,
@@ -2198,24 +2202,179 @@ class MavlinkDroneService implements DroneService {
 
     _logDiagnostic(
       "[MOTOR_TEST REQUEST] targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId, "
-      "motor=${testAll ? 'ALL (1..4)' : motorInstance}, throttle=$throttlePercent%, duration=${durationSeconds}s",
+      "motor=$motorInstance, throttle=$throttlePercent%, duration=${durationSeconds}s",
     );
 
+    try {
+      final result = await _sendSingleMotorTestPacket(
+        motorInstance: motorInstance,
+        throttlePercent: throttlePercent,
+        durationSeconds: durationSeconds,
+        testAll: false,
+      );
+      if (result.success) {
+        _motorTestDurationTimer?.cancel();
+        _motorTestDurationTimer = Timer(Duration(seconds: durationSeconds), () {
+          _cleanupMotorTest();
+        });
+      } else {
+        _cleanupMotorTest();
+      }
+      return result;
+    } catch (e) {
+      _cleanupMotorTest();
+      rethrow;
+    }
+  }
+
+  @override
+  Future<MotorTestResult> testAllMotors({
+    required double throttlePercent,
+    required int durationSeconds,
+  }) async {
+    _assertCommandSupported('testAllMotors');
+    if (_connectionState != DroneConnectionState.connected) {
+      throw StateError("MAVLink link is not connected.");
+    }
+
+    if (_currentTelemetry.armed) {
+      throw StateError(
+        "Safety Block: Drone is armed. Motor test is strictly permitted only when disarmed on the ground.",
+      );
+    }
+
+    if (throttlePercent < 0.0 || throttlePercent > 100.0) {
+      throw ArgumentError.value(
+        throttlePercent,
+        'throttlePercent',
+        'Throttle must be between 0% and 100%.',
+      );
+    }
+
+    if (durationSeconds < 1 || durationSeconds > 5) {
+      throw ArgumentError.value(
+        durationSeconds,
+        'durationSeconds',
+        'Duration must be between 1 and 5 seconds.',
+      );
+    }
+
+    if (_motorTestCompleter != null) {
+      throw StateError("A motor test is already in progress.");
+    }
+
+    _activeMotorTestInstance = 1;
+    _activeMotorTestIsAll = true;
+    _lastMotorTestThrottle = throttlePercent;
+    _lastMotorTestDuration = durationSeconds;
+
+    if (!_isUsingHardware) {
+      _logDiagnostic(
+        "[SIMULATED MOTOR TEST] ALL MOTORS SIMULTANEOUS, throttle=$throttlePercent%, duration=${durationSeconds}s",
+      );
+      _motorTestDurationTimer?.cancel();
+      _motorTestDurationTimer = Timer(Duration(seconds: durationSeconds), () {
+        _cleanupMotorTest();
+      });
+      return MotorTestResult(
+        success: true,
+        ackResult: 0,
+        message: "Simulated simultaneous test of all 4 motors accepted and running for ${durationSeconds}s",
+        commandId: 209,
+        motorIndex: 1,
+        testAll: true,
+        throttlePercent: throttlePercent,
+        durationSeconds: durationSeconds,
+        isSimulated: true,
+        timestamp: DateTime.now(),
+      );
+    }
+
+    _logDiagnostic(
+      "[MOTOR_TEST REQUEST] targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId, "
+      "SIMULTANEOUS ALL MOTORS (1..4), throttle=$throttlePercent%, duration=${durationSeconds}s",
+    );
+
+    try {
+      // Dispatch MAV_CMD_DO_MOTOR_TEST for each motor (1..4) in rapid succession without inter-motor delays,
+      // matching Mission Planner's but_TestAll. In ArduCopter 3.2.1, output_test() sets each channel's PWM
+      // without clearing previous channels, resulting in all 4 motors running simultaneously.
+      for (int motor = 1; motor <= 4; motor++) {
+        final result = await _sendSingleMotorTestPacket(
+          motorInstance: motor,
+          throttlePercent: throttlePercent,
+          durationSeconds: durationSeconds,
+          testAll: true,
+        );
+
+        if (!result.success) {
+          // If any motor command is rejected, stop all motors immediately and report failure
+          await stopMotorTest();
+          return MotorTestResult(
+            success: false,
+            ackResult: result.ackResult,
+            message: "Simultaneous motor test aborted at Motor $motor: ${result.message}",
+            commandId: 209,
+            motorIndex: motor,
+            testAll: true,
+            throttlePercent: throttlePercent,
+            durationSeconds: durationSeconds,
+            isSimulated: false,
+            timestamp: DateTime.now(),
+          );
+        }
+      }
+
+      // All 4 motors accepted and active simultaneously
+      _motorTestDurationTimer?.cancel();
+      _motorTestDurationTimer = Timer(Duration(seconds: durationSeconds), () {
+        _cleanupMotorTest();
+      });
+
+      return MotorTestResult(
+        success: true,
+        ackResult: 0,
+        message: "Simultaneous test of all 4 motors accepted by flight controller",
+        commandId: 209,
+        motorIndex: 1,
+        testAll: true,
+        throttlePercent: throttlePercent,
+        durationSeconds: durationSeconds,
+        isSimulated: false,
+        timestamp: DateTime.now(),
+      );
+    } catch (e) {
+      await stopMotorTest();
+      rethrow;
+    }
+  }
+
+  Future<MotorTestResult> _sendSingleMotorTestPacket({
+    required int motorInstance,
+    required double throttlePercent,
+    required int durationSeconds,
+    required bool testAll,
+  }) {
+    _activeMotorTestInstance = motorInstance;
+    _activeMotorTestIsAll = testAll;
+    _lastMotorTestThrottle = throttlePercent;
+    _lastMotorTestDuration = durationSeconds;
+
     // MAV_CMD_DO_MOTOR_TEST (Command 209)
-    // Param 1: Motor instance sequence (1..4). For all motors, start at 1.
+    // Param 1: Motor instance sequence (1..4)
     // Param 2: Throttle type: 0 = THROTTLE_PERCENT (0..100)
     // Param 3: Throttle value: 0..100
     // Param 4: Timeout in seconds: 1..5
-    // Param 5: Motor count: 4 for all motors in sequence, 1 for single motor
+    // Param 5: Motor count: 0 for single motor instance (Param 5 in MAVLink is sequential motor count)
     // Param 6: Test order: 0
     // Param 7: 0.0
     final command = CommandLong(
       command: 209,
-      param1: testAll ? 1.0 : motorInstance.toDouble(),
+      param1: motorInstance.toDouble(),
       param2: 0.0,
       param3: throttlePercent,
       param4: durationSeconds.toDouble(),
-      param5: testAll ? 4.0 : 1.0,
+      param5: testAll ? 0.0 : 1.0,
       param6: 0.0,
       param7: 0.0,
       targetSystem: effectiveTargetSystemId,
@@ -2236,7 +2395,7 @@ class MavlinkDroneService implements DroneService {
     _motorTestTimeoutTimer = Timer(const Duration(seconds: 3), () {
       if (_motorTestCompleter != null && !_motorTestCompleter!.isCompleted) {
         _logDiagnostic(
-          "[MOTOR_TEST TIMEOUT] Autopilot did not return COMMAND_ACK for command 209 within 3s",
+          "[MOTOR_TEST TIMEOUT] Autopilot did not return COMMAND_ACK for command 209 (motor $motorInstance) within 3s",
         );
         _motorTestCompleter!.complete(
           MotorTestResult(
@@ -2257,21 +2416,7 @@ class MavlinkDroneService implements DroneService {
       _cleanupMotorTestAck();
     });
 
-    try {
-      final result = await _motorTestCompleter!.future;
-      if (result.success) {
-        _motorTestDurationTimer?.cancel();
-        _motorTestDurationTimer = Timer(Duration(seconds: durationSeconds), () {
-          _cleanupMotorTest();
-        });
-      } else {
-        _cleanupMotorTest();
-      }
-      return result;
-    } catch (e) {
-      _cleanupMotorTest();
-      rethrow;
-    }
+    return _motorTestCompleter!.future;
   }
 
   @override

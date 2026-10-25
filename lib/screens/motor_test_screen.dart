@@ -36,7 +36,6 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
   MotorTestResult? _lastResult;
   String? _statusDetails;
   MotorSelection? _currentlyActiveMotor;
-  bool _cancelSequenceRequested = false;
   late final TextEditingController _throttleTextController;
   late final AnimationController _pulseController;
 
@@ -55,35 +54,17 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
     }
   }
 
-  Completer<void>? _delayCompleter;
-  Timer? _delayTimer;
-
-  Future<void> _interruptibleDelay(Duration duration) {
-    _delayTimer?.cancel();
-    _delayCompleter = Completer<void>();
-    _delayTimer = Timer(duration, () {
-      if (_delayCompleter != null && !_delayCompleter!.isCompleted) {
-        _delayCompleter!.complete();
-      }
-    });
-    return _delayCompleter!.future;
-  }
-
-  void _cancelActiveDelay() {
-    _delayTimer?.cancel();
-    _delayTimer = null;
-    if (_delayCompleter != null && !_delayCompleter!.isCompleted) {
-      _delayCompleter!.complete();
-    }
-  }
-
   @override
   void dispose() {
-    _cancelSequenceRequested = true;
-    _cancelActiveDelay();
     _countdownTimer?.cancel();
     _throttleTextController.dispose();
     _pulseController.dispose();
+    if (_status == MotorTestExecutionStatus.running ||
+        _status == MotorTestExecutionStatus.sendingCommand) {
+      try {
+        ref.read(droneServiceProvider).stopMotorTest();
+      } catch (_) {}
+    }
     super.dispose();
   }
 
@@ -226,9 +207,9 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
       setState(() => _hasAcknowledgedSafetyDialog = true);
     }
 
-    // 5. Execute Command (Single Motor or Sequential All-Motors)
+    // 5. Execute Command (Single Motor or Simultaneous All-Motors)
     if (_selectedMotor.isAllMotors) {
-      await _runTestAllMotorsSequence(droneService);
+      await _runTestAllMotorsSimultaneous(droneService);
     } else {
       await _runSingleMotorTest(droneService);
     }
@@ -302,149 +283,82 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
     }
   }
 
-  Future<void> _runTestAllMotorsSequence(DroneService droneService) async {
-    _cancelSequenceRequested = false;
+  Future<void> _runTestAllMotorsSimultaneous(DroneService droneService) async {
     _countdownTimer?.cancel();
 
-    final sequence = [
-      MotorSelection.motor1,
-      MotorSelection.motor2,
-      MotorSelection.motor3,
-      MotorSelection.motor4,
-    ];
-
     setState(() {
-      _status = MotorTestExecutionStatus.running;
-      _statusDetails = 'Starting Test All Motors sequence (Motors 1 to 4)...';
+      _status = MotorTestExecutionStatus.sendingCommand;
+      _statusDetails = 'Transmitting simultaneous test commands for all 4 motors...';
+      _currentlyActiveMotor = MotorSelection.allMotors;
     });
 
-    for (int i = 0; i < sequence.length; i++) {
-      if (!mounted || _cancelSequenceRequested) {
-        break;
-      }
+    try {
+      final result = await droneService.testAllMotors(
+        throttlePercent: _throttlePercent,
+        durationSeconds: _durationSeconds,
+      );
 
-      final motor = sequence[i];
-
-      setState(() {
-        _currentlyActiveMotor = motor;
-        _status = MotorTestExecutionStatus.sendingCommand;
-        _statusDetails = 'Starting Motor ${motor.motorIndex} of 4: ${motor.displayLabel}...';
-        _remainingSeconds = _durationSeconds;
-      });
-
-      // Attempt test with automatic retry for TEMPORARILY_REJECTED
-      MotorTestResult? result;
-      for (int attempt = 0; attempt < 3; attempt++) {
-        if (!mounted || _cancelSequenceRequested) break;
-        try {
-          result = await droneService.testMotor(
-            motorInstance: motor.motorIndex,
-            throttlePercent: _throttlePercent,
-            durationSeconds: _durationSeconds,
-            testAll: false,
-          );
-        } catch (e) {
-          if (attempt == 2 || _cancelSequenceRequested) {
-            if (!mounted) return;
-            setState(() {
-              _status = MotorTestExecutionStatus.failed;
-              _currentlyActiveMotor = null;
-              _statusDetails = 'Motor ${motor.motorIndex} error: $e';
-            });
-            return;
-          }
-          await _interruptibleDelay(const Duration(milliseconds: 600));
-          continue;
-        }
-
-        if (result.success) {
-          break;
-        }
-
-        // If temporarily rejected (code 1), wait 800ms and retry
-        if (result.ackResult == 1 && attempt < 2 && !_cancelSequenceRequested) {
-          setState(() {
-            _statusDetails =
-                'Flight controller busy after previous motor. Retrying Motor ${motor.motorIndex} in 800ms (attempt ${attempt + 2}/3)...';
-          });
-          await _interruptibleDelay(const Duration(milliseconds: 800));
-          continue;
-        }
-        break;
-      }
-
-      if (!mounted || _cancelSequenceRequested) {
-        break;
-      }
+      if (!mounted) return;
 
       setState(() {
         _lastResult = result;
       });
 
-      if (result == null || !result.success) {
+      if (result.success) {
+        setState(() {
+          _status = MotorTestExecutionStatus.running;
+          _remainingSeconds = _durationSeconds;
+          _statusDetails = 'Simultaneous test running: All 4 motors spinning at ${_throttlePercent.toInt()}% throttle.';
+        });
+
+        _countdownTimer?.cancel();
+        _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          if (!mounted) {
+            timer.cancel();
+            return;
+          }
+          if (_remainingSeconds <= 1) {
+            timer.cancel();
+            setState(() {
+              _status = MotorTestExecutionStatus.completed;
+              _remainingSeconds = 0;
+              _currentlyActiveMotor = null;
+              _statusDetails =
+                  'Simultaneous test complete (${_durationSeconds}s duration elapsed). All motors halted.';
+            });
+            droneService.stopMotorTest().catchError((_) => MotorTestResult(
+              success: false,
+              message: 'Stop error',
+              commandId: 209,
+              motorIndex: 1,
+              throttlePercent: 0,
+              durationSeconds: 0,
+              timestamp: DateTime.now(),
+            ));
+          } else {
+            setState(() {
+              _remainingSeconds--;
+            });
+          }
+        });
+      } else {
         setState(() {
           _status = MotorTestExecutionStatus.failed;
           _currentlyActiveMotor = null;
-          _statusDetails =
-              'Motor ${motor.motorIndex} (${motor.letterCode}) failed: ${result?.message ?? "No response"}';
+          _statusDetails = result.message;
         });
-        return;
       }
-
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _status = MotorTestExecutionStatus.running;
-        _statusDetails =
-            'Spinning Motor ${motor.motorIndex} (${motor.letterCode}) [Step ${i + 1}/4] at ${_throttlePercent.toInt()}% throttle...';
-      });
-
-      for (int s = _durationSeconds; s > 0; s--) {
-        if (!mounted || _cancelSequenceRequested) break;
-        setState(() {
-          _remainingSeconds = s;
-        });
-        await _interruptibleDelay(const Duration(seconds: 1));
-      }
-
-      if (!mounted || _cancelSequenceRequested) break;
-
-      // Send explicit stop to reset flight controller test state before next motor
-      try {
-        await droneService.stopMotorTest();
-      } catch (_) {}
-
-      if (i < sequence.length - 1) {
-        setState(() {
-          _currentlyActiveMotor = null;
-          _statusDetails =
-              'Motor ${motor.motorIndex} finished. Cooldown & autopilot state reset before Motor ${sequence[i + 1].motorIndex}...';
-          _remainingSeconds = 0;
-        });
-        await _interruptibleDelay(const Duration(milliseconds: 1000));
-      }
-    }
-
-    if (!mounted) return;
-
-    if (_cancelSequenceRequested) {
-      setState(() {
-        _status = MotorTestExecutionStatus.stopped;
-        _statusDetails = 'Test All Motors sequence was stopped by operator.';
+        _status = MotorTestExecutionStatus.failed;
         _currentlyActiveMotor = null;
-        _remainingSeconds = 0;
-      });
-    } else {
-      setState(() {
-        _status = MotorTestExecutionStatus.completed;
-        _statusDetails = 'All 4 motors tested successfully in sequence (A -> B -> C -> D).';
-        _currentlyActiveMotor = null;
-        _remainingSeconds = 0;
+        _statusDetails = 'Error: $e';
       });
     }
   }
 
   Future<void> _stopMotorTest() async {
-    _cancelSequenceRequested = true;
-    _cancelActiveDelay();
     _countdownTimer?.cancel();
 
     setState(() {
@@ -864,7 +778,7 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                   children: [
                     Icon(LucideIcons.refreshCw, size: 14),
                     SizedBox(width: 4),
-                    Text('Test All Motors (1-4)'),
+                    Text('Test All Motors (Simultaneous)'),
                   ],
                 ),
                 selected: _selectedMotor == MotorSelection.allMotors,
@@ -1184,8 +1098,8 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
             icon: Icon(isRunning ? LucideIcons.loader : LucideIcons.play, size: 16),
             label: Text(
               isRunning
-                  ? (_currentlyActiveMotor != null && _selectedMotor.isAllMotors
-                      ? 'TESTING M${_currentlyActiveMotor!.motorIndex} (${_remainingSeconds}s)'
+                  ? (_selectedMotor.isAllMotors
+                      ? 'ALL 4 MOTORS ACTIVE (${_remainingSeconds}s)'
                       : 'TEST IN PROGRESS ($_remainingSeconds s)')
                   : (_selectedMotor.isAllMotors
                       ? 'START TEST ALL MOTORS'
@@ -1211,9 +1125,9 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
             key: const Key('stop_motor_test_button'),
             onPressed: _stopMotorTest,
             icon: const Icon(LucideIcons.square, size: 16),
-            label: const Text(
-              'STOP TEST',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            label: Text(
+              _selectedMotor.isAllMotors && isRunning ? 'STOP ALL MOTORS' : 'STOP TEST',
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.danger,
@@ -1242,9 +1156,9 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
         break;
       case MotorTestExecutionStatus.running:
         statusColor = AppTheme.success;
-        statusLabel = _selectedMotor.isAllMotors && _currentlyActiveMotor != null
-            ? 'MOTOR ${_currentlyActiveMotor!.letterCode} SPINNING (${_remainingSeconds}s)'
-            : 'MOTOR SPINNING ($_remainingSeconds s)';
+        statusLabel = _selectedMotor.isAllMotors
+            ? 'ALL 4 MOTORS SPINNING SIMULTANEOUSLY (${_remainingSeconds}s)'
+            : 'MOTOR ${_selectedMotor.letterCode} SPINNING (${_remainingSeconds}s)';
         break;
       case MotorTestExecutionStatus.stopping:
         statusColor = AppTheme.warning;
@@ -1319,7 +1233,9 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
           _buildDiagRow('MAVLink Command', 'MAV_CMD_DO_MOTOR_TEST (ID: 209)'),
           _buildDiagRow(
             'Target Parameters',
-            'Motor: ${_currentlyActiveMotor != null ? "${_currentlyActiveMotor!.motorIndex} (${_currentlyActiveMotor!.letterCode}) [Step ${_currentlyActiveMotor!.motorIndex}/4]" : (_selectedMotor.isAllMotors ? "All 4 in Sequence" : _selectedMotor.motorIndex)} | Type: 0 (%) | Throttle: ${_throttlePercent.toInt()}% | Timeout: ${_durationSeconds}s',
+            _selectedMotor.isAllMotors
+                ? 'Motors: ALL 4 SIMULTANEOUS (Motors 1, 2, 3, 4) | Type: 0 (%) | Throttle: ${_throttlePercent.toInt()}% | Timeout: ${_durationSeconds}s'
+                : 'Motor: ${_selectedMotor.motorIndex} (${_selectedMotor.letterCode}) | Type: 0 (%) | Throttle: ${_throttlePercent.toInt()}% | Timeout: ${_durationSeconds}s',
           ),
           if (_lastResult != null) ...[
             _buildDiagRow(
@@ -1415,7 +1331,11 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                 ),
                 SizedBox(height: 6),
                 Text(
-                  '• Test Sequence (A -> B -> C -> D) is always CLOCKWISE around the frame starting with the front-right motor.',
+                  '• Individual motor test order (A -> B -> C -> D) is clockwise around the frame starting with front-right.',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                ),
+                Text(
+                  '• "Test All Motors" operates all 4 motors simultaneously at the configured throttle.',
                   style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
                 ),
                 Text(
@@ -1495,16 +1415,18 @@ class _QuadXFramePainter extends CustomPainter {
 
     // Draw Pulse halos around selected / active motors
     final target = activeMotor ?? selectedMotor;
-    if (target == MotorSelection.motor1 || (activeMotor == null && target == MotorSelection.allMotors)) {
+    final isAll = (selectedMotor == MotorSelection.allMotors) ||
+        (activeMotor == MotorSelection.allMotors);
+    if (target == MotorSelection.motor1 || isAll) {
       _drawHalo(canvas, m1Pos);
     }
-    if (target == MotorSelection.motor2 || (activeMotor == null && target == MotorSelection.allMotors)) {
+    if (target == MotorSelection.motor2 || isAll) {
       _drawHalo(canvas, m2Pos);
     }
-    if (target == MotorSelection.motor3 || (activeMotor == null && target == MotorSelection.allMotors)) {
+    if (target == MotorSelection.motor3 || isAll) {
       _drawHalo(canvas, m3Pos);
     }
-    if (target == MotorSelection.motor4 || (activeMotor == null && target == MotorSelection.allMotors)) {
+    if (target == MotorSelection.motor4 || isAll) {
       _drawHalo(canvas, m4Pos);
     }
   }

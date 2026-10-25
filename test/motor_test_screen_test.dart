@@ -49,7 +49,7 @@ void main() {
     expect(find.text('Motor 2 (B)'), findsOneWidget);
     expect(find.text('Motor 3 (C)'), findsOneWidget);
     expect(find.text('Motor 4 (D)'), findsOneWidget);
-    expect(find.text('Test All Motors (1-4)'), findsOneWidget);
+    expect(find.text('Test All Motors (Simultaneous)'), findsOneWidget);
 
     // Verify default throttle percentage (10%)
     expect(find.text('THROTTLE PERCENTAGE'), findsOneWidget);
@@ -115,13 +115,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
 
     // Tap Test All Motors chip
-    final allMotorsChip = find.text('Test All Motors (1-4)');
+    final allMotorsChip = find.text('Test All Motors (Simultaneous)');
     expect(allMotorsChip, findsOneWidget);
     await tester.tap(allMotorsChip);
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('START TEST ALL MOTORS'), findsOneWidget);
-    expect(find.text('Test All Motors (1-4 Sequence)'), findsWidgets);
+    expect(find.text('Test All Motors (Simultaneous)'), findsWidgets);
 
     mockService.disconnect();
     await tester.pump(const Duration(milliseconds: 100));
@@ -152,7 +152,49 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   });
 
-  testWidgets('Test All Motors starts sequential execution through motors', (tester) async {
+  testWidgets('Individual motor testing remains unchanged and functions independently', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final mockService = MockDroneService();
+    mockService.connect();
+
+    await tester.pumpWidget(buildTestApp(droneService: mockService));
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Select Motor 2 (B)
+    await tester.tap(find.text('Motor 2 (B)'));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // Confirm propellers removed
+    await tester.tap(find.byKey(const Key('props_confirmed_checkbox')));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('START TEST MOTOR B'), findsOneWidget);
+
+    // Tap Start Test
+    await tester.tap(find.byKey(const Key('start_motor_test_button')));
+    await tester.pump();
+
+    // Confirm safety modal dialog if visible
+    if (find.text('I Confirm: Props Removed').evaluate().isNotEmpty) {
+      await tester.tap(find.text('I Confirm: Props Removed'));
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+
+    // Verify individual motor test is running
+    expect(find.textContaining('MOTOR B SPINNING'), findsWidgets);
+
+    // Press Stop
+    await tester.tap(find.byKey(const Key('stop_motor_test_button')));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    mockService.disconnect();
+    await tester.pump(const Duration(milliseconds: 100));
+  });
+
+  testWidgets('Test All Motors starts simultaneous execution of all 4 motors and stops cleanly', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -164,7 +206,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
 
     // Select Test All Motors
-    await tester.tap(find.text('Test All Motors (1-4)'));
+    await tester.tap(find.text('Test All Motors (Simultaneous)'));
     await tester.pump(const Duration(milliseconds: 100));
 
     // Confirm propellers removed
@@ -181,12 +223,43 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
     }
 
-    // Verify it is running the sequence starting at Motor 1
-    expect(find.textContaining('Motor 1'), findsWidgets);
+    // Verify it is running the simultaneous test for all 4 motors
+    expect(find.textContaining('ALL 4 MOTORS ACTIVE'), findsWidgets);
+    expect(find.textContaining('ALL 4 MOTORS SPINNING SIMULTANEOUSLY'), findsWidgets);
+    expect(find.text('STOP ALL MOTORS'), findsOneWidget);
 
-    // Press Stop
+    // Press Stop All Motors
     await tester.tap(find.byKey(const Key('stop_motor_test_button')));
     await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.textContaining('Emergency stop confirmed'), findsWidgets);
+
+    mockService.disconnect();
+    await tester.pump(const Duration(milliseconds: 100));
+  });
+
+  testWidgets('Refuses to start motor test when vehicle is armed', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final mockService = MockDroneService();
+    await tester.pumpWidget(buildTestApp(droneService: mockService));
+    mockService.connect();
+    await tester.pump(const Duration(milliseconds: 600));
+    await mockService.arm();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // Verify armed safety banner is shown
+    expect(find.textContaining('SAFETY INTERLOCK ACTIVE — MOTORS ARMED'), findsOneWidget);
+
+    // Confirm propellers checkbox
+    await tester.tap(find.byKey(const Key('props_confirmed_checkbox')));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // Start button should remain disabled when armed
+    final startButton = tester.widget<ElevatedButton>(find.byKey(const Key('start_motor_test_button')));
+    expect(startButton.onPressed, isNull);
 
     mockService.disconnect();
     await tester.pump(const Duration(milliseconds: 100));

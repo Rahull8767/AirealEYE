@@ -422,6 +422,13 @@ class MockDroneService implements DroneService {
     required int durationSeconds,
     bool testAll = false,
   }) async {
+    if (testAll) {
+      return testAllMotors(
+        throttlePercent: throttlePercent,
+        durationSeconds: durationSeconds,
+      );
+    }
+
     if (_connectionState != DroneConnectionState.connected) {
       throw StateError("MAVLink link is not connected.");
     }
@@ -443,12 +450,47 @@ class MockDroneService implements DroneService {
     return MotorTestResult(
       success: true,
       ackResult: 0,
-      message: testAll
-          ? "Simulated Test All Motors (1-4 Sequence) accepted and running for ${durationSeconds}s"
-          : "Simulated Motor $motorInstance test accepted and running for ${durationSeconds}s",
+      message: "Simulated Motor $motorInstance test accepted and running for ${durationSeconds}s",
       commandId: 209,
       motorIndex: motorInstance,
-      testAll: testAll,
+      testAll: false,
+      throttlePercent: throttlePercent,
+      durationSeconds: durationSeconds,
+      isSimulated: true,
+      timestamp: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<MotorTestResult> testAllMotors({
+    required double throttlePercent,
+    required int durationSeconds,
+  }) async {
+    if (_connectionState != DroneConnectionState.connected) {
+      throw StateError("MAVLink link is not connected.");
+    }
+    if (_currentTelemetry.armed) {
+      throw StateError("Safety Block: Drone is armed. Motor test is only permitted when disarmed.");
+    }
+    if (_isMockMotorTesting) {
+      throw StateError("A motor test is already in progress.");
+    }
+
+    _isMockMotorTesting = true;
+    _mockMotorTestTimer?.cancel();
+    _mockMotorTestTimer = Timer(Duration(seconds: durationSeconds), () {
+      _isMockMotorTesting = false;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    return MotorTestResult(
+      success: true,
+      ackResult: 0,
+      message: "Simulated simultaneous test of all 4 motors accepted and running for ${durationSeconds}s",
+      commandId: 209,
+      motorIndex: 1,
+      testAll: true,
       throttlePercent: throttlePercent,
       durationSeconds: durationSeconds,
       isSimulated: true,

@@ -211,15 +211,14 @@ void main() {
       expect(stopResult.success, true);
       expect(stopResult.throttlePercent, 0.0);
 
-      // Test all motors
-      final resultAll = await mockService.testMotor(
-        motorInstance: 1,
+      // Test all motors simultaneously
+      final resultAll = await mockService.testAllMotors(
         throttlePercent: 10.0,
         durationSeconds: 3,
-        testAll: true,
       );
       expect(resultAll.success, true);
       expect(resultAll.testAll, true);
+      expect(resultAll.message, contains('simultaneous test of all 4 motors'));
     });
   });
 
@@ -368,31 +367,70 @@ void main() {
       expect(result.isSimulated, false);
     });
 
-    test('Encodes Test All Motors with param1=1 and param5=4 (never param1=0)', () async {
+    test('Encodes simultaneous Test All Motors with command 209 for all 4 motors and param5=0 (not sequential)', () async {
       spySocket.injectDatagram(
         buildHeartbeatPacket(systemId: 1, baseMode: 89, v1: true),
       );
       await Future.delayed(const Duration(milliseconds: 50));
 
-      final testFuture = service.testMotor(
-        motorInstance: 1,
+      final testFuture = service.testAllMotors(
         throttlePercent: 12.0,
         durationSeconds: 3,
-        testAll: true,
       );
 
-      await Future.delayed(const Duration(milliseconds: 50));
-      final msg = await extractCommandLong(spySocket.sentPackets.last);
+      // Process Motor 1
+      await Future.delayed(const Duration(milliseconds: 30));
+      expect(spySocket.sentPackets.length, 1);
+      final msg1 = await extractCommandLong(spySocket.sentPackets[0]);
+      expect(msg1, isNotNull);
+      expect(msg1!.command, 209);
+      expect(msg1.param1, 1.0); // Motor 1
+      expect(msg1.param2, 0.0); // Percentage
+      expect(msg1.param3, 12.0); // 12% throttle
+      expect(msg1.param4, 3.0); // 3 seconds
+      expect(msg1.param5, 0.0); // Motor count = 0 (single motor output, not sequence)
+      spySocket.injectDatagram(
+        buildCommandAckPacket(command: 209, result: 0, v1: true),
+      );
 
-      expect(msg, isNotNull);
-      expect(msg!.command, 209);
-      expect(msg.param1, 1.0); // Starting sequence 1 (Never 0)
-      expect(msg.param2, 0.0); // Percentage
-      expect(msg.param3, 12.0); // 12% throttle
-      expect(msg.param4, 3.0); // 3 seconds
-      expect(msg.param5, 4.0); // All 4 motors in sequence!
+      // Process Motor 2
+      await Future.delayed(const Duration(milliseconds: 30));
+      expect(spySocket.sentPackets.length, 2);
+      final msg2 = await extractCommandLong(spySocket.sentPackets[1]);
+      expect(msg2, isNotNull);
+      expect(msg2!.command, 209);
+      expect(msg2.param1, 2.0); // Motor 2
+      expect(msg2.param3, 12.0);
+      expect(msg2.param4, 3.0);
+      expect(msg2.param5, 0.0);
+      spySocket.injectDatagram(
+        buildCommandAckPacket(command: 209, result: 0, v1: true),
+      );
 
-      // Inject ACK accepted
+      // Process Motor 3
+      await Future.delayed(const Duration(milliseconds: 30));
+      expect(spySocket.sentPackets.length, 3);
+      final msg3 = await extractCommandLong(spySocket.sentPackets[2]);
+      expect(msg3, isNotNull);
+      expect(msg3!.command, 209);
+      expect(msg3.param1, 3.0); // Motor 3
+      expect(msg3.param3, 12.0);
+      expect(msg3.param4, 3.0);
+      expect(msg3.param5, 0.0);
+      spySocket.injectDatagram(
+        buildCommandAckPacket(command: 209, result: 0, v1: true),
+      );
+
+      // Process Motor 4
+      await Future.delayed(const Duration(milliseconds: 30));
+      expect(spySocket.sentPackets.length, 4);
+      final msg4 = await extractCommandLong(spySocket.sentPackets[3]);
+      expect(msg4, isNotNull);
+      expect(msg4!.command, 209);
+      expect(msg4.param1, 4.0); // Motor 4
+      expect(msg4.param3, 12.0);
+      expect(msg4.param4, 3.0);
+      expect(msg4.param5, 0.0);
       spySocket.injectDatagram(
         buildCommandAckPacket(command: 209, result: 0, v1: true),
       );
@@ -401,6 +439,43 @@ void main() {
       expect(result.success, true);
       expect(result.testAll, true);
       expect(result.ackResult, 0);
+      expect(result.message, contains('Simultaneous test of all 4 motors accepted'));
+    });
+
+    test('Simultaneous test aborts and triggers stop if any motor command is rejected', () async {
+      spySocket.injectDatagram(
+        buildHeartbeatPacket(systemId: 1, baseMode: 89, v1: true),
+      );
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      final testFuture = service.testAllMotors(
+        throttlePercent: 10.0,
+        durationSeconds: 2,
+      );
+
+      // Motor 1 accepted
+      await Future.delayed(const Duration(milliseconds: 30));
+      spySocket.injectDatagram(
+        buildCommandAckPacket(command: 209, result: 0, v1: true),
+      );
+
+      // Motor 2 rejected (TEMPORARILY_REJECTED code 1)
+      await Future.delayed(const Duration(milliseconds: 30));
+      spySocket.injectDatagram(
+        buildCommandAckPacket(command: 209, result: 1, v1: true),
+      );
+
+      final result = await testFuture;
+      expect(result.success, false);
+      expect(result.ackResult, 1);
+      expect(result.message, contains('aborted at Motor 2'));
+
+      // Verify that emergency stop command (param3=0, param4=0) was dispatched immediately
+      final stopMsg = await extractCommandLong(spySocket.sentPackets.last);
+      expect(stopMsg, isNotNull);
+      expect(stopMsg!.command, 209);
+      expect(stopMsg.param3, 0.0);
+      expect(stopMsg.param4, 0.0);
     });
 
     test('Reports failure when autopilot returns MAV_RESULT_UNSUPPORTED (code 3)', () async {
