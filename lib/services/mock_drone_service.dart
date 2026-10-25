@@ -4,6 +4,7 @@ import 'package:aerial_eye/models/telemetry.dart';
 import 'package:aerial_eye/models/waypoint.dart';
 import 'package:aerial_eye/models/mavlink_connection_config.dart';
 import 'package:aerial_eye/models/connection_diagnostics.dart';
+import 'package:aerial_eye/models/motor_test_state.dart';
 import 'package:aerial_eye/services/drone_service.dart';
 
 class MockDroneService implements DroneService {
@@ -37,6 +38,7 @@ class MockDroneService implements DroneService {
 
   Timer? _telemetryTimer;
   Timer? _missionTimer;
+  Timer? _connectTimer;
   int _currentWaypointIndex = 0;
   List<Waypoint> _activeWaypoints = [];
   bool _isMissionActive = false;
@@ -80,10 +82,11 @@ class MockDroneService implements DroneService {
   @override
   void connect() {
     _telemetryTimer?.cancel();
+    _connectTimer?.cancel();
     _connectionState = DroneConnectionState.connecting;
     _connectionStateController.add(_connectionState);
 
-    Timer(const Duration(milliseconds: 500), () {
+    _connectTimer = Timer(const Duration(milliseconds: 500), () {
       _connectionState = DroneConnectionState.connected;
       _connectionStateController.add(_connectionState);
 
@@ -185,8 +188,10 @@ class MockDroneService implements DroneService {
 
   @override
   void disconnect() {
+    _connectTimer?.cancel();
     _telemetryTimer?.cancel();
     _missionTimer?.cancel();
+    _mockMotorTestTimer?.cancel();
     _isMissionActive = false;
 
     _connectionState = DroneConnectionState.disconnected;
@@ -261,8 +266,9 @@ class MockDroneService implements DroneService {
 
   @override
   Future<bool> startMission() async {
-    if (!_currentTelemetry.isConnected || _activeWaypoints.isEmpty)
+    if (!_currentTelemetry.isConnected || _activeWaypoints.isEmpty) {
       return false;
+    }
     _currentWaypointIndex = 0;
     _isMissionActive = true;
 
@@ -405,4 +411,65 @@ class MockDroneService implements DroneService {
 
   @override
   void requestDataStreams({int? rateHz}) {}
+
+  Timer? _mockMotorTestTimer;
+  bool _isMockMotorTesting = false;
+
+  @override
+  Future<MotorTestResult> testMotor({
+    required int motorInstance,
+    required double throttlePercent,
+    required int durationSeconds,
+    bool testAll = false,
+  }) async {
+    if (_connectionState != DroneConnectionState.connected) {
+      throw StateError("MAVLink link is not connected.");
+    }
+    if (_currentTelemetry.armed) {
+      throw StateError("Safety Block: Drone is armed. Motor test is only permitted when disarmed.");
+    }
+    if (_isMockMotorTesting) {
+      throw StateError("A motor test is already in progress.");
+    }
+
+    _isMockMotorTesting = true;
+    _mockMotorTestTimer?.cancel();
+    _mockMotorTestTimer = Timer(Duration(seconds: durationSeconds), () {
+      _isMockMotorTesting = false;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    return MotorTestResult(
+      success: true,
+      ackResult: 0,
+      message: testAll
+          ? "Simulated Test All Motors (1-4 Sequence) accepted and running for ${durationSeconds}s"
+          : "Simulated Motor $motorInstance test accepted and running for ${durationSeconds}s",
+      commandId: 209,
+      motorIndex: motorInstance,
+      testAll: testAll,
+      throttlePercent: throttlePercent,
+      durationSeconds: durationSeconds,
+      isSimulated: true,
+      timestamp: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<MotorTestResult> stopMotorTest() async {
+    _mockMotorTestTimer?.cancel();
+    _isMockMotorTesting = false;
+    return MotorTestResult(
+      success: true,
+      ackResult: 0,
+      message: "Motor test stopped (throttle cut to 0%)",
+      commandId: 209,
+      motorIndex: 1,
+      throttlePercent: 0.0,
+      durationSeconds: 0,
+      isSimulated: true,
+      timestamp: DateTime.now(),
+    );
+  }
 }

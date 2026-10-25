@@ -23,6 +23,7 @@ import 'package:aerial_eye/screens/mission_history_screen.dart';
 import 'package:aerial_eye/screens/gallery_screen.dart';
 import 'package:aerial_eye/screens/notifications_screen.dart';
 import 'package:aerial_eye/screens/settings_screen.dart';
+import 'package:aerial_eye/screens/motor_test_screen.dart';
 
 class NavigationShell extends ConsumerStatefulWidget {
   const NavigationShell({super.key});
@@ -357,6 +358,13 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const ConnectScreen()),
+            );
+          }),
+          _buildDrawerItem(LucideIcons.fan, 'Motor Test Panel', () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MotorTestScreen()),
             );
           }),
           _buildDrawerItem(LucideIcons.scanFace, 'AI Detection Feed', () {

@@ -192,6 +192,60 @@ class TestMavlinkTelemetryBridge(unittest.TestCase):
         test_sender.close()
         bridge.stop()
 
+    def test_motor_test_command_and_ack(self):
+        """Verifies MAV_CMD_DO_MOTOR_TEST (209) packet reception and COMMAND_ACK generation."""
+        from pymavlink.dialects.v10 import ardupilotmega as mavlink1
+
+        test_port = 14597
+        bridge = MavlinkTelemetryBridge(
+            udp_port=test_port,
+            telemetry_file=self.telemetry_file,
+            simulation=True,
+        )
+        self.assertTrue(bridge.init_udp())
+
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        client_socket.bind(("127.0.0.1", 0))
+        client_socket.settimeout(1.0)
+
+        mav = mavlink1.MAVLink(None, srcSystem=255, srcComponent=190)
+        # Encode MAV_CMD_DO_MOTOR_TEST (command 209)
+        cmd = mav.command_long_encode(
+            target_system=1,
+            target_component=1,
+            command=209,  # MAV_CMD_DO_MOTOR_TEST
+            confirmation=0,
+            param1=1.0,   # Motor 1
+            param2=0.0,   # Throttle percentage (0)
+            param3=15.0,  # 15% throttle
+            param4=3.0,   # 3 seconds
+            param5=1.0,   # Motor count = 1
+            param6=0.0,
+            param7=0.0,
+        )
+        cmd_bytes = cmd.pack(mav)
+
+        client_socket.sendto(cmd_bytes, ("127.0.0.1", test_port))
+        time.sleep(0.05)
+        bridge.handle_udp_rx()
+
+        # Receive the COMMAND_ACK
+        data, _ = client_socket.recvfrom(2048)
+        mav_rx = mavlink1.MAVLink(None, srcSystem=1, srcComponent=1)
+        ack_msg = None
+        for b in data:
+            m = mav_rx.parse_char(bytes([b]))
+            if m and m.get_type() == "COMMAND_ACK":
+                ack_msg = m
+                break
+
+        self.assertIsNotNone(ack_msg, "Failed to receive COMMAND_ACK for motor test")
+        self.assertEqual(ack_msg.command, 209)
+        self.assertEqual(ack_msg.result, mavlink1.MAV_RESULT_ACCEPTED)
+
+        client_socket.close()
+        bridge.stop()
+
 
 class TestFlaskViewEndpoints(unittest.TestCase):
     def setUp(self):

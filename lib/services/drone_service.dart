@@ -2,6 +2,7 @@ import 'package:aerial_eye/models/telemetry.dart';
 import 'package:aerial_eye/models/waypoint.dart';
 import 'package:aerial_eye/models/mavlink_connection_config.dart';
 import 'package:aerial_eye/models/connection_diagnostics.dart';
+import 'package:aerial_eye/models/motor_test_state.dart';
 
 enum DroneConnectionState {
   disconnected,
@@ -83,4 +84,13 @@ abstract class DroneService {
   Future<bool> resumeMission();
   Future<bool> clearMission();
   void requestDataStreams({int? rateHz});
+
+  Future<MotorTestResult> testMotor({
+    required int motorInstance,
+    required double throttlePercent,
+    required int durationSeconds,
+    bool testAll = false,
+  });
+
+  Future<MotorTestResult> stopMotorTest();
 }

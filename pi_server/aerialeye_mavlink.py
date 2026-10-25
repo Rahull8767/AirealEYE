@@ -378,6 +378,35 @@ class MavlinkTelemetryBridge:
                         self.packets_relayed_to_serial += 1
                     except Exception as e:
                         logger.warning("Serial write error: %s", e)
+                elif self.simulation:
+                    # In simulation mode, parse incoming commands and reply with COMMAND_ACK
+                    try:
+                        from pymavlink.dialects.v10 import ardupilotmega as mavlink1
+                        mav_sim = mavlink1.MAVLink(
+                            None,
+                            srcSystem=self.telemetry.get("system_id", 1),
+                            srcComponent=self.telemetry.get("component_id", 1),
+                        )
+                        for b in data:
+                            msg = mav_sim.parse_char(bytes([b]))
+                            if msg and msg.get_type() == "COMMAND_LONG":
+                                cmd_id = getattr(msg, "command", 0)
+                                ack = mav_sim.command_ack_encode(
+                                    command=cmd_id,
+                                    result=mavlink1.MAV_RESULT_ACCEPTED,
+                                )
+                                ack_bytes = ack.pack(mav_sim)
+                                if self.udp_socket:
+                                    self.udp_socket.sendto(ack_bytes, addr)
+                                    self.udp_bytes_out += len(ack_bytes)
+                                    self.packets_relayed_to_udp += 1
+                                logger.info(
+                                    "Simulated COMMAND_ACK for command %d sent to %s",
+                                    cmd_id,
+                                    addr,
+                                )
+                    except Exception as e:
+                        logger.debug("Simulation command parse error: %s", e)
 
         except (BlockingIOError, socket.error):
             pass

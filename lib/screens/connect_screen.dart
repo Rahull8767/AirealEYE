@@ -12,6 +12,7 @@ import 'package:aerial_eye/providers/drone_provider.dart';
 import 'package:aerial_eye/services/drone_service.dart';
 import 'package:aerial_eye/screens/mavlink_connection_screen.dart';
 import 'package:aerial_eye/screens/camera_connection_screen.dart';
+import 'package:aerial_eye/screens/motor_test_screen.dart';
 import 'package:aerial_eye/providers/pi_camera_provider.dart';
 import 'package:aerial_eye/models/camera_stream_state.dart';
 import 'package:aerial_eye/widgets/glass_panel.dart';
@@ -752,23 +753,50 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                   ),
 
                   const SizedBox(height: 8),
-                  Center(
-                    child: TextButton.icon(
-                      onPressed: _openMavlinkSettings,
-                      icon: const Icon(
-                        LucideIcons.sliders,
-                        size: 14,
-                        color: AppTheme.secondary,
-                      ),
-                      label: const Text(
-                        'Configure MAVLink Settings',
-                        style: TextStyle(
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _openMavlinkSettings,
+                        icon: const Icon(
+                          LucideIcons.sliders,
+                          size: 14,
                           color: AppTheme.secondary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                        ),
+                        label: const Text(
+                          'MAVLink Settings',
+                          style: TextStyle(
+                            color: AppTheme.secondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const MotorTestScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(
+                          LucideIcons.fan,
+                          size: 14,
+                          color: AppTheme.primary,
+                        ),
+                        label: const Text(
+                          'Motor Test Panel',
+                          style: TextStyle(
+                            color: AppTheme.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

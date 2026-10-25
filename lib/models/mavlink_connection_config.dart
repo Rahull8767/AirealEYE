@@ -1,4 +1,4 @@
-enum MavlinkTransport { udp }
+enum MavlinkTransport { udp, http }
 
 enum MavlinkConnectionMode {
   listener, // Binds on 0.0.0.0:<localPort> and receives from MAVProxy/SITL/Radio
@@ -24,6 +24,11 @@ class MavlinkConnectionConfig {
   final int telemetryRateHz;
   final bool debugLogging;
 
+  // Raspberry Pi Flask HTTP Telemetry fields
+  final String httpBaseUrl;
+  final int httpPollingIntervalMs;
+  final int httpTimeoutSeconds;
+
   const MavlinkConnectionConfig({
     this.transport = MavlinkTransport.udp,
     this.connectionMode = MavlinkConnectionMode.listener,
@@ -42,6 +47,9 @@ class MavlinkConnectionConfig {
     this.reconnectIntervalSeconds = 3,
     this.telemetryRateHz = 10,
     this.debugLogging = true,
+    this.httpBaseUrl = 'http://10.174.17.87:8081',
+    this.httpPollingIntervalMs = 1000,
+    this.httpTimeoutSeconds = 3,
   });
 
   factory MavlinkConnectionConfig.defaultConfig() {
@@ -66,6 +74,9 @@ class MavlinkConnectionConfig {
     int? reconnectIntervalSeconds,
     int? telemetryRateHz,
     bool? debugLogging,
+    String? httpBaseUrl,
+    int? httpPollingIntervalMs,
+    int? httpTimeoutSeconds,
   }) {
     return MavlinkConnectionConfig(
       transport: transport ?? this.transport,
@@ -88,6 +99,10 @@ class MavlinkConnectionConfig {
           reconnectIntervalSeconds ?? this.reconnectIntervalSeconds,
       telemetryRateHz: telemetryRateHz ?? this.telemetryRateHz,
       debugLogging: debugLogging ?? this.debugLogging,
+      httpBaseUrl: httpBaseUrl ?? this.httpBaseUrl,
+      httpPollingIntervalMs:
+          httpPollingIntervalMs ?? this.httpPollingIntervalMs,
+      httpTimeoutSeconds: httpTimeoutSeconds ?? this.httpTimeoutSeconds,
     );
   }
 
@@ -110,6 +125,9 @@ class MavlinkConnectionConfig {
       'reconnectIntervalSeconds': reconnectIntervalSeconds,
       'telemetryRateHz': telemetryRateHz,
       'debugLogging': debugLogging,
+      'httpBaseUrl': httpBaseUrl,
+      'httpPollingIntervalMs': httpPollingIntervalMs,
+      'httpTimeoutSeconds': httpTimeoutSeconds,
     };
   }
 
@@ -138,6 +156,10 @@ class MavlinkConnectionConfig {
       reconnectIntervalSeconds: json['reconnectIntervalSeconds'] as int? ?? 3,
       telemetryRateHz: json['telemetryRateHz'] as int? ?? 10,
       debugLogging: json['debugLogging'] as bool? ?? true,
+      httpBaseUrl:
+          json['httpBaseUrl'] as String? ?? 'http://10.174.17.87:8081',
+      httpPollingIntervalMs: json['httpPollingIntervalMs'] as int? ?? 1000,
+      httpTimeoutSeconds: json['httpTimeoutSeconds'] as int? ?? 3,
     );
   }
 
@@ -145,6 +167,28 @@ class MavlinkConnectionConfig {
   List<String> validate() {
     final errors = <String>[];
 
+    if (transport == MavlinkTransport.http) {
+      final trimmedUrl = httpBaseUrl.trim();
+      if (trimmedUrl.isEmpty) {
+        errors.add('Raspberry Pi HTTP Base URL is required');
+      } else {
+        final uri = Uri.tryParse(trimmedUrl);
+        if (uri == null ||
+            (uri.scheme != 'http' && uri.scheme != 'https') ||
+            uri.host.isEmpty) {
+          errors.add('Invalid HTTP Base URL (must start with http:// or https://)');
+        }
+      }
+      if (httpPollingIntervalMs < 200 || httpPollingIntervalMs > 10000) {
+        errors.add('HTTP polling interval must be between 200ms and 10000ms');
+      }
+      if (httpTimeoutSeconds <= 0 || httpTimeoutSeconds > 30) {
+        errors.add('HTTP request timeout must be between 1 and 30 seconds');
+      }
+      return errors;
+    }
+
+    // UDP Validation
     if (localPort < 1 || localPort > 65535) {
       errors.add('Local UDP Port must be between 1 and 65535');
     }

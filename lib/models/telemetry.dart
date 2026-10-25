@@ -147,7 +147,11 @@ class DroneTelemetry {
   String get batteryVoltageDisplay =>
       hasReceivedBattery ? '${batteryVoltage.toStringAsFixed(1)} V' : '--';
   String get batteryPercentDisplay =>
-      hasReceivedBattery ? '${batteryPercentage.toStringAsFixed(0)}%' : '--';
+      hasReceivedBattery && batteryPercentage >= 0
+          ? '${batteryPercentage.toStringAsFixed(0)}%'
+          : '--';
+  bool get isBatteryPercentAvailable =>
+      hasReceivedBattery && batteryPercentage >= 0;
   String get satellitesDisplay =>
       hasReceivedGps ? '$satellites Sats' : 'Waiting...';
   String get waypointProgressDisplay =>

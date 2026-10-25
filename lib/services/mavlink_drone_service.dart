@@ -6,13 +6,16 @@ import 'package:aerial_eye/models/telemetry.dart';
 import 'package:aerial_eye/models/waypoint.dart';
 import 'package:aerial_eye/models/mavlink_connection_config.dart';
 import 'package:aerial_eye/models/connection_diagnostics.dart';
+import 'package:aerial_eye/models/motor_test_state.dart';
 import 'package:aerial_eye/services/drone_service.dart';
 import 'package:aerial_eye/services/mavlink_config_storage.dart';
+import 'package:aerial_eye/services/pi_http_telemetry_service.dart';
 import 'package:dart_mavlink/mavlink.dart';
 import 'package:dart_mavlink/dialects/ardupilotmega.dart';
 
 class MavlinkDroneService implements DroneService {
   MavlinkConnectionConfig _config = MavlinkConnectionConfig.defaultConfig();
+  late final PiHttpTelemetryService _httpService;
 
   final _telemetryController = StreamController<DroneTelemetry>.broadcast();
   DroneTelemetry _currentTelemetry = DroneTelemetry.initial();
@@ -44,6 +47,14 @@ class MavlinkDroneService implements DroneService {
   Completer<bool>? _missionUploadCompleter;
   List<MissionItemInt> _uploadingWaypoints = [];
   Timer? _missionUploadTimeoutTimer;
+
+  Completer<MotorTestResult>? _motorTestCompleter;
+  Timer? _motorTestTimeoutTimer;
+  Timer? _motorTestDurationTimer;
+  int? _activeMotorTestInstance;
+  bool _activeMotorTestIsAll = false;
+  double _lastMotorTestThrottle = 10.0;
+  int _lastMotorTestDuration = 3;
 
   RawDatagramSocket? _socket;
   RawDatagramSocket? _mockSocketInstance;
@@ -90,10 +101,38 @@ class MavlinkDroneService implements DroneService {
   // Rate-limiting debug logs
   DateTime? _lastTelemetryLogTime;
 
-  MavlinkDroneService() {
-    _initStoredConfig();
+  MavlinkDroneService({MavlinkConnectionConfig? initialConfig}) {
+    if (initialConfig != null) {
+      _config = initialConfig;
+    }
+    _httpService = PiHttpTelemetryService(config: _config);
+    _initHttpListeners();
+    _initStoredConfig(skipIfConfigured: initialConfig != null);
     _initParserListener();
     _startPpsSampler();
+  }
+
+  void _initHttpListeners() {
+    _httpService.telemetryStream.listen((telem) {
+      if (_config.transport == MavlinkTransport.http) {
+        _currentTelemetry = telem;
+        _telemetryController.add(telem);
+      }
+    });
+
+    _httpService.connectionStateStream.listen((state) {
+      if (_config.transport == MavlinkTransport.http) {
+        _connectionState = state;
+        _connectionStateController.add(state);
+      }
+    });
+
+    _httpService.diagnosticsStream.listen((diag) {
+      if (_config.transport == MavlinkTransport.http) {
+        _currentDiagnostics = diag;
+        _diagnosticsController.add(diag);
+      }
+    });
   }
 
   void _initParserListener() {
@@ -119,10 +158,12 @@ class MavlinkDroneService implements DroneService {
     );
   }
 
-  Future<void> _initStoredConfig() async {
+  Future<void> _initStoredConfig({bool skipIfConfigured = false}) async {
+    if (skipIfConfigured) return;
     try {
       final stored = await MavlinkConfigStorage.loadConfig();
       _config = stored;
+      _httpService.updateConfig(stored);
     } catch (_) {}
   }
 
@@ -140,11 +181,17 @@ class MavlinkDroneService implements DroneService {
 
   @override
   void updateConfig(MavlinkConnectionConfig newConfig) {
+    final transportChanged = _config.transport != newConfig.transport;
     _config = newConfig;
+    _httpService.updateConfig(newConfig);
     MavlinkConfigStorage.saveConfig(newConfig);
     _logDiagnostic(
-      "Config updated: localPort=${newConfig.localPort}, mode=${newConfig.connectionMode.name}, bind=${newConfig.bindAddress}, remote=${newConfig.remoteHost}:${newConfig.remotePort}",
+      "Config updated: transport=${newConfig.transport.name}, localPort=${newConfig.localPort}, httpUrl=${newConfig.httpBaseUrl}",
     );
+    if (transportChanged && _connectionState == DroneConnectionState.connected) {
+      disconnect();
+      connect();
+    }
     _updateDiagnostics();
   }
 
@@ -219,6 +266,19 @@ class MavlinkDroneService implements DroneService {
     _malformedFramesCount = 0;
     _detectedProtocolVersion = 'None';
 
+    if (_config.transport == MavlinkTransport.http) {
+      if (_socket != null) {
+        _socket?.close();
+        _socket = null;
+        _socketStatus = 'CLOSED';
+      }
+      _isUsingHardware = false;
+      _httpService.start();
+      return;
+    }
+
+    _httpService.stop();
+
     if (_connectionMode == DroneConnectionMode.real) {
       _isUsingHardware = true;
       _setConnectionState(DroneConnectionState.connecting);
@@ -267,6 +327,8 @@ class MavlinkDroneService implements DroneService {
   @override
   void disconnect() {
     _cleanupCompletersOnDisconnect();
+
+    _httpService.stop();
 
     _telemetryTimer?.cancel();
     _telemetryTimer = null;
@@ -328,6 +390,13 @@ class MavlinkDroneService implements DroneService {
       );
     }
     _cleanupMissionUpload();
+
+    if (_motorTestCompleter != null && !_motorTestCompleter!.isCompleted) {
+      _motorTestCompleter!.completeError(
+        StateError("MAVLink link was disconnected."),
+      );
+    }
+    _cleanupMotorTest();
   }
 
   void _setConnectionState(DroneConnectionState newState) {
@@ -880,6 +949,10 @@ class MavlinkDroneService implements DroneService {
           }
         }
         _cleanupTakeoff();
+      } else if (msg.command == 209) {
+        // MAV_CMD_DO_MOTOR_TEST
+        _logDiagnostic("[MOTOR_TEST ACK] command=209 result=${msg.result}");
+        _handleMotorTestAck(msg.result);
       }
     } else if (msg is Statustext) {
       final textStr = String.fromCharCodes(
@@ -1069,6 +1142,13 @@ class MavlinkDroneService implements DroneService {
       );
     }
 
+    if (testConfig.transport == MavlinkTransport.http) {
+      return _httpService.testEndpoint(
+        testConfig.httpBaseUrl,
+        timeoutSeconds: testConfig.httpTimeoutSeconds,
+      );
+    }
+
     RawDatagramSocket? testSocket;
     final completer = Completer<MavlinkTestResult>();
     Timer? timeoutTimer;
@@ -1207,8 +1287,18 @@ class MavlinkDroneService implements DroneService {
 
   // --- Flight Commands ---
 
+  void _assertCommandSupported(String commandName) {
+    if (_config.transport == MavlinkTransport.http) {
+      final msg =
+          'Flight command "$commandName" is not supported in Raspberry Pi HTTP Telemetry mode. Switch to MAVLink UDP mode for full flight control.';
+      _logDiagnostic("[HTTP RESTRICTION] $msg");
+      throw UnsupportedError(msg);
+    }
+  }
+
   @override
   Future<bool> arm() async {
+    _assertCommandSupported('arm');
     if (_connectionState != DroneConnectionState.connected) {
       throw StateError("MAVLink link is not connected.");
     }
@@ -1269,6 +1359,7 @@ class MavlinkDroneService implements DroneService {
 
   @override
   Future<bool> disarm() async {
+    _assertCommandSupported('disarm');
     if (_connectionState != DroneConnectionState.connected) {
       throw StateError("MAVLink link is not connected.");
     }
@@ -1331,6 +1422,7 @@ class MavlinkDroneService implements DroneService {
 
   @override
   Future<bool> setFlightMode(String mode) async {
+    _assertCommandSupported('setFlightMode');
     final modeUpper = mode.toUpperCase();
     final supportedModes = [
       'STABILIZE',
@@ -1439,6 +1531,7 @@ class MavlinkDroneService implements DroneService {
 
   @override
   Future<bool> takeoff(double altitudeMeters) async {
+    _assertCommandSupported('takeoff');
     _logDiagnostic("[TAKEOFF REQUEST]");
 
     final bool isConnected =
@@ -1548,11 +1641,50 @@ class MavlinkDroneService implements DroneService {
     _targetArmState = null;
   }
 
+  void _handleMotorTestAck(int result) {
+    if (_motorTestCompleter != null && !_motorTestCompleter!.isCompleted) {
+      final success = result == 0;
+      final desc = MotorTestResult.describeMavResult(result);
+      _motorTestCompleter!.complete(
+        MotorTestResult(
+          success: success,
+          ackResult: result,
+          message: success
+              ? "Motor test command accepted by flight controller"
+              : "Motor test rejected: $desc",
+          commandId: 209,
+          motorIndex: _activeMotorTestInstance ?? 1,
+          testAll: _activeMotorTestIsAll,
+          throttlePercent: _lastMotorTestThrottle,
+          durationSeconds: _lastMotorTestDuration,
+          isSimulated: !_isUsingHardware,
+          timestamp: DateTime.now(),
+        ),
+      );
+    }
+    _cleanupMotorTestAck();
+  }
+
+  void _cleanupMotorTestAck() {
+    _motorTestTimeoutTimer?.cancel();
+    _motorTestTimeoutTimer = null;
+    _motorTestCompleter = null;
+  }
+
+  void _cleanupMotorTest() {
+    _cleanupMotorTestAck();
+    _motorTestDurationTimer?.cancel();
+    _motorTestDurationTimer = null;
+    _activeMotorTestInstance = null;
+    _activeMotorTestIsAll = false;
+  }
+
   @override
   List<Waypoint> get activeWaypoints => _activeWaypoints;
 
   @override
   Future<bool> uploadMission(List<Waypoint> waypoints) async {
+    _assertCommandSupported('uploadMission');
     if (_connectionState != DroneConnectionState.connected) {
       throw StateError("MAVLink link is not connected.");
     }
@@ -1668,6 +1800,7 @@ class MavlinkDroneService implements DroneService {
 
   @override
   Future<bool> clearMission() async {
+    _assertCommandSupported('clearMission');
     if (_connectionState != DroneConnectionState.connected) {
       throw StateError("MAVLink link is not connected.");
     }
@@ -1698,6 +1831,7 @@ class MavlinkDroneService implements DroneService {
 
   @override
   Future<bool> startMission() async {
+    _assertCommandSupported('startMission');
     if (_connectionState != DroneConnectionState.connected) {
       throw StateError("MAVLink link is not connected.");
     }
@@ -1772,6 +1906,7 @@ class MavlinkDroneService implements DroneService {
 
   @override
   Future<bool> pauseMission() async {
+    _assertCommandSupported('pauseMission');
     if (_connectionState != DroneConnectionState.connected) {
       throw StateError("MAVLink link is not connected.");
     }
@@ -1789,6 +1924,7 @@ class MavlinkDroneService implements DroneService {
 
   @override
   Future<bool> resumeMission() async {
+    _assertCommandSupported('resumeMission');
     if (_connectionState != DroneConnectionState.connected) {
       throw StateError("MAVLink link is not connected.");
     }
@@ -1809,6 +1945,7 @@ class MavlinkDroneService implements DroneService {
 
   @override
   Future<bool> returnToLaunch() async {
+    _assertCommandSupported('returnToLaunch');
     if (_connectionState != DroneConnectionState.connected) {
       throw StateError("MAVLink link is not connected.");
     }
@@ -1838,6 +1975,7 @@ class MavlinkDroneService implements DroneService {
 
   @override
   Future<bool> land() async {
+    _assertCommandSupported('land');
     if (_connectionState != DroneConnectionState.connected) {
       throw StateError("MAVLink link is not connected.");
     }
@@ -1926,6 +2064,7 @@ class MavlinkDroneService implements DroneService {
 
   @override
   void requestDataStreams({int? rateHz}) {
+    if (_config.transport == MavlinkTransport.http) return;
     final rate = rateHz ?? _config.telemetryRateHz;
     _logDiagnostic(
       "[DATA STREAMS] Requesting telemetry streams at ${rate}Hz (targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId)",
@@ -1981,4 +2120,228 @@ class MavlinkDroneService implements DroneService {
     );
     _sendMavlinkPacket(_createOutFrame(reqHud).serialize());
   }
+
+  @override
+  Future<MotorTestResult> testMotor({
+    required int motorInstance,
+    required double throttlePercent,
+    required int durationSeconds,
+    bool testAll = false,
+  }) async {
+    _assertCommandSupported('testMotor');
+    if (_connectionState != DroneConnectionState.connected) {
+      throw StateError("MAVLink link is not connected.");
+    }
+
+    if (_currentTelemetry.armed) {
+      throw StateError(
+        "Safety Block: Drone is armed. Motor test is strictly permitted only when disarmed on the ground.",
+      );
+    }
+
+    if (throttlePercent < 0.0 || throttlePercent > 100.0) {
+      throw ArgumentError.value(
+        throttlePercent,
+        'throttlePercent',
+        'Throttle must be between 0% and 100%.',
+      );
+    }
+
+    if (durationSeconds < 1 || durationSeconds > 5) {
+      throw ArgumentError.value(
+        durationSeconds,
+        'durationSeconds',
+        'Duration must be between 1 and 5 seconds.',
+      );
+    }
+
+    if (motorInstance < 1 || motorInstance > 4) {
+      throw ArgumentError.value(
+        motorInstance,
+        'motorInstance',
+        'Motor instance must be between 1 and 4.',
+      );
+    }
+
+    if (_motorTestCompleter != null) {
+      throw StateError("A motor test is already in progress.");
+    }
+
+    _activeMotorTestInstance = motorInstance;
+    _activeMotorTestIsAll = testAll;
+    _lastMotorTestThrottle = throttlePercent;
+    _lastMotorTestDuration = durationSeconds;
+
+    if (!_isUsingHardware) {
+      _logDiagnostic(
+        "[SIMULATED MOTOR TEST] motor=$motorInstance, testAll=$testAll, throttle=$throttlePercent%, duration=${durationSeconds}s",
+      );
+      _motorTestDurationTimer?.cancel();
+      _motorTestDurationTimer = Timer(Duration(seconds: durationSeconds), () {
+        _cleanupMotorTest();
+      });
+      return MotorTestResult(
+        success: true,
+        ackResult: 0,
+        message: testAll
+            ? "Simulated Test All Motors (1-4 Sequence) accepted for ${durationSeconds}s"
+            : "Simulated Motor $motorInstance test accepted for ${durationSeconds}s",
+        commandId: 209,
+        motorIndex: motorInstance,
+        testAll: testAll,
+        throttlePercent: throttlePercent,
+        durationSeconds: durationSeconds,
+        isSimulated: true,
+        timestamp: DateTime.now(),
+      );
+    }
+
+    _logDiagnostic(
+      "[MOTOR_TEST REQUEST] targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId, "
+      "motor=${testAll ? 'ALL (1..4)' : motorInstance}, throttle=$throttlePercent%, duration=${durationSeconds}s",
+    );
+
+    // MAV_CMD_DO_MOTOR_TEST (Command 209)
+    // Param 1: Motor instance sequence (1..4). For all motors, start at 1.
+    // Param 2: Throttle type: 0 = THROTTLE_PERCENT (0..100)
+    // Param 3: Throttle value: 0..100
+    // Param 4: Timeout in seconds: 1..5
+    // Param 5: Motor count: 4 for all motors in sequence, 1 for single motor
+    // Param 6: Test order: 0
+    // Param 7: 0.0
+    final command = CommandLong(
+      command: 209,
+      param1: testAll ? 1.0 : motorInstance.toDouble(),
+      param2: 0.0,
+      param3: throttlePercent,
+      param4: durationSeconds.toDouble(),
+      param5: testAll ? 4.0 : 1.0,
+      param6: 0.0,
+      param7: 0.0,
+      targetSystem: effectiveTargetSystemId,
+      targetComponent: effectiveTargetComponentId,
+      confirmation: 0,
+    );
+
+    final frame = _createOutFrame(command);
+    final packet = frame.serialize();
+
+    _motorTestCompleter = Completer<MotorTestResult>();
+
+    _logDiagnostic(
+      "[MOTOR_TEST TX] command=209, p1=${command.param1}, p2=0, p3=$throttlePercent, p4=$durationSeconds, p5=${command.param5}",
+    );
+    _sendMavlinkPacket(packet);
+
+    _motorTestTimeoutTimer = Timer(const Duration(seconds: 3), () {
+      if (_motorTestCompleter != null && !_motorTestCompleter!.isCompleted) {
+        _logDiagnostic(
+          "[MOTOR_TEST TIMEOUT] Autopilot did not return COMMAND_ACK for command 209 within 3s",
+        );
+        _motorTestCompleter!.complete(
+          MotorTestResult(
+            success: false,
+            ackResult: null,
+            message:
+                "Autopilot did not acknowledge MAV_CMD_DO_MOTOR_TEST (timeout after 3s). Check telemetry link and APM firmware.",
+            commandId: 209,
+            motorIndex: motorInstance,
+            testAll: testAll,
+            throttlePercent: throttlePercent,
+            durationSeconds: durationSeconds,
+            isSimulated: false,
+            timestamp: DateTime.now(),
+          ),
+        );
+      }
+      _cleanupMotorTestAck();
+    });
+
+    try {
+      final result = await _motorTestCompleter!.future;
+      if (result.success) {
+        _motorTestDurationTimer?.cancel();
+        _motorTestDurationTimer = Timer(Duration(seconds: durationSeconds), () {
+          _cleanupMotorTest();
+        });
+      } else {
+        _cleanupMotorTest();
+      }
+      return result;
+    } catch (e) {
+      _cleanupMotorTest();
+      rethrow;
+    }
+  }
+
+  @override
+  Future<MotorTestResult> stopMotorTest() async {
+    _assertCommandSupported('stopMotorTest');
+    _logDiagnostic(
+      "[MOTOR_TEST STOP] Sending immediate stop (throttle=0, duration=0)",
+    );
+
+    _cleanupMotorTest();
+
+    if (!_isUsingHardware) {
+      return MotorTestResult(
+        success: true,
+        ackResult: 0,
+        message: "Motor test stopped (throttle cut to 0%)",
+        commandId: 209,
+        motorIndex: 1,
+        throttlePercent: 0.0,
+        durationSeconds: 0,
+        isSimulated: true,
+        timestamp: DateTime.now(),
+      );
+    }
+
+    if (_connectionState != DroneConnectionState.connected) {
+      return MotorTestResult(
+        success: false,
+        ackResult: null,
+        message: "Cannot stop motor test: MAVLink link is disconnected",
+        commandId: 209,
+        motorIndex: 1,
+        throttlePercent: 0.0,
+        durationSeconds: 0,
+        isSimulated: false,
+        timestamp: DateTime.now(),
+      );
+    }
+
+    // In ArduPilot, sending MAV_CMD_DO_MOTOR_TEST with throttle = 0 (and duration = 0)
+    // calls motor_test_stop(), which halts output immediately.
+    final command = CommandLong(
+      command: 209,
+      param1: 1.0,
+      param2: 0.0,
+      param3: 0.0,
+      param4: 0.0,
+      param5: 0.0,
+      param6: 0.0,
+      param7: 0.0,
+      targetSystem: effectiveTargetSystemId,
+      targetComponent: effectiveTargetComponentId,
+      confirmation: 0,
+    );
+
+    final frame = _createOutFrame(command);
+    final packet = frame.serialize();
+
+    _sendMavlinkPacket(packet);
+
+    return MotorTestResult(
+      success: true,
+      ackResult: 0,
+      message: "Emergency stop packet sent to autopilot (throttle cut to 0%)",
+      commandId: 209,
+      motorIndex: 1,
+      throttlePercent: 0.0,
+      durationSeconds: 0,
+      isSimulated: false,
+      timestamp: DateTime.now(),
+    );
+    }
 }
