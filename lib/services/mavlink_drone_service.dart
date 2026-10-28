@@ -2154,11 +2154,11 @@ class MavlinkDroneService implements DroneService {
       );
     }
 
-    if (durationSeconds < 1 || durationSeconds > 5) {
+    if (durationSeconds < 1 || durationSeconds > 600) {
       throw ArgumentError.value(
         durationSeconds,
         'durationSeconds',
-        'Duration must be between 1 and 5 seconds.',
+        'Duration must be between 1 and 600 seconds (up to 10 minutes).',
       );
     }
 
@@ -2251,11 +2251,11 @@ class MavlinkDroneService implements DroneService {
       );
     }
 
-    if (durationSeconds < 1 || durationSeconds > 5) {
+    if (durationSeconds < 1 || durationSeconds > 600) {
       throw ArgumentError.value(
         durationSeconds,
         'durationSeconds',
-        'Duration must be between 1 and 5 seconds.',
+        'Duration must be between 1 and 600 seconds (up to 10 minutes).',
       );
     }
 

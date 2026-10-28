@@ -281,7 +281,7 @@ void main() {
       expect(spySocket.sentPackets.isEmpty, true);
     });
 
-    test('Parameter validation: rejects throttle < 0 or > 100 and duration < 1 or > 5', () async {
+    test('Parameter validation: rejects throttle < 0 or > 100 and duration < 1 or > 600', () async {
       spySocket.injectDatagram(
         buildHeartbeatPacket(systemId: 1, baseMode: 89, v1: true),
       );
@@ -310,7 +310,16 @@ void main() {
         () => service.testMotor(
           motorInstance: 1,
           throttlePercent: 10.0,
-          durationSeconds: 6,
+          durationSeconds: 0,
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+
+      expect(
+        () => service.testMotor(
+          motorInstance: 1,
+          throttlePercent: 10.0,
+          durationSeconds: 601,
         ),
         throwsA(isA<ArgumentError>()),
       );

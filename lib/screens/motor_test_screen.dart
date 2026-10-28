@@ -11,6 +11,11 @@ import 'package:aerial_eye/providers/drone_provider.dart';
 import 'package:aerial_eye/services/drone_service.dart';
 import 'package:aerial_eye/widgets/glass_panel.dart';
 
+enum DurationUnit {
+  seconds,
+  minutes,
+}
+
 class MotorTestScreen extends ConsumerStatefulWidget {
   const MotorTestScreen({super.key});
 
@@ -24,6 +29,7 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
   MotorSelection _selectedMotor = MotorSelection.motor1;
   double _throttlePercent = 10.0;
   int _durationSeconds = 3;
+  DurationUnit _durationUnit = DurationUnit.seconds;
 
   // Safety State
   bool _propsRemovedConfirmed = false;
@@ -37,6 +43,7 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
   String? _statusDetails;
   MotorSelection? _currentlyActiveMotor;
   late final TextEditingController _throttleTextController;
+  late final TextEditingController _durationTextController;
   late final AnimationController _pulseController;
 
   @override
@@ -44,6 +51,9 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
     super.initState();
     _throttleTextController = TextEditingController(
       text: _throttlePercent.toInt().toString(),
+    );
+    _durationTextController = TextEditingController(
+      text: _durationSeconds.toString(),
     );
     _pulseController = AnimationController(
       vsync: this,
@@ -58,6 +68,7 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
   void dispose() {
     _countdownTimer?.cancel();
     _throttleTextController.dispose();
+    _durationTextController.dispose();
     _pulseController.dispose();
     if (_status == MotorTestExecutionStatus.running ||
         _status == MotorTestExecutionStatus.sendingCommand) {
@@ -83,6 +94,59 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
         _throttlePercent = clamped;
       });
     }
+  }
+
+  void _onDurationTextChanged(String text) {
+    final parsed = double.tryParse(text.trim());
+    if (parsed != null && parsed > 0) {
+      int totalSec;
+      if (_durationUnit == DurationUnit.minutes) {
+        totalSec = (parsed * 60).round();
+      } else {
+        totalSec = parsed.round();
+      }
+      if (totalSec < 1) totalSec = 1;
+      if (totalSec > 600) totalSec = 600;
+      setState(() {
+        _durationSeconds = totalSec;
+      });
+    }
+  }
+
+  void _setDurationUnit(DurationUnit unit) {
+    if (_durationUnit == unit) return;
+    setState(() {
+      _durationUnit = unit;
+      if (unit == DurationUnit.minutes) {
+        final mins = _durationSeconds / 60.0;
+        _durationTextController.text = (mins % 1 == 0)
+            ? mins.toInt().toString()
+            : mins.toStringAsFixed(1);
+      } else {
+        _durationTextController.text = _durationSeconds.toString();
+      }
+    });
+  }
+
+  String _formatDurationBadge(int totalSeconds) {
+    if (totalSeconds < 60) {
+      return '${totalSeconds}s';
+    }
+    final mins = totalSeconds ~/ 60;
+    final secs = totalSeconds % 60;
+    if (secs == 0) {
+      return '${mins}m (${totalSeconds}s)';
+    }
+    return '${mins}m ${secs}s (${totalSeconds}s)';
+  }
+
+  String _formatCountdown(int remainingSeconds) {
+    if (remainingSeconds < 60) {
+      return '${remainingSeconds}s';
+    }
+    final mins = remainingSeconds ~/ 60;
+    final secs = remainingSeconds % 60;
+    return '${mins}m ${secs.toString().padLeft(2, '0')}s';
   }
 
   Future<void> _startMotorTest() async {
@@ -258,12 +322,31 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
               _remainingSeconds = 0;
               _currentlyActiveMotor = null;
               _statusDetails =
-                  'Test complete (${_durationSeconds}s duration elapsed). Autopilot watchdog cut throttle.';
+                  'Test complete (${_formatDurationBadge(_durationSeconds)} duration elapsed). Autopilot watchdog cut throttle.';
             });
           } else {
             setState(() {
               _remainingSeconds--;
             });
+
+            // Keepalive renewal for APM 2.8 30s hardware watchdog if test duration is long
+            final elapsed = _durationSeconds - _remainingSeconds;
+            if (elapsed > 0 && elapsed % 20 == 0 && _remainingSeconds > 5) {
+              droneService.testMotor(
+                motorInstance: targetIndex,
+                throttlePercent: _throttlePercent,
+                durationSeconds: _remainingSeconds > 30 ? 30 : _remainingSeconds,
+                testAll: false,
+              ).catchError((_) => MotorTestResult(
+                success: false,
+                message: 'Keepalive refresh error',
+                commandId: 209,
+                motorIndex: targetIndex,
+                throttlePercent: _throttlePercent,
+                durationSeconds: _remainingSeconds,
+                timestamp: DateTime.now(),
+              ));
+            }
           }
         });
       } else {
@@ -324,7 +407,7 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
               _remainingSeconds = 0;
               _currentlyActiveMotor = null;
               _statusDetails =
-                  'Simultaneous test complete (${_durationSeconds}s duration elapsed). All motors halted.';
+                  'Simultaneous test complete (${_formatDurationBadge(_durationSeconds)} duration elapsed). All motors halted.';
             });
             droneService.stopMotorTest().catchError((_) => MotorTestResult(
               success: false,
@@ -339,6 +422,23 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
             setState(() {
               _remainingSeconds--;
             });
+
+            // Keepalive renewal for APM 2.8 30s hardware watchdog if test duration is long
+            final elapsed = _durationSeconds - _remainingSeconds;
+            if (elapsed > 0 && elapsed % 20 == 0 && _remainingSeconds > 5) {
+              droneService.testAllMotors(
+                throttlePercent: _throttlePercent,
+                durationSeconds: _remainingSeconds > 30 ? 30 : _remainingSeconds,
+              ).catchError((_) => MotorTestResult(
+                success: false,
+                message: 'Keepalive refresh error',
+                commandId: 209,
+                motorIndex: 1,
+                throttlePercent: _throttlePercent,
+                durationSeconds: _remainingSeconds,
+                timestamp: DateTime.now(),
+              ));
+            }
           }
         });
       } else {
@@ -1022,7 +1122,7 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'TEST DURATION (1–5 SECONDS)',
+                'TEST DURATION',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -1030,56 +1130,208 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                   letterSpacing: 1.0,
                 ),
               ),
-              Text(
-                '${_durationSeconds}s',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.secondary,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppTheme.secondary.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  _formatDurationBadge(_durationSeconds),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.secondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Custom Input Row: Numeric TextField + Unit Toggle (Seconds / Minutes)
+          Row(
+            children: [
+              // Numeric text input for custom duration
+              Expanded(
+                flex: 4,
+                child: TextField(
+                  key: const Key('duration_text_field'),
+                  controller: _durationTextController,
+                  enabled: !isRunning,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                  ],
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.secondary,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'Duration',
+                    labelStyle: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                    suffixText: _durationUnit == DurationUnit.seconds ? 'sec' : 'min',
+                    suffixStyle: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    filled: true,
+                    fillColor: AppTheme.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppTheme.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppTheme.secondary),
+                    ),
+                  ),
+                  onChanged: _onDurationTextChanged,
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              // Unit selector pills: Seconds / Minutes
+              Expanded(
+                flex: 5,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          key: const Key('duration_unit_seconds'),
+                          onTap: isRunning ? null : () => _setDurationUnit(DurationUnit.seconds),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: _durationUnit == DurationUnit.seconds
+                                  ? AppTheme.primary
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Seconds (s)',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: _durationUnit == DurationUnit.seconds
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: _durationUnit == DurationUnit.seconds
+                                    ? Colors.white
+                                    : AppTheme.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: InkWell(
+                          key: const Key('duration_unit_minutes'),
+                          onTap: isRunning ? null : () => _setDurationUnit(DurationUnit.minutes),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: _durationUnit == DurationUnit.minutes
+                                  ? AppTheme.primary
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Minutes (m)',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: _durationUnit == DurationUnit.minutes
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: _durationUnit == DurationUnit.minutes
+                                    ? Colors.white
+                                    : AppTheme.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [1, 2, 3, 4, 5].map((sec) {
-              final isSelected = _durationSeconds == sec;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: InkWell(
-                    onTap: isRunning ? null : () => setState(() => _durationSeconds = sec),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppTheme.primary : AppTheme.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isSelected ? AppTheme.secondary : AppTheme.border,
-                        ),
-                      ),
-                      child: Text(
-                        '${sec}s${sec == 3 ? ' (Def)' : ''}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected ? Colors.white : AppTheme.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
+
+          // Quick Preset Chips
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _buildPresetChip('3s (Def)', 3, DurationUnit.seconds, '3', isRunning),
+              _buildPresetChip('5s', 5, DurationUnit.seconds, '5', isRunning),
+              _buildPresetChip('10s', 10, DurationUnit.seconds, '10', isRunning),
+              _buildPresetChip('30s', 30, DurationUnit.seconds, '30', isRunning),
+              _buildPresetChip('1m', 60, DurationUnit.minutes, '1', isRunning),
+              _buildPresetChip('2m', 120, DurationUnit.minutes, '2', isRunning),
+              _buildPresetChip('5m', 300, DurationUnit.minutes, '5', isRunning),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           const Text(
-            'Autopilot hardware watchdog will strictly cutoff throttle when duration expires.',
+            'Enter any custom seconds or minutes (1s up to 10m). Autopilot watchdog & keepalive will protect the aircraft.',
             style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPresetChip(
+    String label,
+    int seconds,
+    DurationUnit preferredUnit,
+    String textValue,
+    bool isRunning,
+  ) {
+    final isSelected = _durationSeconds == seconds;
+    return InkWell(
+      key: Key('duration_preset_$label'),
+      onTap: isRunning
+          ? null
+          : () {
+              setState(() {
+                _durationSeconds = seconds;
+                _durationUnit = preferredUnit;
+                _durationTextController.text = textValue;
+              });
+            },
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primary : AppTheme.surface,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isSelected ? AppTheme.secondary : AppTheme.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.white : AppTheme.textSecondary,
+          ),
+        ),
       ),
     );
   }
@@ -1099,8 +1351,8 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
             label: Text(
               isRunning
                   ? (_selectedMotor.isAllMotors
-                      ? 'ALL 4 MOTORS ACTIVE (${_remainingSeconds}s)'
-                      : 'TEST IN PROGRESS ($_remainingSeconds s)')
+                      ? 'ALL 4 MOTORS ACTIVE (${_formatCountdown(_remainingSeconds)})'
+                      : 'TEST IN PROGRESS (${_formatCountdown(_remainingSeconds)})')
                   : (_selectedMotor.isAllMotors
                       ? 'START TEST ALL MOTORS'
                       : 'START TEST MOTOR ${_selectedMotor.letterCode}'),

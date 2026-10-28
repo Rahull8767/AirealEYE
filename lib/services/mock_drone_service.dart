@@ -435,6 +435,13 @@ class MockDroneService implements DroneService {
     if (_currentTelemetry.armed) {
       throw StateError("Safety Block: Drone is armed. Motor test is only permitted when disarmed.");
     }
+    if (durationSeconds < 1 || durationSeconds > 600) {
+      throw ArgumentError.value(
+        durationSeconds,
+        'durationSeconds',
+        'Duration must be between 1 and 600 seconds (up to 10 minutes).',
+      );
+    }
     if (_isMockMotorTesting) {
       throw StateError("A motor test is already in progress.");
     }
@@ -471,6 +478,13 @@ class MockDroneService implements DroneService {
     }
     if (_currentTelemetry.armed) {
       throw StateError("Safety Block: Drone is armed. Motor test is only permitted when disarmed.");
+    }
+    if (durationSeconds < 1 || durationSeconds > 600) {
+      throw ArgumentError.value(
+        durationSeconds,
+        'durationSeconds',
+        'Duration must be between 1 and 600 seconds (up to 10 minutes).',
+      );
     }
     if (_isMockMotorTesting) {
       throw StateError("A motor test is already in progress.");

@@ -56,8 +56,11 @@ void main() {
     expect(find.text('10% (Def)'), findsOneWidget);
 
     // Verify default duration (3s)
-    expect(find.text('TEST DURATION (1–5 SECONDS)'), findsOneWidget);
+    expect(find.text('TEST DURATION'), findsOneWidget);
     expect(find.text('3s (Def)'), findsOneWidget);
+    expect(find.byKey(const Key('duration_text_field')), findsOneWidget);
+    expect(find.byKey(const Key('duration_unit_seconds')), findsOneWidget);
+    expect(find.byKey(const Key('duration_unit_minutes')), findsOneWidget);
 
     // Verify Action buttons
     expect(find.byKey(const Key('start_motor_test_button')), findsOneWidget);
@@ -260,6 +263,53 @@ void main() {
     // Start button should remain disabled when armed
     final startButton = tester.widget<ElevatedButton>(find.byKey(const Key('start_motor_test_button')));
     expect(startButton.onPressed, isNull);
+
+    mockService.disconnect();
+    await tester.pump(const Duration(milliseconds: 100));
+  });
+
+  testWidgets('User can enter custom seconds or minutes for motor test duration', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final mockService = MockDroneService();
+    mockService.connect();
+
+    await tester.pumpWidget(buildTestApp(droneService: mockService));
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // 1. Enter custom seconds (e.g., 25s)
+    final durationInput = find.byKey(const Key('duration_text_field'));
+    expect(durationInput, findsOneWidget);
+
+    await tester.enterText(durationInput, '25');
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // Verify badge updates to 25s
+    expect(find.text('25s'), findsWidgets);
+
+    // 2. Switch to Minutes unit
+    final minutesToggle = find.byKey(const Key('duration_unit_minutes'));
+    expect(minutesToggle, findsOneWidget);
+    await tester.tap(minutesToggle);
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // Enter 2 minutes
+    await tester.enterText(durationInput, '2');
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // Verify badge updates to 2m (120s)
+    expect(find.text('2m (120s)'), findsOneWidget);
+
+    // 3. Tap a preset chip (e.g., 1m)
+    final preset1m = find.byKey(const Key('duration_preset_1m'));
+    expect(preset1m, findsOneWidget);
+    await tester.tap(preset1m);
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // Verify badge updates to 1m (60s)
+    expect(find.text('1m (60s)'), findsOneWidget);
 
     mockService.disconnect();
     await tester.pump(const Duration(milliseconds: 100));
