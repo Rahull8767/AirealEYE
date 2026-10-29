@@ -84,6 +84,7 @@ abstract class DroneService {
   Future<bool> resumeMission();
   Future<bool> clearMission();
   void requestDataStreams({int? rateHz});
+  void requestArmingCheck();
 
   Future<MotorTestResult> testMotor({
     required int motorInstance,

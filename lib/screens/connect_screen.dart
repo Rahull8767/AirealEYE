@@ -258,6 +258,19 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       return;
     }
 
+    if (!telemetry.isGpsValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Automated MAVLink takeoff requires 3D GPS lock in GUIDED mode. For GPS-free AltHold operation, arm in AltHold mode and take off manually using the throttle stick to ~2 metres.',
+          ),
+          backgroundColor: AppTheme.warning,
+          duration: Duration(seconds: 5),
+        ),
+      );
+      return;
+    }
+
     final double? altitude = await showDialog<double>(
       context: context,
       builder: (context) {
@@ -1259,7 +1272,19 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     DroneTelemetry telemetry,
     DroneConnectionState connectionState,
   ) {
-    final modes = ['STABILIZE', 'GUIDED', 'LOITER', 'AUTO', 'RTL', 'LAND'];
+    // Primary GPS-free modes supported by ArduCopter 3.2.1: Stabilize, AltHold, Land
+    // Advanced GPS-dependent modes: Loiter, Guided, Auto, RTL
+    final modes = [
+      'STABILIZE',
+      'ALT_HOLD',
+      'LAND',
+      'LOITER',
+      'GUIDED',
+      'AUTO',
+      'RTL',
+    ];
+    final gpsDependentModes = ['LOITER', 'GUIDED', 'AUTO', 'RTL'];
+
     final isConnectionLost =
         connectionState == DroneConnectionState.connectionLost ||
         connectionState == DroneConnectionState.stale;
@@ -1269,15 +1294,40 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'FLIGHT MODE CONTROL',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'FLIGHT MODE CONTROL',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              if (telemetry.isAltHold)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.success.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppTheme.success.withOpacity(0.4)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(LucideIcons.gauge, size: 12, color: AppTheme.success),
+                      SizedBox(width: 4),
+                      Text(
+                        'AltHold Active',
+                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppTheme.success),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 8),
           const Text(
-            'Transition the drone to a new flight mode. RTL and LAND require safety confirmation.',
+            'Select vehicle flight mode. Stabilize, AltHold, and Land do not require GPS. AltHold maintains altitude using the barometer after manual takeoff.',
             style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
           ),
           const Divider(color: AppTheme.border, height: 24),
@@ -1285,7 +1335,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Current confirmed mode:',
+                'Confirmed Autopilot Mode:',
                 style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
               ),
               Container(
@@ -1313,8 +1363,11 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
             spacing: 8,
             runSpacing: 8,
             children: modes.map((mode) {
-              final isCurrent = telemetry.flightMode == mode;
-              final isPending = _isModeChanging && _pendingMode == mode;
+              final isCurrent = telemetry.flightMode == mode ||
+                  (mode == 'ALT_HOLD' && telemetry.flightMode == 'ALTHOLD');
+              final isPending = _isModeChanging && (_pendingMode == mode || (_pendingMode == 'ALT_HOLD' && mode == 'ALTHOLD'));
+              final isGpsMode = gpsDependentModes.contains(mode);
+              final isGpsBlocked = isGpsMode && !telemetry.isGpsValid;
 
               Color buttonBgColor = AppTheme.surface;
               Color buttonTextColor = AppTheme.textPrimary;
@@ -1330,6 +1383,9 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                   color: AppTheme.secondary,
                   width: 1.2,
                 );
+              } else if (isGpsBlocked) {
+                buttonTextColor = AppTheme.textSecondary.withOpacity(0.5);
+                buttonBgColor = AppTheme.surface.withOpacity(0.3);
               }
 
               if (isConnectionLost) {
@@ -1340,7 +1396,21 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
               return InkWell(
                 onTap: (_isModeChanging || isConnectionLost)
                     ? null
-                    : () => _setFlightMode(mode),
+                    : () {
+                        if (isGpsBlocked) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '$mode requires 3D GPS fix. Current setup is GPS-free (use AltHold, Stabilize, or Land).',
+                              ),
+                              backgroundColor: AppTheme.warning,
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                          return;
+                        }
+                        _setFlightMode(mode);
+                      },
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
                   width: (MediaQuery.of(context).size.width - 80) / 2,
@@ -1377,11 +1447,39 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                           color: buttonTextColor,
                         ),
                       ),
+                      if (isGpsBlocked) ...[
+                        const SizedBox(width: 4),
+                        const Icon(LucideIcons.lock, size: 11, color: AppTheme.textSecondary),
+                      ],
                     ],
                   ),
                 ),
               );
             }).toList(),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.surface.withOpacity(0.4),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.border.withOpacity(0.5)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(LucideIcons.info, size: 14, color: AppTheme.secondary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    telemetry.isGpsValid
+                        ? '3D GPS lock active: Navigation modes (Loiter, Guided, Auto) available.'
+                        : 'Compass/GPS-Free Setup: Stabilize, AltHold, and Land are fully available. AltHold maintains altitude (~2m) using the barometer once airborne.',
+                    style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary, height: 1.3),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1423,10 +1521,103 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Arm the motors or execute takeoff. Safe and explicit confirmation is required.',
+            'Arm the motors or execute takeoff. Explicit confirmation is required before arming.',
             style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
           ),
           const Divider(color: AppTheme.border, height: 24),
+
+          // Flight Controller Telemetry & Pre-arm Status
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.border, width: 0.8),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Autopilot Mode:', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                    Text(telemetry.flightMode, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.secondary)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Relative Altitude (Baro):', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                    Text(telemetry.altitudeDisplay, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Vertical Speed:', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                    Text(telemetry.verticalSpeedDisplay, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('GPS Hardware:', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                    Text(
+                      telemetry.isGpsValid ? '${telemetry.satellites} Sats (3D Fix)' : 'Not Installed / No Fix (AltHold Mode)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: telemetry.isGpsValid ? AppTheme.success : AppTheme.warning,
+                      ),
+                    ),
+                  ],
+                ),
+                if (telemetry.lastStatusText != null && telemetry.lastStatusText!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  const Divider(color: AppTheme.border, height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Last APM Message: ', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                      Expanded(
+                        child: Text(
+                          telemetry.lastStatusText!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: telemetry.lastStatusText!.toLowerCase().contains('prearm') ||
+                                   telemetry.lastStatusText!.toLowerCase().contains('bad') ||
+                                   telemetry.lastStatusText!.toLowerCase().contains('fail')
+                                ? AppTheme.warning
+                                : AppTheme.secondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (telemetry.lastError != null && telemetry.lastError!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Last Failure: ', style: TextStyle(fontSize: 11, color: AppTheme.danger)),
+                      Expanded(
+                        child: Text(
+                          telemetry.lastError!,
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.danger),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1489,7 +1680,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                   ElevatedButton(
                     onPressed: isButtonsDisabled ? null : _takeoffDrone,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.secondary,
+                      backgroundColor: telemetry.isGpsValid ? AppTheme.secondary : AppTheme.surface,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
@@ -1510,13 +1701,23 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                           ),
                           const SizedBox(width: 8),
                         ],
-                        const Text('TAKEOFF'),
+                        Text(
+                          'TAKEOFF',
+                          style: TextStyle(
+                            color: telemetry.isGpsValid ? Colors.white : AppTheme.textSecondary,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ],
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Target: In AltHold mode, arm the drone and manually climb to ~2m using throttle. AltHold will maintain altitude via barometer.',
+            style: TextStyle(fontSize: 11, color: AppTheme.textSecondary.withOpacity(0.8), fontStyle: FontStyle.italic),
           ),
         ],
       ),

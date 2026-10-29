@@ -40,6 +40,10 @@ class MavlinkDroneService implements DroneService {
   Completer<bool>? _armCompleter;
   bool? _targetArmState;
   Timer? _armTimeoutTimer;
+  int? _lastArmAckResult;
+  bool _armAckReceived = false;
+  String? _lastStatusTextMessage;
+  DateTime? _lastStatusTextTime;
 
   Completer<bool>? _takeoffCompleter;
   Timer? _takeoffTimeoutTimer;
@@ -255,6 +259,15 @@ class MavlinkDroneService implements DroneService {
     if (_config.debugLogging) {
       debugPrint("[MAVLINK] $message");
     }
+  }
+
+  String? _recentStatusText(DateTime now) {
+    if (_lastStatusTextMessage != null && _lastStatusTextTime != null) {
+      if (now.difference(_lastStatusTextTime!).inSeconds <= 8) {
+        return _lastStatusTextMessage;
+      }
+    }
+    return null;
   }
 
   @override
@@ -778,6 +791,7 @@ class MavlinkDroneService implements DroneService {
       if (_mockSocketInstance == null &&
           (_heartbeatCount == 1 || _heartbeatCount % 20 == 0)) {
         requestDataStreams();
+        requestArmingCheck();
       }
 
       _currentTelemetry = _currentTelemetry.copyWith(
@@ -793,7 +807,9 @@ class MavlinkDroneService implements DroneService {
       if (_targetMode != null &&
           _modeChangeCompleter != null &&
           !_modeChangeCompleter!.isCompleted) {
-        if (mode == _targetMode) {
+        final targetNorm = (_targetMode == 'ALTHOLD' || _targetMode == 'ALT_HOLD') ? 'ALT_HOLD' : _targetMode;
+        final modeNorm = (mode == 'ALTHOLD' || mode == 'ALT_HOLD') ? 'ALT_HOLD' : mode;
+        if (modeNorm == targetNorm) {
           _logDiagnostic("[MODE CONFIRMED] mode=$_targetMode");
           _modeChangeCompleter!.complete(true);
           _cleanupModeChange();
@@ -895,15 +911,36 @@ class MavlinkDroneService implements DroneService {
       );
       _telemetryController.add(_currentTelemetry);
     } else if (msg is VfrHud) {
+      final double baroAlt = double.parse(msg.alt.toStringAsFixed(2));
+      final double climb = double.parse(msg.climb.toStringAsFixed(2));
+      final double speed = double.parse(msg.groundspeed.toStringAsFixed(2));
+      final double air = double.parse(msg.airspeed.toStringAsFixed(2));
+      final double heading = msg.heading.toDouble();
+
+      // If GPS position is absent or invalid, use the barometric altitude from VFR_HUD
+      final bool hasGpsPosition = _currentTelemetry.hasReceivedPosition && _currentTelemetry.isGpsValid;
+      final double effectiveAlt = hasGpsPosition ? _currentTelemetry.altitude : baroAlt;
+      final double effectiveRelAlt = hasGpsPosition ? _currentTelemetry.relativeAltitude : baroAlt;
+      final double effectiveHdg = (_currentTelemetry.hasReceivedPosition && _currentTelemetry.heading != 0)
+          ? _currentTelemetry.heading
+          : (heading >= 0 ? heading : _currentTelemetry.heading);
+
       _currentTelemetry = _currentTelemetry.copyWith(
-        airSpeed: msg.airspeed,
-        groundSpeed: msg.groundspeed,
-        speed: msg.groundspeed,
-        climbRate: msg.climb,
+        airSpeed: air,
+        groundSpeed: speed,
+        speed: speed,
+        climbRate: climb,
+        altitude: effectiveAlt,
+        relativeAltitude: effectiveRelAlt,
+        barometricAltitude: baroAlt,
+        heading: effectiveHdg,
         hasReceivedVfrHud: true,
         lastVfrHudUpdate: now,
       );
       _telemetryController.add(_currentTelemetry);
+      _logTelemetryThrottled(
+        "VFR_HUD: alt=${baroAlt}m, climb=${climb}m/s, spd=${speed}m/s, hdg=$heading°",
+      );
     } else if (msg is CommandAck) {
       _logDiagnostic(
         "COMMAND_ACK received: command=${msg.command}, result=${msg.result}",
@@ -911,28 +948,97 @@ class MavlinkDroneService implements DroneService {
 
       if (msg.command == 176) {
         // MAV_CMD_DO_SET_MODE
+        _logDiagnostic("[MODE ACK] command=176 result=${msg.result} targetMode=$_targetMode");
         if (msg.result == 0) {
-          // Accepted, wait for heartbeat confirmation
+          // Accepted by APM 2.8: Check if current mode already matches
+          final targetNorm = (_targetMode == 'ALTHOLD' || _targetMode == 'ALT_HOLD') ? 'ALT_HOLD' : _targetMode;
+          final currentNorm = (_currentTelemetry.flightMode == 'ALTHOLD' || _currentTelemetry.flightMode == 'ALT_HOLD')
+              ? 'ALT_HOLD'
+              : _currentTelemetry.flightMode;
+          if (targetNorm != null && currentNorm == targetNorm) {
+            _logDiagnostic("[MODE CONFIRMED ON ACK] mode=$_targetMode");
+            if (_modeChangeCompleter != null && !_modeChangeCompleter!.isCompleted) {
+              _modeChangeCompleter!.complete(true);
+            }
+            _cleanupModeChange();
+          } else {
+            _logDiagnostic("[MODE ACCEPTED BY FC] Awaiting Heartbeat mode confirmation...");
+          }
         } else {
-          if (_modeChangeCompleter != null &&
-              !_modeChangeCompleter!.isCompleted) {
-            _modeChangeCompleter!.completeError(
-              Exception("Mode change rejected: result code ${msg.result}"),
-            );
+          String desc;
+          switch (msg.result) {
+            case 1:
+              desc = "Temporarily rejected by autopilot (MAV_RESULT_TEMPORARILY_REJECTED)";
+              break;
+            case 2:
+              final st = _recentStatusText(now);
+              desc = "Denied by autopilot (MAV_RESULT_DENIED)${st != null ? ': $st' : ''}";
+              break;
+            case 3:
+              desc = "Unsupported flight mode for ArduCopter 3.2.1 (MAV_RESULT_UNSUPPORTED)";
+              break;
+            case 4:
+              final st = _recentStatusText(now);
+              desc = "Mode change failed (MAV_RESULT_FAILED)${st != null ? ': $st' : ''}";
+              break;
+            default:
+              final st = _recentStatusText(now);
+              desc = "Rejected with code ${msg.result}${st != null ? ': $st' : ''}";
+          }
+          final fullMsg = "Mode change to $_targetMode rejected: $desc";
+          _currentTelemetry = _currentTelemetry.copyWith(lastError: fullMsg);
+          _telemetryController.add(_currentTelemetry);
+
+          if (_modeChangeCompleter != null && !_modeChangeCompleter!.isCompleted) {
+            _modeChangeCompleter!.completeError(Exception(fullMsg));
           }
           _cleanupModeChange();
         }
       } else if (msg.command == 400) {
         // MAV_CMD_COMPONENT_ARM_DISARM
+        _armAckReceived = true;
+        _lastArmAckResult = msg.result;
+        _logDiagnostic("[ARM/DISARM ACK] result=${msg.result} targetArmState=$_targetArmState");
+
         if (msg.result == 0) {
-          // Accepted, wait for heartbeat confirmation
+          // Accepted by APM 2.8:
+          if (_targetArmState != null && _currentTelemetry.armed == _targetArmState) {
+            _logDiagnostic("[ARM/DISARM CONFIRMED ON ACK] armed=$_targetArmState");
+            if (_armCompleter != null && !_armCompleter!.isCompleted) {
+              _armCompleter!.complete(true);
+            }
+            _cleanupArmChange();
+          } else {
+            _logDiagnostic("[ARM/DISARM ACCEPTED BY FC] Awaiting Heartbeat armed confirmation...");
+          }
         } else {
+          String desc;
+          switch (msg.result) {
+            case 1:
+              desc = "Temporarily rejected (sensor calibration in progress, throttle not low, or safety switch active)";
+              break;
+            case 2:
+              final st = _recentStatusText(now);
+              desc = "Denied: ${st ?? 'Pre-arm safety check failed'}";
+              break;
+            case 3:
+              desc = "Command unsupported by flight controller firmware";
+              break;
+            case 4:
+              final st = _recentStatusText(now);
+              desc = "Failed: ${st ?? 'Pre-arm check or hardware fault'}";
+              break;
+            default:
+              final st = _recentStatusText(now);
+              desc = "Rejected with code ${msg.result}: ${st ?? 'Unknown error'}";
+          }
+          final opName = _targetArmState == true ? "Arming" : "Disarming";
+          final fullMsg = "$opName rejected: $desc";
+          _currentTelemetry = _currentTelemetry.copyWith(lastError: fullMsg);
+          _telemetryController.add(_currentTelemetry);
+
           if (_armCompleter != null && !_armCompleter!.isCompleted) {
-            _armCompleter!.completeError(
-              Exception(
-                "Arm/Disarm rejected: result code ${msg.result} (Pre-arm check or state fault)",
-              ),
-            );
+            _armCompleter!.completeError(Exception(fullMsg));
           }
           _cleanupArmChange();
         }
@@ -961,9 +1067,28 @@ class MavlinkDroneService implements DroneService {
         msg.text.where((c) => c != 0),
       ).trim();
       _logDiagnostic("STATUSTEXT (severity ${msg.severity}): $textStr");
+      _lastStatusTextMessage = textStr;
+      _lastStatusTextTime = now;
       _currentDiagnostics = _currentDiagnostics.copyWith(
         lastStatusText: textStr,
       );
+      _currentTelemetry = _currentTelemetry.copyWith(
+        lastStatusText: textStr,
+      );
+      _telemetryController.add(_currentTelemetry);
+    } else if (msg is ParamValue) {
+      final idStr = String.fromCharCodes(
+        msg.paramId.where((c) => c != 0),
+      ).trim();
+      _logDiagnostic("PARAM_VALUE received: id=$idStr, value=${msg.paramValue}");
+      if (idStr == 'ARMING_CHECK') {
+        final val = msg.paramValue.toInt();
+        _logDiagnostic("[ARMING_CHECK CONFIRMED] value=$val");
+        _currentTelemetry = _currentTelemetry.copyWith(
+          armingCheckValue: val,
+        );
+        _telemetryController.add(_currentTelemetry);
+      }
     } else if (msg is MissionRequest || msg is MissionRequestInt) {
       final int requestedSeq = msg is MissionRequest
           ? msg.seq
@@ -1315,6 +1440,9 @@ class MavlinkDroneService implements DroneService {
       throw StateError("An arm/disarm command is already in progress.");
     }
 
+    _lastArmAckResult = null;
+    _armAckReceived = false;
+
     _logDiagnostic(
       "[ARM REQUEST] targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId",
     );
@@ -1322,7 +1450,7 @@ class MavlinkDroneService implements DroneService {
     final command = CommandLong(
       command: 400, // MAV_CMD_COMPONENT_ARM_DISARM
       param1: 1.0, // Arm
-      param2: 0.0,
+      param2: 0.0, // 0 = respect autopilot pre-arm safety checks
       param3: 0.0,
       param4: 0.0,
       param5: 0.0,
@@ -1342,10 +1470,31 @@ class MavlinkDroneService implements DroneService {
     _logDiagnostic("[ARM TX] true");
     _sendMavlinkPacket(packet);
 
-    _armTimeoutTimer = Timer(const Duration(seconds: 3), () {
+    final timeoutSec = max(8, _config.heartbeatTimeoutSeconds * 2);
+    _armTimeoutTimer = Timer(Duration(seconds: timeoutSec), () {
       if (_armCompleter != null && !_armCompleter!.isCompleted) {
-        _logDiagnostic("[ARM TIMEOUT] true");
-        _armCompleter!.completeError(TimeoutException("Arm command timed out"));
+        // Query actual vehicle state before declaring timeout failure
+        if (_currentTelemetry.armed == true) {
+          _logDiagnostic("[ARM VERIFIED ON TIMEOUT] Telemetry confirms vehicle is armed!");
+          _armCompleter!.complete(true);
+        } else if (_armAckReceived && _lastArmAckResult == 0) {
+          _logDiagnostic("[ARM TIMEOUT WITH ACK] FC accepted command but armed heartbeat timed out");
+          _armCompleter!.completeError(
+            TimeoutException(
+              "Arm command was accepted by flight controller, but heartbeat armed state confirmation was not received within ${timeoutSec}s. Check APM arming state.",
+            ),
+          );
+        } else {
+          _logDiagnostic("[ARM TIMEOUT] true");
+          final recentStatus = _recentStatusText(DateTime.now());
+          _armCompleter!.completeError(
+            TimeoutException(
+              recentStatus != null
+                  ? "Arm command timed out: $recentStatus"
+                  : "Arm command timed out: no response from APM 2.8 within ${timeoutSec}s. Check MAVLink telemetry link.",
+            ),
+          );
+        }
       }
       _cleanupArmChange();
     });
@@ -1376,6 +1525,9 @@ class MavlinkDroneService implements DroneService {
       throw StateError("An arm/disarm command is already in progress.");
     }
 
+    _lastArmAckResult = null;
+    _armAckReceived = false;
+
     _logDiagnostic(
       "[DISARM REQUEST] targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId",
     );
@@ -1403,12 +1555,30 @@ class MavlinkDroneService implements DroneService {
     _logDiagnostic("[DISARM TX] false");
     _sendMavlinkPacket(packet);
 
-    _armTimeoutTimer = Timer(const Duration(seconds: 3), () {
+    final timeoutSec = max(8, _config.heartbeatTimeoutSeconds * 2);
+    _armTimeoutTimer = Timer(Duration(seconds: timeoutSec), () {
       if (_armCompleter != null && !_armCompleter!.isCompleted) {
-        _logDiagnostic("[DISARM TIMEOUT] false");
-        _armCompleter!.completeError(
-          TimeoutException("Disarm command timed out"),
-        );
+        if (_currentTelemetry.armed == false) {
+          _logDiagnostic("[DISARM VERIFIED ON TIMEOUT] Telemetry confirms vehicle is disarmed!");
+          _armCompleter!.complete(true);
+        } else if (_armAckReceived && _lastArmAckResult == 0) {
+          _logDiagnostic("[DISARM TIMEOUT WITH ACK] FC accepted command but disarmed heartbeat timed out");
+          _armCompleter!.completeError(
+            TimeoutException(
+              "Disarm command was accepted by flight controller, but heartbeat disarmed state was not received within ${timeoutSec}s.",
+            ),
+          );
+        } else {
+          _logDiagnostic("[DISARM TIMEOUT] false");
+          final recentStatus = _recentStatusText(DateTime.now());
+          _armCompleter!.completeError(
+            TimeoutException(
+              recentStatus != null
+                  ? "Disarm command timed out: $recentStatus"
+                  : "Disarm command timed out: no response from APM 2.8 within ${timeoutSec}s.",
+            ),
+          );
+        }
       }
       _cleanupArmChange();
     });
@@ -1426,13 +1596,19 @@ class MavlinkDroneService implements DroneService {
   Future<bool> setFlightMode(String mode) async {
     _assertCommandSupported('setFlightMode');
     final modeUpper = mode.toUpperCase();
+    final normalizedMode = (modeUpper == 'ALTHOLD' || modeUpper == 'ALT_HOLD') ? 'ALT_HOLD' : modeUpper;
     final supportedModes = [
       'STABILIZE',
+      'ALT_HOLD',
+      'ALTHOLD',
       'GUIDED',
       'LOITER',
       'AUTO',
       'RTL',
       'LAND',
+      'ACRO',
+      'SPORT',
+      'POSHOLD',
     ];
     if (!supportedModes.contains(modeUpper)) {
       throw ArgumentError("Unsupported flight mode: $mode");
@@ -1443,7 +1619,7 @@ class MavlinkDroneService implements DroneService {
     }
 
     if (!_isUsingHardware) {
-      _currentTelemetry = _currentTelemetry.copyWith(flightMode: modeUpper);
+      _currentTelemetry = _currentTelemetry.copyWith(flightMode: normalizedMode);
       _telemetryController.add(_currentTelemetry);
       return true;
     }
@@ -1453,13 +1629,19 @@ class MavlinkDroneService implements DroneService {
     }
 
     _logDiagnostic(
-      "[MODE REQUEST] $modeUpper targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId",
+      "[MODE REQUEST] $normalizedMode targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId",
     );
 
     int? customModeVal;
-    switch (modeUpper) {
+    switch (normalizedMode) {
       case 'STABILIZE':
         customModeVal = 0;
+        break;
+      case 'ACRO':
+        customModeVal = 1;
+        break;
+      case 'ALT_HOLD':
+        customModeVal = 2; // ArduCopter 3.2.1 AltHold custom mode
         break;
       case 'AUTO':
         customModeVal = 3;
@@ -1475,6 +1657,12 @@ class MavlinkDroneService implements DroneService {
         break;
       case 'LAND':
         customModeVal = 9;
+        break;
+      case 'SPORT':
+        customModeVal = 13;
+        break;
+      case 'POSHOLD':
+        customModeVal = 16;
         break;
     }
 
@@ -1499,18 +1687,32 @@ class MavlinkDroneService implements DroneService {
     final frame = _createOutFrame(command);
     final packet = frame.serialize();
 
-    _targetMode = modeUpper;
+    _targetMode = normalizedMode;
     _modeChangeCompleter = Completer<bool>();
 
-    _logDiagnostic("[MODE TX] $modeUpper");
+    _logDiagnostic("[MODE TX] $normalizedMode");
     _sendMavlinkPacket(packet);
 
-    _modeTimeoutTimer = Timer(const Duration(seconds: 3), () {
+    final timeoutSec = max(8, _config.heartbeatTimeoutSeconds * 2);
+    _modeTimeoutTimer = Timer(Duration(seconds: timeoutSec), () {
       if (_modeChangeCompleter != null && !_modeChangeCompleter!.isCompleted) {
-        _logDiagnostic("[MODE TIMEOUT] $modeUpper");
-        _modeChangeCompleter!.completeError(
-          TimeoutException("Mode change timed out"),
-        );
+        final currentNorm = (_currentTelemetry.flightMode == 'ALTHOLD' || _currentTelemetry.flightMode == 'ALT_HOLD')
+            ? 'ALT_HOLD'
+            : _currentTelemetry.flightMode;
+        if (currentNorm == normalizedMode) {
+          _logDiagnostic("[MODE VERIFIED ON TIMEOUT] Confirmed active mode is $normalizedMode");
+          _modeChangeCompleter!.complete(true);
+        } else {
+          _logDiagnostic("[MODE TIMEOUT] $modeUpper");
+          final recentStatus = _recentStatusText(DateTime.now());
+          _modeChangeCompleter!.completeError(
+            TimeoutException(
+              recentStatus != null
+                  ? "Mode change to $modeUpper timed out: $recentStatus"
+                  : "Mode change to $modeUpper timed out waiting for heartbeat confirmation.",
+            ),
+          );
+        }
       }
       _cleanupModeChange();
     });
@@ -1611,7 +1813,8 @@ class MavlinkDroneService implements DroneService {
     _logDiagnostic("[TAKEOFF TX] altitude=$altitudeMeters");
     _sendMavlinkPacket(packet);
 
-    _takeoffTimeoutTimer = Timer(const Duration(seconds: 5), () {
+    final timeoutSec = max(8, _config.heartbeatTimeoutSeconds * 2);
+    _takeoffTimeoutTimer = Timer(Duration(seconds: timeoutSec), () {
       if (_takeoffCompleter != null && !_takeoffCompleter!.isCompleted) {
         _logDiagnostic("[TAKEOFF TIMEOUT] $altitudeMeters");
         _takeoffCompleter!.completeError(
@@ -1641,6 +1844,8 @@ class MavlinkDroneService implements DroneService {
     _armTimeoutTimer = null;
     _armCompleter = null;
     _targetArmState = null;
+    _lastArmAckResult = null;
+    _armAckReceived = false;
   }
 
   void _handleMotorTestAck(int result) {
@@ -2048,20 +2253,36 @@ class MavlinkDroneService implements DroneService {
   }
 
   MavlinkFrame _createOutFrame(MavlinkMessage message) {
-    if (_detectedProtocolVersion.contains('v1')) {
-      return MavlinkFrame.v1(
+    if (_detectedProtocolVersion.contains('v2')) {
+      return MavlinkFrame.v2(
         _sequenceNumber++,
         _config.sourceSystemId,
         _config.sourceComponentId,
         message,
       );
     }
-    return MavlinkFrame.v2(
+    // Default to MAVLink 1.0 for APM 2.8 and ArduCopter 3.2.1 compatibility
+    return MavlinkFrame.v1(
       _sequenceNumber++,
       _config.sourceSystemId,
       _config.sourceComponentId,
       message,
     );
+  }
+
+  @override
+  void requestArmingCheck() {
+    if (_config.transport == MavlinkTransport.http) return;
+    _logDiagnostic(
+      "[PARAM REQUEST] ARMING_CHECK (targetSys=$effectiveTargetSystemId, targetComp=$effectiveTargetComponentId)",
+    );
+    final reqParam = ParamRequestRead(
+      paramIndex: -1,
+      targetSystem: effectiveTargetSystemId,
+      targetComponent: effectiveTargetComponentId,
+      paramId: 'ARMING_CHECK'.codeUnits + List.filled(16 - 'ARMING_CHECK'.length, 0),
+    );
+    _sendMavlinkPacket(_createOutFrame(reqParam).serialize());
   }
 
   @override

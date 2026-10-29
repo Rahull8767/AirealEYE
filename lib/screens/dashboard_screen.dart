@@ -133,7 +133,7 @@ class DashboardScreen extends ConsumerWidget {
                           ? (telemetry.isArmed
                                 ? 'Motors Armed / Ready'
                                 : 'Motors Disarmed / Standby')
-                          : 'Check Pixhawk telemetry port',
+                          : 'Check APM 2.8 telemetry port',
                       style: const TextStyle(
                         fontSize: 10,
                         color: AppTheme.textSecondary,
@@ -170,19 +170,19 @@ class DashboardScreen extends ConsumerWidget {
                     icon: LucideIcons.satellite,
                     title: 'GPS Satellites',
                     value: telemetry.isConnected
-                        ? '${telemetry.satellites} Sats'
+                        ? (telemetry.satellites > 0 ? '${telemetry.satellites} Sats' : 'No GPS')
                         : 'Unavailable',
                     statusColor:
                         telemetry.isConnected && telemetry.satellites >= 6
                         ? AppTheme.success
-                        : telemetry.isConnected
+                        : (telemetry.isConnected && telemetry.satellites > 0)
                         ? AppTheme.warning
                         : AppTheme.textSecondary,
                     subWidget: Text(
                       telemetry.isConnected
-                          ? (telemetry.isGpsValid
-                                ? '3D GPS Fix Locked'
-                                : 'Searching for satellites...')
+                          ? (telemetry.satellites > 0
+                                ? (telemetry.isGpsValid ? '3D GPS Fix Locked' : 'Searching for satellites...')
+                                : 'GPS-Free / AltHold Setup')
                           : 'GPS receiver offline',
                       style: const TextStyle(
                         fontSize: 10,
@@ -203,7 +203,7 @@ class DashboardScreen extends ConsumerWidget {
                         : AppTheme.textSecondary,
                     subWidget: Text(
                       telemetry.isConnected
-                          ? 'Relative: ${telemetry.relativeAltitude.toStringAsFixed(1)} m'
+                          ? 'Baro: ${telemetry.relativeAltitude.toStringAsFixed(1)} m (${telemetry.verticalSpeedDisplay})'
                           : 'Barometer offline',
                       style: const TextStyle(
                         fontSize: 10,

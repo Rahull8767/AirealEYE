@@ -219,8 +219,11 @@ class MockDroneService implements DroneService {
   @override
   Future<bool> setFlightMode(String mode) async {
     final modeUpper = mode.toUpperCase();
+    final normalizedMode = modeUpper == 'ALTHOLD' ? 'ALT_HOLD' : modeUpper;
     final supportedModes = [
       'STABILIZE',
+      'ALT_HOLD',
+      'ALTHOLD',
       'GUIDED',
       'LOITER',
       'AUTO',
@@ -230,7 +233,7 @@ class MockDroneService implements DroneService {
     if (!supportedModes.contains(modeUpper)) {
       throw ArgumentError("Unsupported flight mode: $mode");
     }
-    _currentTelemetry = _currentTelemetry.copyWith(flightMode: modeUpper);
+    _currentTelemetry = _currentTelemetry.copyWith(flightMode: normalizedMode);
     _telemetryController.add(_currentTelemetry);
     return true;
   }
@@ -411,6 +414,12 @@ class MockDroneService implements DroneService {
 
   @override
   void requestDataStreams({int? rateHz}) {}
+
+  @override
+  void requestArmingCheck() {
+    _currentTelemetry = _currentTelemetry.copyWith(armingCheckValue: 0);
+    _telemetryController.add(_currentTelemetry);
+  }
 
   Timer? _mockMotorTestTimer;
   bool _isMockMotorTesting = false;

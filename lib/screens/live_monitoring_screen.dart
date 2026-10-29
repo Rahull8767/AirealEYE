@@ -715,7 +715,9 @@ class _LiveMonitoringScreenState extends ConsumerState<LiveMonitoringScreen> {
                         _buildHUDItem(
                           'GPS Satellites',
                           telemetry.isConnected
-                              ? '${telemetry.satellites} Sats'
+                              ? (telemetry.satellites > 0
+                                    ? '${telemetry.satellites} Sats'
+                                    : 'No GPS')
                               : 'Unavailable',
                         ),
                         _buildHUDItem(
@@ -727,7 +729,7 @@ class _LiveMonitoringScreenState extends ConsumerState<LiveMonitoringScreen> {
                         _buildHUDItem(
                           'MAVLink Link',
                           telemetry.isConnected
-                              ? (telemetry.isArmed ? 'ARMED' : 'DISARMED')
+                              ? '${telemetry.flightMode} (${telemetry.isArmed ? "ARMED" : "DISARMED"})'
                               : 'OFFLINE',
                         ),
                       ],

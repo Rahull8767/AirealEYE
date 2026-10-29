@@ -26,6 +26,10 @@ class DroneTelemetry {
   final int gpsFix; // 0-1: no fix, 2: 2D, 3: 3D, etc.
   final double climbRate; // m/s
   final DateTime? lastUpdate;
+  final String? lastStatusText;
+  final String? lastError;
+  final double? barometricAltitude;
+  final int? armingCheckValue;
 
   // Mission & Navigation
   final int currentWaypoint;
@@ -76,6 +80,10 @@ class DroneTelemetry {
     this.homeLatitude,
     this.homeLongitude,
     this.lastUpdate,
+    this.lastStatusText,
+    this.lastError,
+    this.barometricAltitude,
+    this.armingCheckValue,
     this.hasReceivedGps = false,
     this.hasReceivedBattery = false,
     this.hasReceivedPosition = false,
@@ -120,6 +128,10 @@ class DroneTelemetry {
       homeLatitude: null,
       homeLongitude: null,
       lastUpdate: null,
+      lastStatusText: null,
+      lastError: null,
+      barometricAltitude: null,
+      armingCheckValue: null,
       hasReceivedGps: false,
       hasReceivedBattery: false,
       hasReceivedPosition: false,
@@ -135,14 +147,17 @@ class DroneTelemetry {
   }
 
   // Formatting helpers to prevent fake zeroes when data hasn't arrived
-  String get altitudeDisplay => hasReceivedPosition || isConnected
+  String get altitudeDisplay => hasReceivedPosition || hasReceivedVfrHud || barometricAltitude != null || isConnected
       ? '${altitude.toStringAsFixed(1)} m'
       : '--';
   String get speedDisplay => hasReceivedVfrHud || isConnected
       ? '${speed.toStringAsFixed(1)} m/s'
       : '--';
-  String get headingDisplay => hasReceivedPosition || isConnected
+  String get headingDisplay => hasReceivedPosition || hasReceivedVfrHud || isConnected
       ? '${heading.toStringAsFixed(0)}°'
+      : '--';
+  String get verticalSpeedDisplay => hasReceivedVfrHud || isConnected
+      ? '${climbRate.toStringAsFixed(1)} m/s'
       : '--';
   String get batteryVoltageDisplay =>
       hasReceivedBattery ? '${batteryVoltage.toStringAsFixed(1)} V' : '--';
@@ -156,6 +171,27 @@ class DroneTelemetry {
       hasReceivedGps ? '$satellites Sats' : 'Waiting...';
   String get waypointProgressDisplay =>
       totalWaypoints > 0 ? 'WP $currentWaypoint / $totalWaypoints' : '--';
+
+  bool get isAltHold => flightMode == 'ALT_HOLD' || flightMode == 'ALTHOLD';
+  bool get isStabilize => flightMode == 'STABILIZE';
+  bool get isLand => flightMode == 'LAND';
+  bool get isGpsDependentMode => isModeGpsDependent(flightMode);
+
+  static bool isModeGpsDependent(String mode) {
+    final upper = mode.toUpperCase();
+    return upper == 'LOITER' ||
+        upper == 'POSHOLD' ||
+        upper == 'AUTO' ||
+        upper == 'RTL' ||
+        upper == 'GUIDED';
+  }
+
+  String get armingCheckSummary {
+    if (armingCheckValue == null) return 'Not read from flight controller';
+    if (armingCheckValue == 0) return 'All Arming Checks Disabled (0)';
+    if (armingCheckValue == 1) return 'All Arming Checks Enabled (1)';
+    return 'Custom Mask ($armingCheckValue)';
+  }
 
   DroneTelemetry copyWith({
     double? altitude,
@@ -187,6 +223,10 @@ class DroneTelemetry {
     double? homeLatitude,
     double? homeLongitude,
     DateTime? lastUpdate,
+    String? lastStatusText,
+    String? lastError,
+    double? barometricAltitude,
+    int? armingCheckValue,
     bool? hasReceivedGps,
     bool? hasReceivedBattery,
     bool? hasReceivedPosition,
@@ -229,6 +269,10 @@ class DroneTelemetry {
       homeLatitude: homeLatitude ?? this.homeLatitude,
       homeLongitude: homeLongitude ?? this.homeLongitude,
       lastUpdate: lastUpdate ?? this.lastUpdate,
+      lastStatusText: lastStatusText ?? this.lastStatusText,
+      lastError: lastError ?? this.lastError,
+      barometricAltitude: barometricAltitude ?? this.barometricAltitude,
+      armingCheckValue: armingCheckValue ?? this.armingCheckValue,
       hasReceivedGps: hasReceivedGps ?? this.hasReceivedGps,
       hasReceivedBattery: hasReceivedBattery ?? this.hasReceivedBattery,
       hasReceivedPosition: hasReceivedPosition ?? this.hasReceivedPosition,

@@ -142,6 +142,22 @@ class TestMavlinkTelemetryBridge(unittest.TestCase):
         bridge.update_telemetry_from_msg(status_msg)
         self.assertIn("PreArm: GPS HDOP 1.4", bridge.telemetry["last_status_text"])
 
+        # 6. Test VFR_HUD (Barometer altitude in GPS-free / AltHold operations)
+        hud = mav.vfr_hud_encode(
+            airspeed=0.0,
+            groundspeed=0.5,
+            heading=90,
+            throttle=50,
+            alt=2.15,      # 2.15m baro altitude
+            climb=0.05,    # 0.05 m/s climb rate
+        )
+        bridge.telemetry["is_gps_valid"] = False
+        bridge.telemetry["relative_alt"] = 0.0
+        bridge.update_telemetry_from_msg(hud)
+        self.assertAlmostEqual(bridge.telemetry["alt"], 2.15, places=2)
+        self.assertAlmostEqual(bridge.telemetry["relative_alt"], 2.15, places=2)
+        self.assertAlmostEqual(bridge.telemetry["climb"], 0.05, places=2)
+
     def test_shared_memory_telemetry_writer(self):
         bridge = MavlinkTelemetryBridge(
             telemetry_file=self.telemetry_file,

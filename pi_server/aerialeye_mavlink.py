@@ -314,6 +314,14 @@ class MavlinkTelemetryBridge:
             self.telemetry["airspeed"] = round(msg.airspeed, 2)
             self.telemetry["groundspeed"] = round(msg.groundspeed, 2)
             self.telemetry["climb"] = round(msg.climb, 2)
+            if hasattr(msg, "alt"):
+                baro_alt = round(float(msg.alt), 2)
+                self.telemetry["alt"] = baro_alt
+                # In GPS-free / AltHold operations, use barometer altitude for relative altitude
+                if not self.telemetry.get("is_gps_valid", False) or self.telemetry.get("relative_alt", 0.0) == 0.0:
+                    self.telemetry["relative_alt"] = baro_alt
+            if hasattr(msg, "heading") and self.telemetry.get("heading", 0.0) == 0.0:
+                self.telemetry["heading"] = float(msg.heading)
 
         elif msg_type == "SYS_STATUS":
             self.telemetry["battery_voltage"] = round(msg.voltage_battery / 1000.0, 2)
