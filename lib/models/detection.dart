@@ -33,6 +33,7 @@ enum DetectionType {
       case 'trash':
       case 'debris':
       case 'rubbish':
+      case 'litter':
         return DetectionType.waste;
       case 'roadcrack':
       case 'road_crack':

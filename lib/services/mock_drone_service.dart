@@ -433,7 +433,9 @@ class MockDroneService implements DroneService {
       throw StateError("MAVLink link is not connected.");
     }
     if (_currentTelemetry.armed) {
-      throw StateError("Safety Block: Drone is armed. Motor test is only permitted when disarmed.");
+      throw StateError(
+        "Safety Block: Drone is armed. Motor test is only permitted when disarmed.",
+      );
     }
     if (durationSeconds < 1 || durationSeconds > 600) {
       throw ArgumentError.value(
@@ -457,7 +459,8 @@ class MockDroneService implements DroneService {
     return MotorTestResult(
       success: true,
       ackResult: 0,
-      message: "Simulated Motor $motorInstance test accepted and running for ${durationSeconds}s",
+      message:
+          "Simulated Motor $motorInstance test accepted and running for ${durationSeconds}s",
       commandId: 209,
       motorIndex: motorInstance,
       testAll: false,
@@ -477,7 +480,9 @@ class MockDroneService implements DroneService {
       throw StateError("MAVLink link is not connected.");
     }
     if (_currentTelemetry.armed) {
-      throw StateError("Safety Block: Drone is armed. Motor test is only permitted when disarmed.");
+      throw StateError(
+        "Safety Block: Drone is armed. Motor test is only permitted when disarmed.",
+      );
     }
     if (durationSeconds < 1 || durationSeconds > 600) {
       throw ArgumentError.value(
@@ -501,7 +506,8 @@ class MockDroneService implements DroneService {
     return MotorTestResult(
       success: true,
       ackResult: 0,
-      message: "Simulated simultaneous test of all 4 motors accepted and running for ${durationSeconds}s",
+      message:
+          "Simulated simultaneous test of all 4 motors accepted and running for ${durationSeconds}s",
       commandId: 209,
       motorIndex: 1,
       testAll: true,

@@ -978,7 +978,10 @@ void main() {
         expect(gpsService.currentTelemetry.hasReceivedGps, isTrue);
         expect(gpsService.currentTelemetry.gpsFix, equals(3));
         expect(gpsService.currentTelemetry.satellites, equals(15));
-        expect(gpsService.currentTelemetry.satellitesDisplay, equals('15 Sats'));
+        expect(
+          gpsService.currentTelemetry.satellitesDisplay,
+          equals('15 Sats'),
+        );
 
         // Inject GLOBAL_POSITION_INT (lat=12.971598, lon=77.594562, alt=12.5m)
         final pos = GlobalPositionInt(
@@ -1004,7 +1007,10 @@ void main() {
           gpsService.currentTelemetry.longitude,
           closeTo(77.594562, 0.0001),
         );
-        expect(gpsService.currentTelemetry.relativeAltitude, closeTo(12.5, 0.1));
+        expect(
+          gpsService.currentTelemetry.relativeAltitude,
+          closeTo(12.5, 0.1),
+        );
         expect(gpsService.currentTelemetry.altitudeDisplay, equals('12.5 m'));
 
         gpsService.disconnect();

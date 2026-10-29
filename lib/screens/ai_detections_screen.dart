@@ -2,11 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:aerial_eye/core/theme/app_theme.dart';
 import 'package:aerial_eye/models/detection.dart';
 import 'package:aerial_eye/providers/detection_provider.dart';
-import 'package:aerial_eye/widgets/glass_panel.dart';
+import 'package:aerial_eye/services/detection_storage_service.dart';
 import 'package:aerial_eye/widgets/animated_button.dart';
+import 'package:aerial_eye/widgets/glass_panel.dart';
 
 class AiDetectionsScreen extends ConsumerWidget {
   const AiDetectionsScreen({super.key});
@@ -15,6 +17,23 @@ class AiDetectionsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detectionState = ref.watch(detectionProvider);
     final notifier = ref.read(detectionProvider.notifier);
+
+    // Supported classes: Person, Animal, Pothole, Road Crack, Waste
+    final supportedClasses = [
+      DetectionType.person,
+      DetectionType.animal,
+      DetectionType.pothole,
+      DetectionType.roadCrack,
+      DetectionType.waste,
+    ];
+
+    // Compute class counts
+    final classCounts = <DetectionType, int>{};
+    for (final t in supportedClasses) {
+      classCounts[t] = detectionState.detections
+          .where((d) => d.type == t)
+          .length;
+    }
 
     // Filter list by confidence
     var filteredList = detectionState.detections.where((d) {
@@ -53,7 +72,7 @@ class AiDetectionsScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          // 1. Filter Panel (Confidence threshold + Trained classes)
+          // Filter Panel (Confidence threshold + Trained classes with live counters)
           Container(
             color: AppTheme.card,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -63,7 +82,7 @@ class AiDetectionsScreen extends ConsumerWidget {
                 Row(
                   children: [
                     const Text(
-                      'Confidence: ',
+                      'Confidence Threshold: ',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppTheme.textSecondary,
@@ -89,29 +108,25 @@ class AiDetectionsScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                // Trained Class Chips
+                // Trained Class Chips with separate counters (Requirement 5)
                 SizedBox(
-                  height: 32,
+                  height: 36,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     children: [
                       _buildFilterChip(
                         context,
-                        'All Classes',
+                        'All Classes (${detectionState.detections.length})',
                         detectionState.typeFilter == null,
                         () => notifier.updateTypeFilter(null),
                       ),
-                      ...[
-                        DetectionType.person,
-                        DetectionType.animal,
-                        DetectionType.pothole,
-                        DetectionType.waste,
-                      ].map((type) {
+                      ...supportedClasses.map((type) {
                         final label = _typeLabel(type);
+                        final count = classCounts[type] ?? 0;
                         final isSelected = detectionState.typeFilter == type;
                         return _buildFilterChip(
                           context,
-                          label,
+                          '$label ($count)',
                           isSelected,
                           () => notifier.updateTypeFilter(type),
                         );
@@ -123,7 +138,7 @@ class AiDetectionsScreen extends ConsumerWidget {
             ),
           ),
 
-          // 2. Feed list
+          // Detections Feed List
           Expanded(
             child: filteredList.isEmpty
                 ? Center(
@@ -149,7 +164,7 @@ class AiDetectionsScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 6),
                         const Text(
-                          'Detections from Raspberry Pi camera will appear in real time.',
+                          'Detections from Raspberry Pi YOLO will appear in real time.',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppTheme.textSecondary,
@@ -212,7 +227,7 @@ class AiDetectionsScreen extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Thumbnail: Real saved frame or icon canvas
+              // Thumbnail: Real saved frame or icon canvas
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
@@ -223,15 +238,14 @@ class AiDetectionsScreen extends ConsumerWidget {
                       ? Image.file(
                           File(d.imagePath),
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              _buildIconThumbnail(d),
+                          errorBuilder: (_, __, ___) => _buildIconThumbnail(d),
                         )
                       : _buildIconThumbnail(d),
                 ),
               ),
               const SizedBox(width: 14),
 
-              // 2. Text specs & details
+              // Details
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,26 +287,54 @@ class AiDetectionsScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        // Severity badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _severityColor(
-                              d.severity,
-                            ).withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            d.severity.toUpperCase(),
-                            style: TextStyle(
-                              color: _severityColor(d.severity),
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
+
+                        // Severity or Simulation Badge
+                        Row(
+                          children: [
+                            if (d.isSimulated)
+                              Container(
+                                margin: const EdgeInsets.only(right: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.purple.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: Colors.purple.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'SIMULATION',
+                                  style: TextStyle(
+                                    color: Colors.purpleAccent,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _severityColor(
+                                  d.severity,
+                                ).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                d.severity.toUpperCase(),
+                                style: TextStyle(
+                                  color: _severityColor(d.severity),
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ],
                     ),
@@ -336,7 +378,7 @@ class AiDetectionsScreen extends ConsumerWidget {
           ),
           const Divider(color: AppTheme.border, height: 20),
 
-          // Action Buttons
+          // Action Buttons: View Evidence, Delete
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -351,6 +393,9 @@ class AiDetectionsScreen extends ConsumerWidget {
               const SizedBox(width: 8),
               _buildCardActionBtn(context, LucideIcons.trash2, 'Delete', () {
                 notifier.deleteDetection(d.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Detection record deleted.')),
+                );
               }, textColor: AppTheme.danger),
             ],
           ),
@@ -471,13 +516,13 @@ class AiDetectionsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'AI Confidence: ${(d.confidence * 100).toStringAsFixed(1)}% Genuine Prediction',
+                      'Confidence: ${(d.confidence * 100).toStringAsFixed(1)}% Match',
                     ),
                     Text(
-                      'Recorded: ${d.timestamp.toLocal().toString().split('.')[0]}',
+                      'Timestamp: ${d.timestamp.toLocal().toString().split('.')[0]}',
                     ),
                     Text(
-                      'GPS Coordinates: [${d.latitude.toStringAsFixed(6)}, ${d.longitude.toStringAsFixed(6)}]',
+                      'GPS Coordinates: ${d.latitude != 0.0 ? "[${d.latitude.toStringAsFixed(6)}, ${d.longitude.toStringAsFixed(6)}]" : "GPS Unavailable"}',
                     ),
                     if (d.altitude != 0.0)
                       Text(
@@ -487,7 +532,7 @@ class AiDetectionsScreen extends ConsumerWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          'Path: ${d.imagePath}',
+                          'File: ${d.imagePath}',
                           style: const TextStyle(
                             fontSize: 10,
                             color: AppTheme.textSecondary,
@@ -495,13 +540,72 @@ class AiDetectionsScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Close Preview'),
-                      ),
+                    const SizedBox(height: 16),
+
+                    // Save and Share buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        if (hasRealImage)
+                          TextButton.icon(
+                            icon: const Icon(
+                              LucideIcons.download,
+                              size: 16,
+                              color: AppTheme.success,
+                            ),
+                            label: const Text(
+                              'Save to Device',
+                              style: TextStyle(color: AppTheme.success),
+                            ),
+                            onPressed: () async {
+                              try {
+                                final source = File(d.imagePath);
+                                final pubDir = Directory(
+                                  '/storage/emulated/0/Pictures/AerialEYE',
+                                );
+                                if (!await pubDir.exists())
+                                  await pubDir.create(recursive: true);
+                                final name = File(
+                                  d.imagePath,
+                                ).uri.pathSegments.last;
+                                await source.copy('${pubDir.path}/$name');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Saved to Pictures/AerialEYE',
+                                      ),
+                                      backgroundColor: AppTheme.success,
+                                    ),
+                                  );
+                                }
+                              } catch (_) {}
+                            },
+                          ),
+                        if (hasRealImage)
+                          TextButton.icon(
+                            icon: const Icon(
+                              LucideIcons.share2,
+                              size: 16,
+                              color: AppTheme.secondary,
+                            ),
+                            label: const Text(
+                              'Share',
+                              style: TextStyle(color: AppTheme.secondary),
+                            ),
+                            onPressed: () {
+                              Share.shareXFiles(
+                                [XFile(d.imagePath)],
+                                text:
+                                    '${d.typeLabel} detection at ${d.timestamp}',
+                              );
+                            },
+                          ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -521,17 +625,13 @@ class AiDetectionsScreen extends ConsumerWidget {
         return 'Animal';
       case DetectionType.pothole:
         return 'Pothole';
+      case DetectionType.roadCrack:
+        return 'Road Crack';
       case DetectionType.waste:
       case DetectionType.garbage:
         return 'Waste';
-      case DetectionType.roadCrack:
-        return 'Road Crack';
-      case DetectionType.waterLogging:
-        return 'Water Logging';
-      case DetectionType.obstacle:
-        return 'Obstacle';
-      case DetectionType.brokenRoadSign:
-        return 'Broken Road Sign';
+      default:
+        return type.name;
     }
   }
 

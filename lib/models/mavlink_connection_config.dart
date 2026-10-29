@@ -156,8 +156,7 @@ class MavlinkConnectionConfig {
       reconnectIntervalSeconds: json['reconnectIntervalSeconds'] as int? ?? 3,
       telemetryRateHz: json['telemetryRateHz'] as int? ?? 10,
       debugLogging: json['debugLogging'] as bool? ?? true,
-      httpBaseUrl:
-          json['httpBaseUrl'] as String? ?? 'http://10.174.17.87:8081',
+      httpBaseUrl: json['httpBaseUrl'] as String? ?? 'http://10.174.17.87:8081',
       httpPollingIntervalMs: json['httpPollingIntervalMs'] as int? ?? 1000,
       httpTimeoutSeconds: json['httpTimeoutSeconds'] as int? ?? 3,
     );
@@ -176,7 +175,9 @@ class MavlinkConnectionConfig {
         if (uri == null ||
             (uri.scheme != 'http' && uri.scheme != 'https') ||
             uri.host.isEmpty) {
-          errors.add('Invalid HTTP Base URL (must start with http:// or https://)');
+          errors.add(
+            'Invalid HTTP Base URL (must start with http:// or https://)',
+          );
         }
       }
       if (httpPollingIntervalMs < 200 || httpPollingIntervalMs > 10000) {

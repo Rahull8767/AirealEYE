@@ -20,27 +20,30 @@ void main() {
       expect(config.validate(), isEmpty);
     });
 
-    test('HTTP config serialization and deserialization retains all fields', () {
-      const config = MavlinkConnectionConfig(
-        transport: MavlinkTransport.http,
-        httpBaseUrl: 'http://192.168.43.87:8081',
-        httpPollingIntervalMs: 500,
-        httpTimeoutSeconds: 5,
-      );
+    test(
+      'HTTP config serialization and deserialization retains all fields',
+      () {
+        const config = MavlinkConnectionConfig(
+          transport: MavlinkTransport.http,
+          httpBaseUrl: 'http://192.168.43.87:8081',
+          httpPollingIntervalMs: 500,
+          httpTimeoutSeconds: 5,
+        );
 
-      final json = config.toJson();
-      expect(json['transport'], equals('http'));
-      expect(json['httpBaseUrl'], equals('http://192.168.43.87:8081'));
-      expect(json['httpPollingIntervalMs'], equals(500));
-      expect(json['httpTimeoutSeconds'], equals(5));
+        final json = config.toJson();
+        expect(json['transport'], equals('http'));
+        expect(json['httpBaseUrl'], equals('http://192.168.43.87:8081'));
+        expect(json['httpPollingIntervalMs'], equals(500));
+        expect(json['httpTimeoutSeconds'], equals(5));
 
-      final restored = MavlinkConnectionConfig.fromJson(json);
-      expect(restored.transport, equals(MavlinkTransport.http));
-      expect(restored.httpBaseUrl, equals('http://192.168.43.87:8081'));
-      expect(restored.httpPollingIntervalMs, equals(500));
-      expect(restored.httpTimeoutSeconds, equals(5));
-      expect(restored.validate(), isEmpty);
-    });
+        final restored = MavlinkConnectionConfig.fromJson(json);
+        expect(restored.transport, equals(MavlinkTransport.http));
+        expect(restored.httpBaseUrl, equals('http://192.168.43.87:8081'));
+        expect(restored.httpPollingIntervalMs, equals(500));
+        expect(restored.httpTimeoutSeconds, equals(5));
+        expect(restored.validate(), isEmpty);
+      },
+    );
 
     test('Backward compatibility: JSON without transport defaults to UDP', () {
       final legacyJson = {
@@ -61,7 +64,10 @@ void main() {
         transport: MavlinkTransport.http,
         httpBaseUrl: '',
       );
-      expect(cfg.validate(), contains('Raspberry Pi HTTP Base URL is required'));
+      expect(
+        cfg.validate(),
+        contains('Raspberry Pi HTTP Base URL is required'),
+      );
 
       // Non-HTTP scheme
       cfg = const MavlinkConnectionConfig(
@@ -69,7 +75,9 @@ void main() {
         httpBaseUrl: 'ftp://10.174.17.87:8081',
       );
       expect(
-        cfg.validate().any((e) => e.contains('must start with http:// or https://')),
+        cfg.validate().any(
+          (e) => e.contains('must start with http:// or https://'),
+        ),
         isTrue,
       );
 
@@ -91,7 +99,9 @@ void main() {
         httpPollingIntervalMs: 20000,
       );
       expect(
-        cfg.validate().any((e) => e.contains('interval must be between 200ms and 10000ms')),
+        cfg.validate().any(
+          (e) => e.contains('interval must be between 200ms and 10000ms'),
+        ),
         isTrue,
       );
 
@@ -168,55 +178,64 @@ void main() {
       expect(telem.isStale, isFalse);
     });
 
-    test('Null battery remaining percentage preserves voltage and formats as dashes', () {
-      final sampleJson = {
-        'mode': 'ALT_HOLD',
-        'armed': false,
-        'battery_voltage_v': 11.9,
-        'battery_remaining_pct': null, // APM 2.8 voltage-only sensor
-      };
+    test(
+      'Null battery remaining percentage preserves voltage and formats as dashes',
+      () {
+        final sampleJson = {
+          'mode': 'ALT_HOLD',
+          'armed': false,
+          'battery_voltage_v': 11.9,
+          'battery_remaining_pct': null, // APM 2.8 voltage-only sensor
+        };
 
-      final telem = PiHttpTelemetryService.parseJson(sampleJson);
+        final telem = PiHttpTelemetryService.parseJson(sampleJson);
 
-      expect(telem.batteryVoltage, equals(11.9));
-      expect(telem.batteryPercentage, equals(-1.0));
-      expect(telem.isBatteryPercentAvailable, isFalse);
-      expect(telem.batteryPercentDisplay, equals('--'));
-      expect(telem.batteryVoltageDisplay, equals('11.9 V'));
-    });
+        expect(telem.batteryVoltage, equals(11.9));
+        expect(telem.batteryPercentage, equals(-1.0));
+        expect(telem.isBatteryPercentAvailable, isFalse);
+        expect(telem.batteryPercentDisplay, equals('--'));
+        expect(telem.batteryVoltageDisplay, equals('11.9 V'));
+      },
+    );
 
-    test('Invalid GPS fix or gps_valid false prevents applying invalid coordinates', () {
-      final invalidGpsJson = {
-        'gps_fix': 1, // No fix
-        'gps_valid': false,
-        'latitude': 0.0,
-        'longitude': 0.0,
-      };
+    test(
+      'Invalid GPS fix or gps_valid false prevents applying invalid coordinates',
+      () {
+        final invalidGpsJson = {
+          'gps_fix': 1, // No fix
+          'gps_valid': false,
+          'latitude': 0.0,
+          'longitude': 0.0,
+        };
 
-      final telem = PiHttpTelemetryService.parseJson(invalidGpsJson);
+        final telem = PiHttpTelemetryService.parseJson(invalidGpsJson);
 
-      expect(telem.hasReceivedPosition, isFalse);
-      expect(telem.gpsFix, equals(1));
-      // Coordinates remain 0.0 without triggering valid position flag
-      expect(telem.latitude, equals(0.0));
-      expect(telem.longitude, equals(0.0));
-    });
+        expect(telem.hasReceivedPosition, isFalse);
+        expect(telem.gpsFix, equals(1));
+        // Coordinates remain 0.0 without triggering valid position flag
+        expect(telem.latitude, equals(0.0));
+        expect(telem.longitude, equals(0.0));
+      },
+    );
 
-    test('Valid GPS 2D fix (fix == 2) with gps_valid true enables position flag', () {
-      final gps2DJson = {
-        'gps_fix': 2,
-        'gps_valid': true,
-        'latitude': 18.53,
-        'longitude': 73.86,
-      };
+    test(
+      'Valid GPS 2D fix (fix == 2) with gps_valid true enables position flag',
+      () {
+        final gps2DJson = {
+          'gps_fix': 2,
+          'gps_valid': true,
+          'latitude': 18.53,
+          'longitude': 73.86,
+        };
 
-      final telem = PiHttpTelemetryService.parseJson(gps2DJson);
+        final telem = PiHttpTelemetryService.parseJson(gps2DJson);
 
-      expect(telem.hasReceivedPosition, isTrue);
-      expect(telem.gpsFix, equals(2));
-      expect(telem.latitude, equals(18.53));
-      expect(telem.longitude, equals(73.86));
-    });
+        expect(telem.hasReceivedPosition, isTrue);
+        expect(telem.gpsFix, equals(2));
+        expect(telem.latitude, equals(18.53));
+        expect(telem.longitude, equals(73.86));
+      },
+    );
   });
 
   group('Mock HTTP Server & PiHttpTelemetryService Integration', () {
@@ -240,29 +259,33 @@ void main() {
 
         if (request.uri.path == '/health') {
           request.response.headers.contentType = ContentType.json;
-          request.response.write(jsonEncode({
-            'status': 'ok',
-            'service': 'aerialeye-telemetry',
-            'fc_connected': true,
-            'fc_heartbeat': true,
-            'mode': 'LOITER',
-            'armed': false,
-          }));
+          request.response.write(
+            jsonEncode({
+              'status': 'ok',
+              'service': 'aerialeye-telemetry',
+              'fc_connected': true,
+              'fc_heartbeat': true,
+              'mode': 'LOITER',
+              'armed': false,
+            }),
+          );
           request.response.close();
         } else if (request.uri.path == '/telemetry') {
           request.response.headers.contentType = ContentType.json;
-          request.response.write(jsonEncode({
-            'mode': 'GUIDED',
-            'armed': true,
-            'relative_altitude_m': 10.2,
-            'altitude_m': 35.0,
-            'heading_deg': 90.0,
-            'battery_voltage_v': 12.1,
-            'battery_remaining_pct': 75,
-            'connected': true,
-            'heartbeat': true,
-            'last_update': DateTime.now().millisecondsSinceEpoch / 1000.0,
-          }));
+          request.response.write(
+            jsonEncode({
+              'mode': 'GUIDED',
+              'armed': true,
+              'relative_altitude_m': 10.2,
+              'altitude_m': 35.0,
+              'heading_deg': 90.0,
+              'battery_voltage_v': 12.1,
+              'battery_remaining_pct': 75,
+              'connected': true,
+              'heartbeat': true,
+              'last_update': DateTime.now().millisecondsSinceEpoch / 1000.0,
+            }),
+          );
           request.response.close();
         } else {
           request.response.statusCode = HttpStatus.notFound;
@@ -307,60 +330,95 @@ void main() {
       service.dispose();
     });
 
-    test('Live polling emits telemetry on stream and transitions to connected', () async {
-      final service = PiHttpTelemetryService(
-        config: MavlinkConnectionConfig(
-          transport: MavlinkTransport.http,
-          httpBaseUrl: 'http://127.0.0.1:$serverPort',
-          httpPollingIntervalMs: 200,
-        ),
-      );
+    test(
+      'Live polling emits telemetry on stream and transitions to connected',
+      () async {
+        final service = PiHttpTelemetryService(
+          config: MavlinkConnectionConfig(
+            transport: MavlinkTransport.http,
+            httpBaseUrl: 'http://127.0.0.1:$serverPort',
+            httpPollingIntervalMs: 200,
+          ),
+        );
 
-      final telemetryFuture = service.telemetryStream.firstWhere(
-        (t) => t.flightMode == 'GUIDED' && t.armed == true,
-      );
+        final telemetryFuture = service.telemetryStream.firstWhere(
+          (t) => t.flightMode == 'GUIDED' && t.armed == true,
+        );
 
-      service.start();
+        service.start();
 
-      final received = await telemetryFuture.timeout(const Duration(seconds: 4));
-      expect(received.flightMode, equals('GUIDED'));
-      expect(received.armed, isTrue);
-      expect(received.relativeAltitude, equals(10.2));
+        final received = await telemetryFuture.timeout(
+          const Duration(seconds: 4),
+        );
+        expect(received.flightMode, equals('GUIDED'));
+        expect(received.armed, isTrue);
+        expect(received.relativeAltitude, equals(10.2));
 
-      expect(service.connectionState, equals(DroneConnectionState.connected));
+        expect(service.connectionState, equals(DroneConnectionState.connected));
 
-      service.stop();
-      expect(service.connectionState, equals(DroneConnectionState.disconnected));
+        service.stop();
+        expect(
+          service.connectionState,
+          equals(DroneConnectionState.disconnected),
+        );
 
-      service.dispose();
-    });
+        service.dispose();
+      },
+    );
   });
 
   group('MavlinkDroneService Dual Mode Command Safety Interlock', () {
-    test('Throws UnsupportedError on flight commands when in HTTP mode', () async {
-      final droneService = MavlinkDroneService(
-        initialConfig: const MavlinkConnectionConfig(
-          transport: MavlinkTransport.http,
-          httpBaseUrl: 'http://10.174.17.87:8081',
-        ),
-      );
+    test(
+      'Throws UnsupportedError on flight commands when in HTTP mode',
+      () async {
+        final droneService = MavlinkDroneService(
+          initialConfig: const MavlinkConnectionConfig(
+            transport: MavlinkTransport.http,
+            httpBaseUrl: 'http://10.174.17.87:8081',
+          ),
+        );
 
-      expect(() => droneService.arm(), throwsA(isA<UnsupportedError>()));
-      expect(() => droneService.disarm(), throwsA(isA<UnsupportedError>()));
-      expect(() => droneService.takeoff(5.0), throwsA(isA<UnsupportedError>()));
-      expect(() => droneService.land(), throwsA(isA<UnsupportedError>()));
-      expect(() => droneService.returnToLaunch(), throwsA(isA<UnsupportedError>()));
-      expect(() => droneService.setFlightMode('LOITER'), throwsA(isA<UnsupportedError>()));
-      expect(() => droneService.uploadMission([]), throwsA(isA<UnsupportedError>()));
-      expect(() => droneService.clearMission(), throwsA(isA<UnsupportedError>()));
-      expect(() => droneService.startMission(), throwsA(isA<UnsupportedError>()));
-      expect(() => droneService.pauseMission(), throwsA(isA<UnsupportedError>()));
-      expect(() => droneService.resumeMission(), throwsA(isA<UnsupportedError>()));
+        expect(() => droneService.arm(), throwsA(isA<UnsupportedError>()));
+        expect(() => droneService.disarm(), throwsA(isA<UnsupportedError>()));
+        expect(
+          () => droneService.takeoff(5.0),
+          throwsA(isA<UnsupportedError>()),
+        );
+        expect(() => droneService.land(), throwsA(isA<UnsupportedError>()));
+        expect(
+          () => droneService.returnToLaunch(),
+          throwsA(isA<UnsupportedError>()),
+        );
+        expect(
+          () => droneService.setFlightMode('LOITER'),
+          throwsA(isA<UnsupportedError>()),
+        );
+        expect(
+          () => droneService.uploadMission([]),
+          throwsA(isA<UnsupportedError>()),
+        );
+        expect(
+          () => droneService.clearMission(),
+          throwsA(isA<UnsupportedError>()),
+        );
+        expect(
+          () => droneService.startMission(),
+          throwsA(isA<UnsupportedError>()),
+        );
+        expect(
+          () => droneService.pauseMission(),
+          throwsA(isA<UnsupportedError>()),
+        );
+        expect(
+          () => droneService.resumeMission(),
+          throwsA(isA<UnsupportedError>()),
+        );
 
-      // Request data streams should complete gracefully without error in HTTP mode
-      expect(() => droneService.requestDataStreams(), returnsNormally);
+        // Request data streams should complete gracefully without error in HTTP mode
+        expect(() => droneService.requestDataStreams(), returnsNormally);
 
-      droneService.disconnect();
-    });
+        droneService.disconnect();
+      },
+    );
   });
 }

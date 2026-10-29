@@ -47,7 +47,7 @@ class PiHttpTelemetryService {
   static const int _maxRecentLogs = 50;
 
   PiHttpTelemetryService({MavlinkConnectionConfig? config})
-      : _config = config ?? MavlinkConnectionConfig.defaultConfig() {
+    : _config = config ?? MavlinkConnectionConfig.defaultConfig() {
     _httpClient = HttpClient()
       ..connectionTimeout = Duration(seconds: _config.httpTimeoutSeconds);
   }
@@ -91,15 +91,13 @@ class PiHttpTelemetryService {
       _connectionState = newState;
       _stateController.add(_connectionState);
       _logDiagnostic(
-          'Connection state transitioned to: ${newState.name.toUpperCase()}');
+        'Connection state transitioned to: ${newState.name.toUpperCase()}',
+      );
       _updateDiagnostics();
     }
   }
 
-  void _updateDiagnostics({
-    int? latencyMs,
-    String? lastError,
-  }) {
+  void _updateDiagnostics({int? latencyMs, String? lastError}) {
     _currentDiagnostics = _currentDiagnostics.copyWith(
       rawDatagramsReceived: _telemetryPacketsReceived,
       mavlinkFramesReceived: _telemetryPacketsReceived,
@@ -129,7 +127,8 @@ class PiHttpTelemetryService {
 
     _setConnectionState(DroneConnectionState.connecting);
     _logDiagnostic(
-        'Starting HTTP telemetry polling on ${_config.httpBaseUrl} (every ${_config.httpPollingIntervalMs}ms)');
+      'Starting HTTP telemetry polling on ${_config.httpBaseUrl} (every ${_config.httpPollingIntervalMs}ms)',
+    );
 
     _pollCycle();
 
@@ -167,7 +166,9 @@ class PiHttpTelemetryService {
     _currentTelemetry = DroneTelemetry.initial();
     _telemetryController.add(_currentTelemetry);
 
-    _logDiagnostic('HTTP telemetry polling stopped. State reset to disconnected.');
+    _logDiagnostic(
+      'HTTP telemetry polling stopped. State reset to disconnected.',
+    );
     _updateDiagnostics();
   }
 
@@ -190,9 +191,9 @@ class PiHttpTelemetryService {
           .timeout(Duration(seconds: _config.httpTimeoutSeconds));
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
 
-      final response = await request
-          .close()
-          .timeout(Duration(seconds: _config.httpTimeoutSeconds));
+      final response = await request.close().timeout(
+        Duration(seconds: _config.httpTimeoutSeconds),
+      );
       stopwatch.stop();
 
       if (response.statusCode == 200) {
@@ -230,12 +231,15 @@ class PiHttpTelemetryService {
           _connectionState != DroneConnectionState.mavlinkNoHeartbeat) {
         _setConnectionState(DroneConnectionState.mavlinkNoHeartbeat);
         _logDiagnostic(
-            'API reachable, but APM 2.8 FC heartbeat is missing (connected=$fcConnected, heartbeat=$fcHeartbeat)');
+          'API reachable, but APM 2.8 FC heartbeat is missing (connected=$fcConnected, heartbeat=$fcHeartbeat)',
+        );
       }
     } else {
       if (_connectionState != DroneConnectionState.connected) {
         _setConnectionState(DroneConnectionState.connected);
-        _logDiagnostic('Connected: Active APM 2.8 telemetry stream received via HTTP.');
+        _logDiagnostic(
+          'Connected: Active APM 2.8 telemetry stream received via HTTP.',
+        );
       }
     }
 
@@ -251,7 +255,9 @@ class PiHttpTelemetryService {
 
   void _handlePollFailure(String reason) {
     _consecutiveFailures++;
-    _logDiagnostic('[POLL ERROR] $reason (Consecutive failures: $_consecutiveFailures)');
+    _logDiagnostic(
+      '[POLL ERROR] $reason (Consecutive failures: $_consecutiveFailures)',
+    );
 
     // After 3 consecutive failed polls or > 4s, mark stale/degraded
     if (_consecutiveFailures >= 3) {
@@ -270,12 +276,15 @@ class PiHttpTelemetryService {
   void _checkLiveness() {
     if (!_isPollingActive || _lastSuccessTime == null) return;
 
-    final elapsedSinceLastSuccess =
-        DateTime.now().difference(_lastSuccessTime!).inMilliseconds;
+    final elapsedSinceLastSuccess = DateTime.now()
+        .difference(_lastSuccessTime!)
+        .inMilliseconds;
 
     if (elapsedSinceLastSuccess > 3500 &&
         _connectionState == DroneConnectionState.connected) {
-      _logDiagnostic('Telemetry watchdog: no updates received for ${elapsedSinceLastSuccess}ms. Marking stale.');
+      _logDiagnostic(
+        'Telemetry watchdog: no updates received for ${elapsedSinceLastSuccess}ms. Marking stale.',
+      );
       _setConnectionState(DroneConnectionState.telemetryStale);
       _currentTelemetry = _currentTelemetry.copyWith(isStale: true);
       _telemetryController.add(_currentTelemetry);
@@ -310,8 +319,8 @@ class PiHttpTelemetryService {
     final bool overallConnected = isFcConnected && hasHeartbeat;
 
     // 2. Flight Mode & Arm Status
-    final String mode = (json['mode'] as String?)?.trim().toUpperCase() ??
-        prev.flightMode;
+    final String mode =
+        (json['mode'] as String?)?.trim().toUpperCase() ?? prev.flightMode;
     final bool armed = json['armed'] as bool? ?? prev.armed;
 
     // 3. Altitudes (meters)
@@ -330,14 +339,17 @@ class PiHttpTelemetryService {
     final double yaw = headingDeg ?? prev.yaw;
     final double roll = rollDeg ?? prev.roll;
     final double pitch = pitchDeg ?? prev.pitch;
-    final bool hasAttitude = rollDeg != null || pitchDeg != null || headingDeg != null;
+    final bool hasAttitude =
+        rollDeg != null || pitchDeg != null || headingDeg != null;
 
     // 5. GPS & Coordinates
     final bool gpsValid = json['gps_valid'] as bool? ?? false;
-    final int gpsFix = (json['gps_fix'] as num?)?.toInt() ??
+    final int gpsFix =
+        (json['gps_fix'] as num?)?.toInt() ??
         (json['fix'] as num?)?.toInt() ??
         0;
-    final int satellites = (json['satellites'] as num?)?.toInt() ??
+    final int satellites =
+        (json['satellites'] as num?)?.toInt() ??
         (json['gps_satellites'] as num?)?.toInt() ??
         0;
 
@@ -346,7 +358,11 @@ class PiHttpTelemetryService {
 
     // STRICT SAFETY RULE: Never treat gps_valid == false or gps_fix < 2 as valid GPS position
     final bool isPositionValid =
-        gpsValid && gpsFix >= 2 && rawLat != null && rawLon != null && (rawLat != 0.0 || rawLon != 0.0);
+        gpsValid &&
+        gpsFix >= 2 &&
+        rawLat != null &&
+        rawLon != null &&
+        (rawLat != 0.0 || rawLon != 0.0);
 
     final double latitude = isPositionValid ? rawLat : prev.latitude;
     final double longitude = isPositionValid ? rawLon : prev.longitude;
@@ -375,7 +391,8 @@ class PiHttpTelemetryService {
     }
 
     // 7. Speed & Distance
-    final double? speedMs = (json['groundspeed_m_s'] as num?)?.toDouble() ??
+    final double? speedMs =
+        (json['groundspeed_m_s'] as num?)?.toDouble() ??
         (json['speed_m_s'] as num?)?.toDouble();
     final double speed = speedMs ?? prev.speed;
     final double groundSpeed = speedMs ?? prev.groundSpeed;
@@ -385,7 +402,9 @@ class PiHttpTelemetryService {
     final dynamic rawTs = json['last_update'] ?? json['timestamp'];
     if (rawTs is num) {
       // If in seconds (Unix timestamp < 1e11), multiply by 1000
-      final millis = rawTs < 100000000000 ? (rawTs * 1000).toInt() : rawTs.toInt();
+      final millis = rawTs < 100000000000
+          ? (rawTs * 1000).toInt()
+          : rawTs.toInt();
       lastUpdate = DateTime.fromMillisecondsSinceEpoch(millis);
     } else if (rawTs is String) {
       lastUpdate = DateTime.tryParse(rawTs) ?? now;
@@ -415,8 +434,10 @@ class PiHttpTelemetryService {
       hasReceivedGps: isPositionValid || satellites > 0,
       hasReceivedPosition: isPositionValid,
       hasReceivedAttitude: hasAttitude || prev.hasReceivedAttitude,
-      hasReceivedBattery: hasBatteryVoltage || hasBatteryPercentage || prev.hasReceivedBattery,
-      hasReceivedVfrHud: speedMs != null || altM != null || prev.hasReceivedVfrHud,
+      hasReceivedBattery:
+          hasBatteryVoltage || hasBatteryPercentage || prev.hasReceivedBattery,
+      hasReceivedVfrHud:
+          speedMs != null || altM != null || prev.hasReceivedVfrHud,
       lastHeartbeat: overallConnected ? now : prev.lastHeartbeat,
       lastGpsUpdate: isPositionValid ? now : prev.lastGpsUpdate,
       lastBatteryUpdate: hasBatteryVoltage ? now : prev.lastBatteryUpdate,
@@ -447,10 +468,12 @@ class PiHttpTelemetryService {
     try {
       // 1. Probe /health endpoint
       final healthUri = Uri.parse('$cleanBaseUrl/health');
-      final healthReq =
-          await client.getUrl(healthUri).timeout(Duration(seconds: timeoutSeconds));
-      final healthResp =
-          await healthReq.close().timeout(Duration(seconds: timeoutSeconds));
+      final healthReq = await client
+          .getUrl(healthUri)
+          .timeout(Duration(seconds: timeoutSeconds));
+      final healthResp = await healthReq.close().timeout(
+        Duration(seconds: timeoutSeconds),
+      );
 
       if (healthResp.statusCode != 200) {
         client.close(force: true);
@@ -464,10 +487,12 @@ class PiHttpTelemetryService {
 
       // 2. Probe /telemetry endpoint
       final telemUri = Uri.parse('$cleanBaseUrl/telemetry');
-      final telemReq =
-          await client.getUrl(telemUri).timeout(Duration(seconds: timeoutSeconds));
-      final telemResp =
-          await telemReq.close().timeout(Duration(seconds: timeoutSeconds));
+      final telemReq = await client
+          .getUrl(telemUri)
+          .timeout(Duration(seconds: timeoutSeconds));
+      final telemResp = await telemReq.close().timeout(
+        Duration(seconds: timeoutSeconds),
+      );
       stopwatch.stop();
 
       if (telemResp.statusCode == 200) {

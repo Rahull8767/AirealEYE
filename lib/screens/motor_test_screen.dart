@@ -11,10 +11,7 @@ import 'package:aerial_eye/providers/drone_provider.dart';
 import 'package:aerial_eye/services/drone_service.dart';
 import 'package:aerial_eye/widgets/glass_panel.dart';
 
-enum DurationUnit {
-  seconds,
-  minutes,
-}
+enum DurationUnit { seconds, minutes }
 
 class MotorTestScreen extends ConsumerStatefulWidget {
   const MotorTestScreen({super.key});
@@ -150,7 +147,8 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
   }
 
   Future<void> _startMotorTest() async {
-    final telemetry = ref.read(droneTelemetryProvider).value ?? DroneTelemetry.initial();
+    final telemetry =
+        ref.read(droneTelemetryProvider).value ?? DroneTelemetry.initial();
     final droneService = ref.read(droneServiceProvider);
 
     // 1. Safety check: Armed Interlock
@@ -167,7 +165,8 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
     }
 
     // 2. Safety check: Connection
-    if (!telemetry.isConnected && droneService.connectionState != DroneConnectionState.connected) {
+    if (!telemetry.isConnected &&
+        droneService.connectionState != DroneConnectionState.connected) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -229,11 +228,17 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                 decoration: BoxDecoration(
                   color: AppTheme.danger.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppTheme.danger.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: const Row(
                   children: [
-                    Icon(LucideIcons.shieldAlert, color: AppTheme.danger, size: 20),
+                    Icon(
+                      LucideIcons.shieldAlert,
+                      color: AppTheme.danger,
+                      size: 20,
+                    ),
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -253,7 +258,10 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
@@ -282,7 +290,8 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
   Future<void> _runSingleMotorTest(DroneService droneService) async {
     setState(() {
       _status = MotorTestExecutionStatus.sendingCommand;
-      _statusDetails = 'Transmitting MAV_CMD_DO_MOTOR_TEST for Motor ${_selectedMotor.letterCode}...';
+      _statusDetails =
+          'Transmitting MAV_CMD_DO_MOTOR_TEST for Motor ${_selectedMotor.letterCode}...';
       _currentlyActiveMotor = _selectedMotor;
     });
 
@@ -332,20 +341,26 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
             // Keepalive renewal for APM 2.8 30s hardware watchdog if test duration is long
             final elapsed = _durationSeconds - _remainingSeconds;
             if (elapsed > 0 && elapsed % 20 == 0 && _remainingSeconds > 5) {
-              droneService.testMotor(
-                motorInstance: targetIndex,
-                throttlePercent: _throttlePercent,
-                durationSeconds: _remainingSeconds > 30 ? 30 : _remainingSeconds,
-                testAll: false,
-              ).catchError((_) => MotorTestResult(
-                success: false,
-                message: 'Keepalive refresh error',
-                commandId: 209,
-                motorIndex: targetIndex,
-                throttlePercent: _throttlePercent,
-                durationSeconds: _remainingSeconds,
-                timestamp: DateTime.now(),
-              ));
+              droneService
+                  .testMotor(
+                    motorInstance: targetIndex,
+                    throttlePercent: _throttlePercent,
+                    durationSeconds: _remainingSeconds > 30
+                        ? 30
+                        : _remainingSeconds,
+                    testAll: false,
+                  )
+                  .catchError(
+                    (_) => MotorTestResult(
+                      success: false,
+                      message: 'Keepalive refresh error',
+                      commandId: 209,
+                      motorIndex: targetIndex,
+                      throttlePercent: _throttlePercent,
+                      durationSeconds: _remainingSeconds,
+                      timestamp: DateTime.now(),
+                    ),
+                  );
             }
           }
         });
@@ -371,7 +386,8 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
 
     setState(() {
       _status = MotorTestExecutionStatus.sendingCommand;
-      _statusDetails = 'Transmitting simultaneous test commands for all 4 motors...';
+      _statusDetails =
+          'Transmitting simultaneous test commands for all 4 motors...';
       _currentlyActiveMotor = MotorSelection.allMotors;
     });
 
@@ -391,7 +407,8 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
         setState(() {
           _status = MotorTestExecutionStatus.running;
           _remainingSeconds = _durationSeconds;
-          _statusDetails = 'Simultaneous test running: All 4 motors spinning at ${_throttlePercent.toInt()}% throttle.';
+          _statusDetails =
+              'Simultaneous test running: All 4 motors spinning at ${_throttlePercent.toInt()}% throttle.';
         });
 
         _countdownTimer?.cancel();
@@ -409,15 +426,17 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
               _statusDetails =
                   'Simultaneous test complete (${_formatDurationBadge(_durationSeconds)} duration elapsed). All motors halted.';
             });
-            droneService.stopMotorTest().catchError((_) => MotorTestResult(
-              success: false,
-              message: 'Stop error',
-              commandId: 209,
-              motorIndex: 1,
-              throttlePercent: 0,
-              durationSeconds: 0,
-              timestamp: DateTime.now(),
-            ));
+            droneService.stopMotorTest().catchError(
+              (_) => MotorTestResult(
+                success: false,
+                message: 'Stop error',
+                commandId: 209,
+                motorIndex: 1,
+                throttlePercent: 0,
+                durationSeconds: 0,
+                timestamp: DateTime.now(),
+              ),
+            );
           } else {
             setState(() {
               _remainingSeconds--;
@@ -426,18 +445,24 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
             // Keepalive renewal for APM 2.8 30s hardware watchdog if test duration is long
             final elapsed = _durationSeconds - _remainingSeconds;
             if (elapsed > 0 && elapsed % 20 == 0 && _remainingSeconds > 5) {
-              droneService.testAllMotors(
-                throttlePercent: _throttlePercent,
-                durationSeconds: _remainingSeconds > 30 ? 30 : _remainingSeconds,
-              ).catchError((_) => MotorTestResult(
-                success: false,
-                message: 'Keepalive refresh error',
-                commandId: 209,
-                motorIndex: 1,
-                throttlePercent: _throttlePercent,
-                durationSeconds: _remainingSeconds,
-                timestamp: DateTime.now(),
-              ));
+              droneService
+                  .testAllMotors(
+                    throttlePercent: _throttlePercent,
+                    durationSeconds: _remainingSeconds > 30
+                        ? 30
+                        : _remainingSeconds,
+                  )
+                  .catchError(
+                    (_) => MotorTestResult(
+                      success: false,
+                      message: 'Keepalive refresh error',
+                      commandId: 209,
+                      motorIndex: 1,
+                      throttlePercent: _throttlePercent,
+                      durationSeconds: _remainingSeconds,
+                      timestamp: DateTime.now(),
+                    ),
+                  );
             }
           }
         });
@@ -463,7 +488,8 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
 
     setState(() {
       _status = MotorTestExecutionStatus.stopping;
-      _statusDetails = 'Sending emergency stop packet (throttle=0, duration=0)...';
+      _statusDetails =
+          'Sending emergency stop packet (throttle=0, duration=0)...';
       _currentlyActiveMotor = null;
     });
 
@@ -490,11 +516,13 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
 
   @override
   Widget build(BuildContext context) {
-    final telemetry = ref.watch(droneTelemetryProvider).value ?? DroneTelemetry.initial();
+    final telemetry =
+        ref.watch(droneTelemetryProvider).value ?? DroneTelemetry.initial();
     final diagnostics = ref.watch(droneDiagnosticsProvider).value;
     final isArmed = telemetry.armed;
     final isConnected = telemetry.isConnected;
-    final isRunning = _status == MotorTestExecutionStatus.running ||
+    final isRunning =
+        _status == MotorTestExecutionStatus.running ||
         _status == MotorTestExecutionStatus.sendingCommand;
 
     return Scaffold(
@@ -662,7 +690,11 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                   color: AppTheme.danger.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(LucideIcons.alertTriangle, color: AppTheme.danger, size: 20),
+                child: const Icon(
+                  LucideIcons.alertTriangle,
+                  color: AppTheme.danger,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               const Expanded(
@@ -680,7 +712,10 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                     ),
                     Text(
                       'All propellers must be physically removed before testing',
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
@@ -708,7 +743,9 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                     : AppTheme.surface,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: _propsRemovedConfirmed ? AppTheme.success : AppTheme.border,
+                  color: _propsRemovedConfirmed
+                      ? AppTheme.success
+                      : AppTheme.border,
                 ),
               ),
               child: Row(
@@ -820,7 +857,10 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                     // Center FC Label
                     Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.card,
                           borderRadius: BorderRadius.circular(6),
@@ -867,7 +907,9 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                   labelStyle: TextStyle(
                     fontSize: 12,
                     color: isSelected ? Colors.white : AppTheme.textSecondary,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 );
               }),
@@ -883,7 +925,8 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                 ),
                 selected: _selectedMotor == MotorSelection.allMotors,
                 onSelected: (val) {
-                  if (val) setState(() => _selectedMotor = MotorSelection.allMotors);
+                  if (val)
+                    setState(() => _selectedMotor = MotorSelection.allMotors);
                 },
                 selectedColor: AppTheme.primary,
                 backgroundColor: AppTheme.surface,
@@ -908,7 +951,8 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
     final isCurrentlyActive = _currentlyActiveMotor == motor;
     final isSelected = _currentlyActiveMotor != null
         ? isCurrentlyActive
-        : (_selectedMotor == motor || _selectedMotor == MotorSelection.allMotors);
+        : (_selectedMotor == motor ||
+              _selectedMotor == MotorSelection.allMotors);
 
     return GestureDetector(
       onTap: () {
@@ -936,8 +980,11 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
           boxShadow: (isCurrentlyActive || isSelected)
               ? [
                   BoxShadow(
-                    color: (isCurrentlyActive ? AppTheme.secondary : AppTheme.primary)
-                        .withValues(alpha: 0.6),
+                    color:
+                        (isCurrentlyActive
+                                ? AppTheme.secondary
+                                : AppTheme.primary)
+                            .withValues(alpha: 0.6),
                     blurRadius: isCurrentlyActive ? 14 : 10,
                     spreadRadius: isCurrentlyActive ? 4 : 2,
                   ),
@@ -952,14 +999,18 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: (isCurrentlyActive || isSelected) ? Colors.white : AppTheme.textPrimary,
+                color: (isCurrentlyActive || isSelected)
+                    ? Colors.white
+                    : AppTheme.textPrimary,
               ),
             ),
             Text(
               '(${motor.letterCode})',
               style: TextStyle(
                 fontSize: 10,
-                color: (isCurrentlyActive || isSelected) ? Colors.white70 : AppTheme.textSecondary,
+                color: (isCurrentlyActive || isSelected)
+                    ? Colors.white70
+                    : AppTheme.textSecondary,
               ),
             ),
           ],
@@ -995,9 +1046,7 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                   controller: _throttleTextController,
                   enabled: !isRunning,
                   keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 16,
@@ -1032,9 +1081,13 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
           // Slider: 0% to 100%
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: _throttlePercent > 30 ? AppTheme.warning : AppTheme.secondary,
+              activeTrackColor: _throttlePercent > 30
+                  ? AppTheme.warning
+                  : AppTheme.secondary,
               inactiveTrackColor: AppTheme.surface,
-              thumbColor: _throttlePercent > 30 ? AppTheme.warning : AppTheme.secondary,
+              thumbColor: _throttlePercent > 30
+                  ? AppTheme.warning
+                  : AppTheme.secondary,
               overlayColor: AppTheme.secondary.withValues(alpha: 0.2),
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
               trackHeight: 6,
@@ -1064,7 +1117,10 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                       },
                 borderRadius: BorderRadius.circular(6),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: isCurrent ? AppTheme.primary : AppTheme.surface,
                     borderRadius: BorderRadius.circular(6),
@@ -1076,7 +1132,9 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                     '$pct%${pct == 10 ? ' (Def)' : ''}',
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isCurrent
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       color: isCurrent ? Colors.white : AppTheme.textSecondary,
                     ),
                   ),
@@ -1095,7 +1153,11 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
               ),
               child: const Row(
                 children: [
-                  Icon(LucideIcons.alertCircle, color: AppTheme.warning, size: 16),
+                  Icon(
+                    LucideIcons.alertCircle,
+                    color: AppTheme.warning,
+                    size: 16,
+                  ),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -1131,11 +1193,16 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.primary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppTheme.secondary.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppTheme.secondary.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Text(
                   _formatDurationBadge(_durationSeconds),
@@ -1160,7 +1227,9 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                   key: const Key('duration_text_field'),
                   controller: _durationTextController,
                   enabled: !isRunning,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                   ],
@@ -1172,10 +1241,21 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                   ),
                   decoration: InputDecoration(
                     labelText: 'Duration',
-                    labelStyle: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-                    suffixText: _durationUnit == DurationUnit.seconds ? 'sec' : 'min',
-                    suffixStyle: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    labelStyle: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textSecondary,
+                    ),
+                    suffixText: _durationUnit == DurationUnit.seconds
+                        ? 'sec'
+                        : 'min',
+                    suffixStyle: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textSecondary,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                     filled: true,
                     fillColor: AppTheme.surface,
                     border: OutlineInputBorder(
@@ -1207,7 +1287,9 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                       Expanded(
                         child: InkWell(
                           key: const Key('duration_unit_seconds'),
-                          onTap: isRunning ? null : () => _setDurationUnit(DurationUnit.seconds),
+                          onTap: isRunning
+                              ? null
+                              : () => _setDurationUnit(DurationUnit.seconds),
                           borderRadius: BorderRadius.circular(6),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1222,7 +1304,8 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                               'Seconds (s)',
                               style: TextStyle(
                                 fontSize: 11,
-                                fontWeight: _durationUnit == DurationUnit.seconds
+                                fontWeight:
+                                    _durationUnit == DurationUnit.seconds
                                     ? FontWeight.bold
                                     : FontWeight.normal,
                                 color: _durationUnit == DurationUnit.seconds
@@ -1237,7 +1320,9 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                       Expanded(
                         child: InkWell(
                           key: const Key('duration_unit_minutes'),
-                          onTap: isRunning ? null : () => _setDurationUnit(DurationUnit.minutes),
+                          onTap: isRunning
+                              ? null
+                              : () => _setDurationUnit(DurationUnit.minutes),
                           borderRadius: BorderRadius.circular(6),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1252,7 +1337,8 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                               'Minutes (m)',
                               style: TextStyle(
                                 fontSize: 11,
-                                fontWeight: _durationUnit == DurationUnit.minutes
+                                fontWeight:
+                                    _durationUnit == DurationUnit.minutes
                                     ? FontWeight.bold
                                     : FontWeight.normal,
                                 color: _durationUnit == DurationUnit.minutes
@@ -1276,10 +1362,28 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
             spacing: 6,
             runSpacing: 6,
             children: [
-              _buildPresetChip('3s (Def)', 3, DurationUnit.seconds, '3', isRunning),
+              _buildPresetChip(
+                '3s (Def)',
+                3,
+                DurationUnit.seconds,
+                '3',
+                isRunning,
+              ),
               _buildPresetChip('5s', 5, DurationUnit.seconds, '5', isRunning),
-              _buildPresetChip('10s', 10, DurationUnit.seconds, '10', isRunning),
-              _buildPresetChip('30s', 30, DurationUnit.seconds, '30', isRunning),
+              _buildPresetChip(
+                '10s',
+                10,
+                DurationUnit.seconds,
+                '10',
+                isRunning,
+              ),
+              _buildPresetChip(
+                '30s',
+                30,
+                DurationUnit.seconds,
+                '30',
+                isRunning,
+              ),
               _buildPresetChip('1m', 60, DurationUnit.minutes, '1', isRunning),
               _buildPresetChip('2m', 120, DurationUnit.minutes, '2', isRunning),
               _buildPresetChip('5m', 300, DurationUnit.minutes, '5', isRunning),
@@ -1337,7 +1441,8 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
   }
 
   Widget _buildActionButtons(bool isArmed, bool isConnected, bool isRunning) {
-    final canStart = !isArmed && isConnected && _propsRemovedConfirmed && !isRunning;
+    final canStart =
+        !isArmed && isConnected && _propsRemovedConfirmed && !isRunning;
 
     return Row(
       children: [
@@ -1347,15 +1452,18 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
           child: ElevatedButton.icon(
             key: const Key('start_motor_test_button'),
             onPressed: canStart ? _startMotorTest : null,
-            icon: Icon(isRunning ? LucideIcons.loader : LucideIcons.play, size: 16),
+            icon: Icon(
+              isRunning ? LucideIcons.loader : LucideIcons.play,
+              size: 16,
+            ),
             label: Text(
               isRunning
                   ? (_selectedMotor.isAllMotors
-                      ? 'ALL 4 MOTORS ACTIVE (${_formatCountdown(_remainingSeconds)})'
-                      : 'TEST IN PROGRESS (${_formatCountdown(_remainingSeconds)})')
+                        ? 'ALL 4 MOTORS ACTIVE (${_formatCountdown(_remainingSeconds)})'
+                        : 'TEST IN PROGRESS (${_formatCountdown(_remainingSeconds)})')
                   : (_selectedMotor.isAllMotors
-                      ? 'START TEST ALL MOTORS'
-                      : 'START TEST MOTOR ${_selectedMotor.letterCode}'),
+                        ? 'START TEST ALL MOTORS'
+                        : 'START TEST MOTOR ${_selectedMotor.letterCode}'),
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
@@ -1364,7 +1472,9 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
               disabledBackgroundColor: AppTheme.surface,
               disabledForegroundColor: AppTheme.textSecondary,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
         ),
@@ -1378,14 +1488,18 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
             onPressed: _stopMotorTest,
             icon: const Icon(LucideIcons.square, size: 16),
             label: Text(
-              _selectedMotor.isAllMotors && isRunning ? 'STOP ALL MOTORS' : 'STOP TEST',
+              _selectedMotor.isAllMotors && isRunning
+                  ? 'STOP ALL MOTORS'
+                  : 'STOP TEST',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.danger,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
         ),
@@ -1475,7 +1589,9 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
                     ? 1.0 - (_remainingSeconds / _durationSeconds)
                     : 0.0,
                 backgroundColor: AppTheme.surface,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.success),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppTheme.success,
+                ),
                 minHeight: 6,
               ),
             ),
@@ -1495,14 +1611,18 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
               _lastResult!.ackResult != null
                   ? MotorTestResult.describeMavResult(_lastResult!.ackResult)
                   : 'No ACK returned (Timeout)',
-              valueColor: _lastResult!.success ? AppTheme.success : AppTheme.danger,
+              valueColor: _lastResult!.success
+                  ? AppTheme.success
+                  : AppTheme.danger,
             ),
             _buildDiagRow(
               'Service Origin',
               _lastResult!.isSimulated
                   ? 'Simulated Mode (Mock Test)'
                   : 'Live Flight Controller MAVLink Transport',
-              valueColor: _lastResult!.isSimulated ? AppTheme.warning : AppTheme.secondary,
+              valueColor: _lastResult!.isSimulated
+                  ? AppTheme.warning
+                  : AppTheme.secondary,
             ),
           ],
           if (_statusDetails != null) ...[
@@ -1516,7 +1636,10 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
               ),
               child: Text(
                 _statusDetails!,
-                style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.textSecondary,
+                ),
               ),
             ),
           ],
@@ -1535,7 +1658,10 @@ class _MotorTestScreenState extends ConsumerState<MotorTestScreen>
             width: 130,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppTheme.textSecondary,
+              ),
             ),
           ),
           Expanded(
@@ -1667,7 +1793,8 @@ class _QuadXFramePainter extends CustomPainter {
 
     // Draw Pulse halos around selected / active motors
     final target = activeMotor ?? selectedMotor;
-    final isAll = (selectedMotor == MotorSelection.allMotors) ||
+    final isAll =
+        (selectedMotor == MotorSelection.allMotors) ||
         (activeMotor == MotorSelection.allMotors);
     if (target == MotorSelection.motor1 || isAll) {
       _drawHalo(canvas, m1Pos);

@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>AerialEYE requires photo library access to save captured inspection photos and report media.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>AerialEYE requires permission to save inspection photos and video recordings to your device.</string>
 </dict>
 </plist>

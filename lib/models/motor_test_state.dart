@@ -1,13 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 /// Represents individual motor selection or simultaneous all-motors test.
-enum MotorSelection {
-  motor1,
-  motor2,
-  motor3,
-  motor4,
-  allMotors,
-}
+enum MotorSelection { motor1, motor2, motor3, motor4, allMotors }
 
 extension MotorSelectionExtension on MotorSelection {
   /// 1-indexed motor sequence number for MAVLink (1..4)

@@ -11,7 +11,8 @@ import sys
 import time
 import json
 import tempfile
-from flask import Flask, Response, jsonify
+import threading
+from flask import Flask, Response, jsonify, send_file, request
 
 app = Flask(__name__)
 
@@ -217,12 +218,221 @@ def status_endpoint():
     })
 
 
+@app.route("/capture")
+@app.route("/snapshot")
+def capture_endpoint():
+    """
+    Returns the latest high-resolution single JPEG frame.
+    Attaches current detection and telemetry metadata in headers.
+    """
+    frame_bytes, detections, telemetry = get_latest_data()
+    if frame_bytes is not None:
+        response = Response(frame_bytes, mimetype="image/jpeg")
+        response.headers["X-Detections"] = json.dumps(detections)
+        if telemetry:
+            response.headers["X-Telemetry"] = json.dumps(telemetry)
+        return response
+    return jsonify({"error": "No camera frame currently available"}), 503
+
+
+# Video recording state management
+RECORDINGS_DIR = os.path.join(tempfile.gettempdir(), "aerialeye_recordings")
+os.makedirs(RECORDINGS_DIR, exist_ok=True)
+
+recording_lock = threading.Lock()
+active_recording = {
+    "is_recording": False,
+    "recording_id": None,
+    "file_path": None,
+    "start_time": None,
+    "stop_event": None,
+    "thread": None,
+    "frame_count": 0,
+    "error": None,
+}
+
+
+def _record_worker(file_path, stop_event, fps=20.0):
+    try:
+        import cv2
+        import numpy as np
+        writer = None
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+
+        while not stop_event.is_set():
+            t0 = time.time()
+            frame_bytes, _, _ = get_latest_data()
+            if frame_bytes is not None:
+                nparr = np.frombuffer(frame_bytes, np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                if img is not None:
+                    h, w = img.shape[:2]
+                    if writer is None:
+                        writer = cv2.VideoWriter(file_path, fourcc, fps, (w, h))
+                    writer.write(img)
+                    with recording_lock:
+                        active_recording["frame_count"] += 1
+
+            dt = time.time() - t0
+            sleep_time = max(0.001, (1.0 / fps) - dt)
+            time.sleep(sleep_time)
+
+        if writer is not None:
+            writer.release()
+    except Exception as e:
+        with recording_lock:
+            active_recording["error"] = str(e)
+
+
+@app.route("/record/start", methods=["POST"])
+def record_start():
+    with recording_lock:
+        if active_recording["is_recording"]:
+            return jsonify({
+                "error": "A recording is already active.",
+                "recording_id": active_recording["recording_id"],
+                "start_time": active_recording["start_time"],
+            }), 409
+
+        rec_id = f"rec_{int(time.time())}"
+        file_path = os.path.join(RECORDINGS_DIR, f"{rec_id}.mp4")
+        stop_event = threading.Event()
+        worker = threading.Thread(
+            target=_record_worker,
+            args=(file_path, stop_event),
+            daemon=True,
+        )
+
+        active_recording["is_recording"] = True
+        active_recording["recording_id"] = rec_id
+        active_recording["file_path"] = file_path
+        active_recording["start_time"] = time.time()
+        active_recording["stop_event"] = stop_event
+        active_recording["thread"] = worker
+        active_recording["frame_count"] = 0
+        active_recording["error"] = None
+
+        worker.start()
+
+        return jsonify({
+            "status": "recording_started",
+            "recording_id": rec_id,
+            "start_time": active_recording["start_time"],
+        })
+
+
+@app.route("/record/status", methods=["GET"])
+def record_status():
+    with recording_lock:
+        is_rec = active_recording["is_recording"]
+        duration = time.time() - active_recording["start_time"] if is_rec and active_recording["start_time"] else 0.0
+        return jsonify({
+            "is_recording": is_rec,
+            "recording_id": active_recording["recording_id"],
+            "duration_seconds": round(duration, 1),
+            "frame_count": active_recording["frame_count"],
+            "error": active_recording["error"],
+        })
+
+
+@app.route("/record/stop", methods=["POST"])
+def record_stop():
+    with recording_lock:
+        if not active_recording["is_recording"]:
+            return jsonify({"error": "No recording is currently active."}), 400
+
+        rec_id = active_recording["recording_id"]
+        file_path = active_recording["file_path"]
+        active_recording["stop_event"].set()
+        thread = active_recording["thread"]
+
+    # Wait for writer to release
+    if thread is not None:
+        thread.join(timeout=3.0)
+
+    size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+    duration = time.time() - active_recording["start_time"] if active_recording["start_time"] else 0.0
+    frames = active_recording["frame_count"]
+
+    with recording_lock:
+        active_recording["is_recording"] = False
+        active_recording["thread"] = None
+        active_recording["stop_event"] = None
+
+    return jsonify({
+        "status": "recording_stopped",
+        "recording_id": rec_id,
+        "file_name": f"{rec_id}.mp4",
+        "size_bytes": size,
+        "duration_seconds": round(duration, 1),
+        "frame_count": frames,
+        "download_url": f"/record/download/{rec_id}",
+    })
+
+
+@app.route("/record/download/<recording_id>", methods=["GET"])
+def record_download(recording_id):
+    # Sanitize id
+    safe_id = os.path.basename(recording_id)
+    if not safe_id.endswith(".mp4"):
+        safe_id = f"{safe_id}.mp4"
+    path = os.path.join(RECORDINGS_DIR, safe_id)
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        return jsonify({"error": f"Recording {recording_id} not found on server."}), 404
+
+    from flask import send_file
+    return send_file(
+        path,
+        mimetype="video/mp4",
+        as_attachment=True,
+        download_name=safe_id,
+    )
+
+
+@app.route("/record/list", methods=["GET"])
+def record_list():
+    recordings = []
+    if os.path.exists(RECORDINGS_DIR):
+        for fname in sorted(os.listdir(RECORDINGS_DIR), reverse=True):
+            if fname.endswith(".mp4"):
+                full_path = os.path.join(RECORDINGS_DIR, fname)
+                try:
+                    stat = os.stat(full_path)
+                    recordings.append({
+                        "id": os.path.splitext(fname)[0],
+                        "file_name": fname,
+                        "size_bytes": stat.st_size,
+                        "created_at": stat.st_mtime,
+                        "download_url": f"/record/download/{os.path.splitext(fname)[0]}",
+                    })
+                except Exception:
+                    pass
+    return jsonify({"count": len(recordings), "recordings": recordings})
+
+
+@app.route("/record/<recording_id>", methods=["DELETE"])
+def record_delete(recording_id):
+    safe_id = os.path.basename(recording_id)
+    if not safe_id.endswith(".mp4"):
+        safe_id = f"{safe_id}.mp4"
+    path = os.path.join(RECORDINGS_DIR, safe_id)
+    if os.path.exists(path):
+        try:
+            os.remove(path)
+            return jsonify({"status": "deleted", "recording_id": recording_id})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    return jsonify({"error": "Recording not found"}), 404
+
+
 def main():
     print("=======================================================")
-    print(" AerialEYE — Flask MJPEG & Detection Server (Port 8080)")
-    print(" Endpoint: http://0.0.0.0:8080/video_feed")
-    print(" Detections: http://0.0.0.0:8080/detections")
-    print(" Status: http://0.0.0.0:8080/status")
+    print(" AerialEYE — Flask MJPEG, Recording & Detection Server")
+    print(" Video Feed:  http://0.0.0.0:8080/video_feed")
+    print(" Capture:     http://0.0.0.0:8080/capture")
+    print(" Record:      http://0.0.0.0:8080/record/start")
+    print(" Detections:  http://0.0.0.0:8080/detections")
+    print(" Status:      http://0.0.0.0:8080/status")
     print("=======================================================")
 
     app.run(host="0.0.0.0", port=8080, threaded=True, debug=False)

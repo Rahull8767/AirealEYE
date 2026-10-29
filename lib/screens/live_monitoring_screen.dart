@@ -2,18 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:aerial_eye/core/theme/app_theme.dart';
+import 'package:aerial_eye/models/camera_stream_state.dart';
 import 'package:aerial_eye/models/detection.dart';
 import 'package:aerial_eye/models/mission.dart';
 import 'package:aerial_eye/models/notification.dart';
 import 'package:aerial_eye/models/telemetry.dart';
-import 'package:aerial_eye/models/camera_stream_state.dart';
 import 'package:aerial_eye/providers/detection_provider.dart';
 import 'package:aerial_eye/providers/drone_provider.dart';
+import 'package:aerial_eye/providers/evidence_provider.dart';
 import 'package:aerial_eye/providers/mission_provider.dart';
 import 'package:aerial_eye/providers/notification_provider.dart';
 import 'package:aerial_eye/providers/pi_camera_provider.dart';
+import 'package:aerial_eye/providers/video_recording_provider.dart';
 import 'package:aerial_eye/screens/camera_connection_screen.dart';
+import 'package:aerial_eye/screens/gallery_screen.dart';
+import 'package:aerial_eye/screens/video_recordings_screen.dart';
 import 'package:aerial_eye/services/detection_storage_service.dart';
+import 'package:aerial_eye/services/evidence_storage_service.dart';
+import 'package:aerial_eye/services/video_recording_service.dart';
 import 'package:aerial_eye/widgets/camera/pi_camera_view.dart';
 
 class LiveMonitoringScreen extends ConsumerStatefulWidget {
@@ -25,13 +31,12 @@ class LiveMonitoringScreen extends ConsumerStatefulWidget {
 }
 
 class _LiveMonitoringScreenState extends ConsumerState<LiveMonitoringScreen> {
-  bool _isRecording = false;
   double _zoomLevel = 1.0;
+  bool _isCapturing = false;
 
   @override
   void initState() {
     super.initState();
-    // Auto-connect to camera stream if disconnected or configured
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final cameraService = ref.read(piCameraServiceProvider);
       if (cameraService.currentState.status == CameraStatus.disconnected) {
@@ -47,6 +52,238 @@ class _LiveMonitoringScreenState extends ConsumerState<LiveMonitoringScreen> {
     );
   }
 
+  Future<void> _handleCapturePhoto() async {
+    if (_isCapturing) return; // Prevent duplicate rapid requests
+    setState(() => _isCapturing = true);
+
+    final cameraService = ref.read(piCameraServiceProvider);
+    final telemetry =
+        ref.read(droneTelemetryProvider).value ?? DroneTelemetry.initial();
+    final missionState = ref.read(missionProvider);
+    final liveDetections = ref
+        .read(realDetectionServiceProvider)
+        .currentLiveDetections;
+
+    try {
+      final frame = cameraService.latestFrame;
+      if (frame == null || frame.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Unable to capture: Camera stream is offline or not receiving frames.',
+              ),
+              backgroundColor: AppTheme.danger,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Identify active YOLO detection in frame if present
+      DetectionType? detType;
+      double? confidence;
+      List<double>? boundingBox;
+      String severity = 'Low';
+
+      if (liveDetections.isNotEmpty) {
+        final primary = liveDetections.first;
+        detType = primary.type;
+        confidence = primary.confidence;
+        boundingBox = primary.boundingBox;
+        if (detType == DetectionType.pothole) {
+          severity = primary.confidence >= 0.85 ? 'Critical' : 'High';
+        } else if (detType == DetectionType.animal) {
+          severity = 'High';
+        } else if (detType == DetectionType.roadCrack) {
+          severity = 'Medium';
+        }
+      }
+
+      final hasValidGps =
+          telemetry.isConnected &&
+          telemetry.isGpsValid &&
+          telemetry.latitude != 0.0;
+      final missionId = missionState.activeMission?.id ?? 'MANUAL_INSPECTION';
+
+      // 1. Save to EvidenceStorageService
+      final evidence = await EvidenceStorageService.savePhoto(
+        bytes: frame,
+        missionId: missionId,
+        detectionType: detType,
+        confidence: confidence,
+        hasValidGps: hasValidGps,
+        latitude: hasValidGps ? telemetry.latitude : null,
+        longitude: hasValidGps ? telemetry.longitude : null,
+        altitude: telemetry.isConnected ? telemetry.altitude : null,
+        flightMode: telemetry.isConnected ? telemetry.flightMode : null,
+        isSimulated: false,
+      );
+
+      // 2. Also register in DetectionStorageService & detectionProvider
+      final detectionRecord = AiDetection(
+        id: evidence.id,
+        missionId: missionId,
+        type: detType ?? DetectionType.obstacle,
+        confidence: confidence ?? 1.0,
+        timestamp: evidence.timestamp,
+        latitude: hasValidGps ? telemetry.latitude : 0.0,
+        longitude: hasValidGps ? telemetry.longitude : 0.0,
+        altitude: telemetry.isConnected ? telemetry.altitude : 0.0,
+        boundingBox: boundingBox,
+        severity: severity,
+        imagePath: evidence.filePath,
+        isSimulated: false,
+        sequenceNumber: 0,
+      );
+
+      await DetectionStorageService.saveDetection(
+        detection: detectionRecord,
+        imageBytes: frame,
+      );
+
+      ref.read(evidenceProvider.notifier).addEvidence(evidence);
+      ref
+          .read(detectionProvider.notifier)
+          .addDetectionDirectly(detectionRecord);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(
+                  LucideIcons.checkCircle,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Photo saved to device: ${evidence.id}.jpg'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const GalleryScreen()),
+                    );
+                  },
+                  child: const Text(
+                    'VIEW',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppTheme.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save photo: ${e.toString()}'),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCapturing = false);
+    }
+  }
+
+  Future<void> _handleRecordingToggle() async {
+    final recordingService = ref.read(videoRecordingServiceProvider);
+    final cameraService = ref.read(piCameraServiceProvider);
+    final telemetry =
+        ref.read(droneTelemetryProvider).value ?? DroneTelemetry.initial();
+    final missionState = ref.read(missionProvider);
+
+    if (recordingService.isRecording) {
+      // Stop recording
+      final hasValidGps =
+          telemetry.isConnected &&
+          telemetry.isGpsValid &&
+          telemetry.latitude != 0.0;
+      final saved = await recordingService.stopRecording(
+        baseUrl: cameraService.config.baseUrl,
+        missionId: missionState.activeMission?.id ?? 'MANUAL_INSPECTION',
+        hasValidGps: hasValidGps,
+        latitude: hasValidGps ? telemetry.latitude : null,
+        longitude: hasValidGps ? telemetry.longitude : null,
+        altitude: telemetry.isConnected ? telemetry.altitude : null,
+        flightMode: telemetry.isConnected ? telemetry.flightMode : null,
+        fallbackLatestFrame: cameraService.latestFrame,
+      );
+
+      if (saved != null) {
+        ref.read(evidenceProvider.notifier).addEvidence(saved);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(
+                    LucideIcons.checkCircle,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Recording saved successfully (${saved.formattedDuration}, ${saved.formattedSize})',
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VideoRecordingsScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'LIBRARY',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: AppTheme.success,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    } else {
+      // Start recording
+      final hasValidGps =
+          telemetry.isConnected &&
+          telemetry.isGpsValid &&
+          telemetry.latitude != 0.0;
+      await recordingService.startRecording(
+        baseUrl: cameraService.config.baseUrl,
+        missionId: missionState.activeMission?.id ?? 'MANUAL_INSPECTION',
+        hasValidGps: hasValidGps,
+        latitude: hasValidGps ? telemetry.latitude : null,
+        longitude: hasValidGps ? telemetry.longitude : null,
+        altitude: telemetry.isConnected ? telemetry.altitude : null,
+        flightMode: telemetry.isConnected ? telemetry.flightMode : null,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final telemetryAsync = ref.watch(droneTelemetryProvider);
@@ -55,6 +292,10 @@ class _LiveMonitoringScreenState extends ConsumerState<LiveMonitoringScreen> {
     final cameraService = ref.watch(piCameraServiceProvider);
     final cameraStateAsync = ref.watch(piCameraStateProvider);
     final cameraState = cameraStateAsync.value ?? cameraService.currentState;
+    final recordingSnapshotAsync = ref.watch(videoRecordingSnapshotProvider);
+    final recordingSnapshot =
+        recordingSnapshotAsync.value ??
+        ref.watch(videoRecordingServiceProvider).currentSnapshot;
 
     final double progress = missionState.activeMission == null
         ? 0.0
@@ -62,6 +303,9 @@ class _LiveMonitoringScreenState extends ConsumerState<LiveMonitoringScreen> {
         ? (telemetry.distance / (missionState.plannedWaypoints.length * 280))
               .clamp(0.0, 1.0)
         : 0.0;
+
+    final isRecording = recordingSnapshot.state.isActive;
+    final isTransitioning = recordingSnapshot.state.isTransitioning;
 
     return Scaffold(
       body: Column(
@@ -74,7 +318,7 @@ class _LiveMonitoringScreenState extends ConsumerState<LiveMonitoringScreen> {
                 // Real Raspberry Pi Camera Stream
                 PiCameraView(
                   zoomLevel: _zoomLevel,
-                  isRecording: _isRecording,
+                  isRecording: isRecording,
                   onOpenSettings: _openCameraSettings,
                 ),
 
@@ -86,39 +330,51 @@ class _LiveMonitoringScreenState extends ConsumerState<LiveMonitoringScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Recording status pill
+                      // Recording status pill with live duration
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.6),
+                          color: Colors.black.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1),
+                            color: isRecording
+                                ? AppTheme.danger
+                                : Colors.white12,
                             width: 0.8,
                           ),
                         ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              width: 6,
-                              height: 6,
+                              width: 8,
+                              height: 8,
                               decoration: BoxDecoration(
-                                color: _isRecording
+                                color: isRecording
                                     ? AppTheme.danger
-                                    : Colors.white54,
+                                    : isTransitioning
+                                    ? AppTheme.warning
+                                    : Colors.white38,
                                 shape: BoxShape.circle,
                               ),
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              _isRecording ? 'REC' : 'STANDBY',
-                              style: const TextStyle(
+                              isRecording
+                                  ? 'REC ${recordingSnapshot.formattedDuration}'
+                                  : isTransitioning
+                                  ? 'PROCESSING...'
+                                  : 'STANDBY',
+                              style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: isRecording
+                                    ? AppTheme.danger
+                                    : Colors.white,
+                                fontFamily: isRecording ? 'monospace' : null,
                               ),
                             ),
                           ],
@@ -239,10 +495,10 @@ class _LiveMonitoringScreenState extends ConsumerState<LiveMonitoringScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
+                      color: Colors.black.withValues(alpha: 0.75),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: Colors.white.withValues(alpha: 0.15),
                         width: 0.8,
                       ),
                     ),
@@ -270,85 +526,55 @@ class _LiveMonitoringScreenState extends ConsumerState<LiveMonitoringScreen> {
                             }
                           },
                         ),
-                        // Recording toggle
+
+                        // Video Recording Toggle Button (Requirement 4)
                         IconButton(
-                          tooltip: _isRecording
+                          tooltip: isRecording
                               ? 'Stop Recording'
                               : 'Start Recording',
-                          icon: Icon(
-                            _isRecording
-                                ? LucideIcons.videoOff
-                                : LucideIcons.video,
-                            color: _isRecording
-                                ? AppTheme.danger
-                                : Colors.white,
-                            size: 18,
-                          ),
-                          onPressed: () =>
-                              setState(() => _isRecording = !_isRecording),
-                        ),
-                        // Snapshot capture
-                        IconButton(
-                          tooltip: 'Capture Frame',
-                          icon: const Icon(
-                            LucideIcons.camera,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                          onPressed: () async {
-                            final frame = cameraService.latestFrame;
-                            if (frame != null && frame.isNotEmpty) {
-                              final currentTelemetry =
-                                  ref.read(droneTelemetryProvider).value ??
-                                  DroneTelemetry.initial();
-                              final snap = AiDetection(
-                                id: 'snapshot_${DateTime.now().millisecondsSinceEpoch}',
-                                missionId:
-                                    missionState.activeMission?.id ??
-                                    'MANUAL_INSPECTION',
-                                type: DetectionType.obstacle,
-                                confidence: 1.0,
-                                timestamp: DateTime.now(),
-                                latitude: currentTelemetry.latitude,
-                                longitude: currentTelemetry.longitude,
-                                altitude: currentTelemetry.altitude,
-                                severity: 'Low',
-                                imagePath: '',
-                                isSimulated: false,
-                                sequenceNumber: 0,
-                              );
-
-                              final saved =
-                                  await DetectionStorageService.saveDetection(
-                                    detection: snap,
-                                    imageBytes: frame,
-                                  );
-                              ref
-                                  .read(detectionProvider.notifier)
-                                  .addDetectionDirectly(saved);
-
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Camera frame captured & saved to Gallery.',
-                                    ),
-                                    backgroundColor: AppTheme.success,
+                          icon: isTransitioning
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppTheme.warning,
                                   ),
-                                );
-                              }
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'No camera frame available. Ensure feed is connected.',
-                                  ),
-                                  backgroundColor: AppTheme.danger,
+                                )
+                              : Icon(
+                                  isRecording
+                                      ? LucideIcons.stopCircle
+                                      : LucideIcons.video,
+                                  color: isRecording
+                                      ? AppTheme.danger
+                                      : Colors.white,
+                                  size: 19,
                                 ),
-                              );
-                            }
-                          },
+                          onPressed: isTransitioning
+                              ? null
+                              : _handleRecordingToggle,
                         ),
+
+                        // Snapshot Capture Button (Requirement 3)
+                        IconButton(
+                          tooltip: 'Capture Photo',
+                          icon: _isCapturing
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppTheme.secondary,
+                                  ),
+                                )
+                              : const Icon(
+                                  LucideIcons.camera,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                          onPressed: _isCapturing ? null : _handleCapturePhoto,
+                        ),
+
                         // Zoom toggle
                         IconButton(
                           tooltip: _zoomLevel > 1.0
@@ -367,12 +593,31 @@ class _LiveMonitoringScreenState extends ConsumerState<LiveMonitoringScreen> {
                             });
                           },
                         ),
+
+                        // Quick Navigation to Video Library
+                        IconButton(
+                          tooltip: 'Open Video Library',
+                          icon: const Icon(
+                            LucideIcons.film,
+                            color: Colors.white70,
+                            size: 18,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const VideoRecordingsScreen(),
+                              ),
+                            );
+                          },
+                        ),
+
                         // Quick Camera Settings navigation
                         IconButton(
                           tooltip: 'Camera Network Settings',
                           icon: const Icon(
                             LucideIcons.settings,
-                            color: Colors.white,
+                            color: Colors.white70,
                             size: 18,
                           ),
                           onPressed: _openCameraSettings,
@@ -441,47 +686,49 @@ class _LiveMonitoringScreenState extends ConsumerState<LiveMonitoringScreen> {
                           'Altitude AGL',
                           telemetry.isConnected
                               ? '${telemetry.altitude.toStringAsFixed(1)} m'
-                              : '0.0 m',
+                              : 'Unavailable',
                         ),
                         _buildHUDItem(
                           'Groundspeed',
                           telemetry.isConnected
                               ? '${telemetry.speed.toStringAsFixed(1)} m/s'
-                              : '0.0 m/s',
+                              : 'Unavailable',
                         ),
                         _buildHUDItem(
                           'Flight distance',
                           telemetry.isConnected
                               ? '${telemetry.distance.toStringAsFixed(0)} m'
-                              : '0 m',
+                              : 'Unavailable',
                         ),
                         _buildHUDItem(
                           'Heading Angle',
                           telemetry.isConnected
                               ? '${telemetry.heading.toStringAsFixed(0)}°'
-                              : '0°',
+                              : 'Unavailable',
                         ),
                         _buildHUDItem(
                           'Battery Volt',
-                          telemetry.isConnected
+                          telemetry.isConnected && telemetry.batteryVoltage > 0
                               ? '${telemetry.batteryVoltage} V'
-                              : '0.0 V',
+                              : 'Unavailable',
                         ),
                         _buildHUDItem(
                           'GPS Satellites',
                           telemetry.isConnected
                               ? '${telemetry.satellites} Sats'
-                              : '0 Sats',
+                              : 'Unavailable',
                         ),
                         _buildHUDItem(
                           'RF Signal RSSI',
                           telemetry.isConnected
                               ? '${telemetry.rssi.toStringAsFixed(0)}%'
-                              : '0%',
+                              : 'Unavailable',
                         ),
                         _buildHUDItem(
                           'MAVLink Link',
-                          telemetry.isConnected ? 'ARMED' : 'STANDBY',
+                          telemetry.isConnected
+                              ? (telemetry.isArmed ? 'ARMED' : 'DISARMED')
+                              : 'OFFLINE',
                         ),
                       ],
                     ),

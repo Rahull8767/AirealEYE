@@ -6,6 +6,7 @@ import 'package:aerial_eye/models/mission.dart';
 import 'package:aerial_eye/providers/mission_provider.dart';
 import 'package:aerial_eye/widgets/glass_panel.dart';
 import 'package:aerial_eye/widgets/animated_button.dart';
+import 'package:aerial_eye/screens/reports_screen.dart';
 
 class MissionHistoryScreen extends ConsumerStatefulWidget {
   const MissionHistoryScreen({super.key});
@@ -220,8 +221,12 @@ class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
                         }),
                         const SizedBox(width: 8),
                         _buildCardBtn('Report', LucideIcons.fileText, () {
-                          // Quick dialog
-                          _showReportDetails(context, m);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ReportsScreen(),
+                            ),
+                          );
                         }),
                       ],
                     ),
@@ -276,24 +281,6 @@ class _MissionHistoryScreenState extends ConsumerState<MissionHistoryScreen> {
           minimumSize: Size.zero,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-      ),
-    );
-  }
-
-  void _showReportDetails(BuildContext context, Mission m) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(m.name),
-        content: Text(
-          'Detailed inspection log for flight: ${m.id}.\n\nDistance: ${m.distance} km\nDuration: ${m.duration.inMinutes} mins\nStatus: ${m.status.name.toUpperCase()}\nDate: ${m.date.toString()}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
   }

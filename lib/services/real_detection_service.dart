@@ -356,6 +356,7 @@ class RealDetectionService implements DetectionService {
     return type == DetectionType.person ||
         type == DetectionType.animal ||
         type == DetectionType.pothole ||
+        type == DetectionType.roadCrack ||
         type == DetectionType.waste ||
         type == DetectionType.garbage;
   }
@@ -386,7 +387,7 @@ class RealDetectionService implements DetectionService {
       boundingBox: [0.3, 0.4, 0.6, 0.7],
       severity: 'High',
       imagePath: '',
-      isSimulated: false,
+      isSimulated: true,
       sequenceNumber: _sequenceCounter,
     );
   }

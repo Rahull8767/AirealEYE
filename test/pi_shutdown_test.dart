@@ -76,23 +76,33 @@ void main() {
 
     test('Status display strings for all enum states', () {
       expect(
-        PiShutdownState.initial().copyWith(status: PiPowerStatus.online).statusDisplay,
+        PiShutdownState.initial()
+            .copyWith(status: PiPowerStatus.online)
+            .statusDisplay,
         equals('Online (Ready)'),
       );
       expect(
-        PiShutdownState.initial().copyWith(status: PiPowerStatus.shuttingDown).statusDisplay,
+        PiShutdownState.initial()
+            .copyWith(status: PiPowerStatus.shuttingDown)
+            .statusDisplay,
         equals('Shutting Down...'),
       );
       expect(
-        PiShutdownState.initial().copyWith(status: PiPowerStatus.shutdownComplete).statusDisplay,
+        PiShutdownState.initial()
+            .copyWith(status: PiPowerStatus.shutdownComplete)
+            .statusDisplay,
         equals('Powered Off (Offline)'),
       );
       expect(
-        PiShutdownState.initial().copyWith(status: PiPowerStatus.offline).statusDisplay,
+        PiShutdownState.initial()
+            .copyWith(status: PiPowerStatus.offline)
+            .statusDisplay,
         equals('Offline (Unreachable)'),
       );
       expect(
-        PiShutdownState.initial().copyWith(status: PiPowerStatus.error).statusDisplay,
+        PiShutdownState.initial()
+            .copyWith(status: PiPowerStatus.error)
+            .statusDisplay,
         equals('Connection Error'),
       );
     });
@@ -129,55 +139,64 @@ void main() {
       expect(result.success, isFalse);
     });
 
-    test('Blocks shutdown when drone is IN ACTIVE FLIGHT (altitude > 1m)', () async {
-      mockDrone.setTelemetry(
-        DroneTelemetry.initial().copyWith(
-          armed: false,
-          relativeAltitude: 2.5,
-          speed: 0.2,
-          flightMode: 'STABILIZE',
-        ),
-      );
+    test(
+      'Blocks shutdown when drone is IN ACTIVE FLIGHT (altitude > 1m)',
+      () async {
+        mockDrone.setTelemetry(
+          DroneTelemetry.initial().copyWith(
+            armed: false,
+            relativeAltitude: 2.5,
+            speed: 0.2,
+            flightMode: 'STABILIZE',
+          ),
+        );
 
-      final safetyError = service.validateFlightSafety();
-      expect(safetyError, isNotNull);
-      expect(safetyError, contains('ACTIVE FLIGHT'));
+        final safetyError = service.validateFlightSafety();
+        expect(safetyError, isNotNull);
+        expect(safetyError, contains('ACTIVE FLIGHT'));
 
-      final result = await service.requestShutdown();
-      expect(result.isBlockedByFlight, isTrue);
-      expect(result.success, isFalse);
-    });
+        final result = await service.requestShutdown();
+        expect(result.isBlockedByFlight, isTrue);
+        expect(result.success, isFalse);
+      },
+    );
 
-    test('Blocks shutdown when drone is in AUTO / GUIDED mission mode', () async {
-      mockDrone.setTelemetry(
-        DroneTelemetry.initial().copyWith(
-          armed: false,
-          relativeAltitude: 0.0,
-          flightMode: 'AUTO',
-        ),
-      );
+    test(
+      'Blocks shutdown when drone is in AUTO / GUIDED mission mode',
+      () async {
+        mockDrone.setTelemetry(
+          DroneTelemetry.initial().copyWith(
+            armed: false,
+            relativeAltitude: 0.0,
+            flightMode: 'AUTO',
+          ),
+        );
 
-      final safetyError = service.validateFlightSafety();
-      expect(safetyError, isNotNull);
-      expect(safetyError, contains('AUTO'));
+        final safetyError = service.validateFlightSafety();
+        expect(safetyError, isNotNull);
+        expect(safetyError, contains('AUTO'));
 
-      final result = await service.requestShutdown();
-      expect(result.isBlockedByFlight, isTrue);
-    });
+        final result = await service.requestShutdown();
+        expect(result.isBlockedByFlight, isTrue);
+      },
+    );
 
-    test('Permits shutdown when drone is on the ground, disarmed, in STABILIZE mode', () {
-      mockDrone.setTelemetry(
-        DroneTelemetry.initial().copyWith(
-          armed: false,
-          relativeAltitude: 0.0,
-          speed: 0.0,
-          flightMode: 'STABILIZE',
-        ),
-      );
+    test(
+      'Permits shutdown when drone is on the ground, disarmed, in STABILIZE mode',
+      () {
+        mockDrone.setTelemetry(
+          DroneTelemetry.initial().copyWith(
+            armed: false,
+            relativeAltitude: 0.0,
+            speed: 0.0,
+            flightMode: 'STABILIZE',
+          ),
+        );
 
-      final safetyError = service.validateFlightSafety();
-      expect(safetyError, isNull);
-    });
+        final safetyError = service.validateFlightSafety();
+        expect(safetyError, isNull);
+      },
+    );
   });
 
   group('HTTP Communication with Mock Server', () {
@@ -195,7 +214,8 @@ void main() {
 
       server.listen((HttpRequest request) async {
         final path = request.uri.path;
-        final authHeader = request.headers.value('x-aerialeye-token') ??
+        final authHeader =
+            request.headers.value('x-aerialeye-token') ??
             request.headers.value('authorization');
         await request.drain<void>();
 
@@ -203,16 +223,18 @@ void main() {
           request.response
             ..statusCode = HttpStatus.ok
             ..headers.contentType = ContentType.json
-            ..write(jsonEncode({
-              'status': 'online',
-              'hostname': 'aerialeye',
-              'shutdown_in_progress': serverShutdownCalled,
-              'uptime_seconds': 123.4,
-            }));
+            ..write(
+              jsonEncode({
+                'status': 'online',
+                'hostname': 'aerialeye',
+                'shutdown_in_progress': serverShutdownCalled,
+                'uptime_seconds': 123.4,
+              }),
+            );
           await request.response.close();
         } else if (path == '/shutdown') {
-          final isAuthorized = authHeader == testSecret ||
-              authHeader == 'Bearer $testSecret';
+          final isAuthorized =
+              authHeader == testSecret || authHeader == 'Bearer $testSecret';
 
           if (!isAuthorized) {
             request.response
@@ -236,11 +258,13 @@ void main() {
           request.response
             ..statusCode = HttpStatus.ok
             ..headers.contentType = ContentType.json
-            ..write(jsonEncode({
-              'status': 'shutting_down',
-              'message': 'Raspberry Pi safe shutdown initiated.',
-              'delay_seconds': 1.5,
-            }));
+            ..write(
+              jsonEncode({
+                'status': 'shutting_down',
+                'message': 'Raspberry Pi safe shutdown initiated.',
+                'delay_seconds': 1.5,
+              }),
+            );
           await request.response.close();
         } else {
           request.response
@@ -265,14 +289,17 @@ void main() {
       await server.close(force: true);
     });
 
-    test('checkStatus parses 200 JSON and transitions to online state', () async {
-      final state = await service.checkStatus();
+    test(
+      'checkStatus parses 200 JSON and transitions to online state',
+      () async {
+        final state = await service.checkStatus();
 
-      expect(state.status, equals(PiPowerStatus.online));
-      expect(state.hostname, equals('aerialeye'));
-      expect(state.uptimeSeconds, equals(123.4));
-      expect(state.isOnline, isTrue);
-    });
+        expect(state.status, equals(PiPowerStatus.online));
+        expect(state.hostname, equals('aerialeye'));
+        expect(state.uptimeSeconds, equals(123.4));
+        expect(state.isOnline, isTrue);
+      },
+    );
 
     test('requestShutdown with valid token returns HTTP 200 success', () async {
       final result = await service.requestShutdown(force: true);
@@ -284,40 +311,52 @@ void main() {
       expect(service.currentState.status, equals(PiPowerStatus.shuttingDown));
     });
 
-    test('requestShutdown with invalid token returns HTTP 401 unauthorized', () async {
-      service.updateConfig(
-        service.config.copyWith(secretToken: 'WRONG_SECRET_TOKEN'),
-      );
+    test(
+      'requestShutdown with invalid token returns HTTP 401 unauthorized',
+      () async {
+        service.updateConfig(
+          service.config.copyWith(secretToken: 'WRONG_SECRET_TOKEN'),
+        );
 
-      final result = await service.requestShutdown(force: true);
+        final result = await service.requestShutdown(force: true);
 
-      expect(result.success, isFalse);
-      expect(result.statusCode, equals(401));
-      expect(service.currentState.status, equals(PiPowerStatus.error));
-      expect(service.currentState.errorMessage, contains('Invalid shutdown secret token'));
-    });
+        expect(result.success, isFalse);
+        expect(result.statusCode, equals(401));
+        expect(service.currentState.status, equals(PiPowerStatus.error));
+        expect(
+          service.currentState.errorMessage,
+          contains('Invalid shutdown secret token'),
+        );
+      },
+    );
 
-    test('requestShutdown handles HTTP 409 conflict when already in progress', () async {
-      serverShutdownCalled = true; // Simulate already shutting down on server
+    test(
+      'requestShutdown handles HTTP 409 conflict when already in progress',
+      () async {
+        serverShutdownCalled = true; // Simulate already shutting down on server
 
-      final result = await service.requestShutdown(force: true);
+        final result = await service.requestShutdown(force: true);
 
-      expect(result.success, isTrue);
-      expect(result.statusCode, equals(409));
-      expect(result.message, contains('already in progress'));
-      expect(service.currentState.status, equals(PiPowerStatus.shuttingDown));
-    });
+        expect(result.success, isTrue);
+        expect(result.statusCode, equals(409));
+        expect(result.message, contains('already in progress'));
+        expect(service.currentState.status, equals(PiPowerStatus.shuttingDown));
+      },
+    );
 
-    test('Unreachable server marks state as offline with error message', () async {
-      service.updateConfig(
-        service.config.copyWith(port: 59999), // Closed port
-      );
+    test(
+      'Unreachable server marks state as offline with error message',
+      () async {
+        service.updateConfig(
+          service.config.copyWith(port: 59999), // Closed port
+        );
 
-      final state = await service.checkStatus();
+        final state = await service.checkStatus();
 
-      expect(state.status, equals(PiPowerStatus.offline));
-      expect(state.errorMessage, isNotNull);
-      expect(state.isOnline, isFalse);
-    });
+        expect(state.status, equals(PiPowerStatus.offline));
+        expect(state.errorMessage, isNotNull);
+        expect(state.isOnline, isFalse);
+      },
+    );
   });
 }

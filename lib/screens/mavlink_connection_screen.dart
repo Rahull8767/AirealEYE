@@ -354,9 +354,10 @@ class _MavlinkConnectionScreenState
                             height: 8,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: (_transport == MavlinkTransport.http
+                              color:
+                                  (_transport == MavlinkTransport.http
                                       ? (diagnostics.socketStatus ==
-                                          'HTTP POLLING')
+                                            'HTTP POLLING')
                                       : (diagnostics.socketStatus == 'BOUND'))
                                   ? AppTheme.success
                                   : AppTheme.danger,
@@ -427,10 +428,7 @@ class _MavlinkConnectionScreenState
                       'Detected Protocol:',
                       diagnostics.mavlinkProtocolVersion,
                     ),
-                    _buildDiagItem(
-                      'Target Vehicle:',
-                      diagnostics.vehicleType,
-                    ),
+                    _buildDiagItem('Target Vehicle:', diagnostics.vehicleType),
                     _buildDiagItem(
                       'Watchdog Status:',
                       diagnostics.heartbeatHealth.name.toUpperCase(),
@@ -489,13 +487,14 @@ class _MavlinkConnectionScreenState
                         child: ElevatedButton.icon(
                           onPressed: () {
                             final droneService = ref.read(droneServiceProvider);
-                            final isRunning = _transport == MavlinkTransport.http
+                            final isRunning =
+                                _transport == MavlinkTransport.http
                                 ? (droneService.connectionState ==
-                                        DroneConnectionState.connected ||
-                                    droneService.connectionState ==
-                                        DroneConnectionState.connecting ||
-                                    diagnostics.socketStatus ==
-                                        'HTTP POLLING')
+                                          DroneConnectionState.connected ||
+                                      droneService.connectionState ==
+                                          DroneConnectionState.connecting ||
+                                      diagnostics.socketStatus ==
+                                          'HTTP POLLING')
                                 : (diagnostics.socketStatus == 'BOUND');
 
                             if (isRunning) {
@@ -514,32 +513,32 @@ class _MavlinkConnectionScreenState
                           icon: Icon(
                             (_transport == MavlinkTransport.http
                                     ? (diagnostics.socketStatus ==
-                                        'HTTP POLLING')
+                                          'HTTP POLLING')
                                     : (diagnostics.socketStatus == 'BOUND'))
                                 ? LucideIcons.square
                                 : (_transport == MavlinkTransport.http
-                                    ? LucideIcons.globe
-                                    : LucideIcons.play),
+                                      ? LucideIcons.globe
+                                      : LucideIcons.play),
                             size: 15,
                           ),
                           label: Text(
                             _transport == MavlinkTransport.http
                                 ? (diagnostics.socketStatus == 'HTTP POLLING'
-                                    ? 'Stop HTTP Telemetry'
-                                    : 'Start HTTP Telemetry')
+                                      ? 'Stop HTTP Telemetry'
+                                      : 'Start HTTP Telemetry')
                                 : (diagnostics.socketStatus == 'BOUND'
-                                    ? 'Stop UDP Listener'
-                                    : 'Start UDP Listener'),
+                                      ? 'Stop UDP Listener'
+                                      : 'Start UDP Listener'),
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: (_transport ==
-                                        MavlinkTransport.http
+                            backgroundColor:
+                                (_transport == MavlinkTransport.http
                                     ? (diagnostics.socketStatus ==
-                                        'HTTP POLLING')
+                                          'HTTP POLLING')
                                     : (diagnostics.socketStatus == 'BOUND'))
                                 ? AppTheme.danger.withOpacity(0.8)
                                 : AppTheme.primary,
@@ -1261,7 +1260,11 @@ class _MavlinkConnectionScreenState
                     ),
                   );
                 },
-                icon: const Icon(LucideIcons.fan, size: 16, color: AppTheme.secondary),
+                icon: const Icon(
+                  LucideIcons.fan,
+                  size: 16,
+                  color: AppTheme.secondary,
+                ),
                 label: const Text(
                   'Open Motor Test Panel (Bench Diagnostics)',
                   style: TextStyle(
@@ -1400,9 +1403,7 @@ class _MavlinkConnectionScreenState
       backgroundColor: isCurrent
           ? AppTheme.secondary.withOpacity(0.3)
           : AppTheme.surface,
-      side: BorderSide(
-        color: isCurrent ? AppTheme.secondary : AppTheme.border,
-      ),
+      side: BorderSide(color: isCurrent ? AppTheme.secondary : AppTheme.border),
       onPressed: () {
         setState(() {
           _httpBaseUrlCtrl.text = url;
@@ -1442,8 +1443,9 @@ class _MavlinkConnectionScreenState
               children: [
                 Icon(
                   icon,
-                  color:
-                      isSelected ? AppTheme.secondary : AppTheme.textSecondary,
+                  color: isSelected
+                      ? AppTheme.secondary
+                      : AppTheme.textSecondary,
                   size: 20,
                 ),
                 const Spacer(),

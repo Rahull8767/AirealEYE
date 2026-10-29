@@ -188,7 +188,8 @@ class MavlinkDroneService implements DroneService {
     _logDiagnostic(
       "Config updated: transport=${newConfig.transport.name}, localPort=${newConfig.localPort}, httpUrl=${newConfig.httpBaseUrl}",
     );
-    if (transportChanged && _connectionState == DroneConnectionState.connected) {
+    if (transportChanged &&
+        _connectionState == DroneConnectionState.connected) {
       disconnect();
       connect();
     }
@@ -774,7 +775,8 @@ class MavlinkDroneService implements DroneService {
         );
       }
 
-      if (_mockSocketInstance == null && (_heartbeatCount == 1 || _heartbeatCount % 20 == 0)) {
+      if (_mockSocketInstance == null &&
+          (_heartbeatCount == 1 || _heartbeatCount % 20 == 0)) {
         requestDataStreams();
       }
 
@@ -2189,7 +2191,8 @@ class MavlinkDroneService implements DroneService {
       return MotorTestResult(
         success: true,
         ackResult: 0,
-        message: "Simulated Motor $motorInstance test accepted for ${durationSeconds}s",
+        message:
+            "Simulated Motor $motorInstance test accepted for ${durationSeconds}s",
         commandId: 209,
         motorIndex: motorInstance,
         testAll: false,
@@ -2279,7 +2282,8 @@ class MavlinkDroneService implements DroneService {
       return MotorTestResult(
         success: true,
         ackResult: 0,
-        message: "Simulated simultaneous test of all 4 motors accepted and running for ${durationSeconds}s",
+        message:
+            "Simulated simultaneous test of all 4 motors accepted and running for ${durationSeconds}s",
         commandId: 209,
         motorIndex: 1,
         testAll: true,
@@ -2313,7 +2317,8 @@ class MavlinkDroneService implements DroneService {
           return MotorTestResult(
             success: false,
             ackResult: result.ackResult,
-            message: "Simultaneous motor test aborted at Motor $motor: ${result.message}",
+            message:
+                "Simultaneous motor test aborted at Motor $motor: ${result.message}",
             commandId: 209,
             motorIndex: motor,
             testAll: true,
@@ -2334,7 +2339,8 @@ class MavlinkDroneService implements DroneService {
       return MotorTestResult(
         success: true,
         ackResult: 0,
-        message: "Simultaneous test of all 4 motors accepted by flight controller",
+        message:
+            "Simultaneous test of all 4 motors accepted by flight controller",
         commandId: 209,
         motorIndex: 1,
         testAll: true,
@@ -2488,5 +2494,5 @@ class MavlinkDroneService implements DroneService {
       isSimulated: false,
       timestamp: DateTime.now(),
     );
-    }
+  }
 }

@@ -148,8 +148,8 @@ class DroneTelemetry {
       hasReceivedBattery ? '${batteryVoltage.toStringAsFixed(1)} V' : '--';
   String get batteryPercentDisplay =>
       hasReceivedBattery && batteryPercentage >= 0
-          ? '${batteryPercentage.toStringAsFixed(0)}%'
-          : '--';
+      ? '${batteryPercentage.toStringAsFixed(0)}%'
+      : '--';
   bool get isBatteryPercentAvailable =>
       hasReceivedBattery && batteryPercentage >= 0;
   String get satellitesDisplay =>
@@ -242,4 +242,8 @@ class DroneTelemetry {
       lastVfrHudUpdate: lastVfrHudUpdate ?? this.lastVfrHudUpdate,
     );
   }
+
+  bool get isArmed => armed;
+  bool get isGpsValid =>
+      (hasReceivedGps || gpsFix >= 2) && latitude != 0.0 && longitude != 0.0;
 }

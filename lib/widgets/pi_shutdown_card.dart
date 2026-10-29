@@ -82,8 +82,7 @@ class _PiShutdownCardState extends ConsumerState<PiShutdownCard> {
     final service = ref.read(piShutdownServiceProvider);
     final drone = ref.read(droneServiceProvider);
     final telemetry = drone.currentTelemetry;
-    final isConnected =
-        drone.connectionState == DroneConnectionState.connected;
+    final isConnected = drone.connectionState == DroneConnectionState.connected;
 
     // 1. Check if drone is armed or flying -> Hard block
     final flightBlocker = service.validateFlightSafety();
@@ -95,7 +94,11 @@ class _PiShutdownCardState extends ConsumerState<PiShutdownCard> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          icon: const Icon(LucideIcons.shieldAlert, color: AppTheme.danger, size: 36),
+          icon: const Icon(
+            LucideIcons.shieldAlert,
+            color: AppTheme.danger,
+            size: 36,
+          ),
           title: const Text('Shutdown Blocked for Flight Safety'),
           content: Text(
             flightBlocker,
@@ -185,7 +188,9 @@ class _PiShutdownCardState extends ConsumerState<PiShutdownCard> {
               child: Row(
                 children: [
                   Icon(
-                    isConnected ? LucideIcons.checkCircle2 : LucideIcons.alertCircle,
+                    isConnected
+                        ? LucideIcons.checkCircle2
+                        : LucideIcons.alertCircle,
                     color: isConnected ? AppTheme.success : Colors.amber,
                     size: 16,
                   ),
@@ -356,7 +361,10 @@ class _PiShutdownCardState extends ConsumerState<PiShutdownCard> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(LucideIcons.refreshCw, size: 13),
-                    label: const Text('Refresh', style: TextStyle(fontSize: 11)),
+                    label: const Text(
+                      'Refresh',
+                      style: TextStyle(fontSize: 11),
+                    ),
                     style: TextButton.styleFrom(
                       foregroundColor: AppTheme.secondary,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -379,7 +387,10 @@ class _PiShutdownCardState extends ConsumerState<PiShutdownCard> {
                   state.status == PiPowerStatus.error) ...[
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.danger.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
@@ -415,10 +426,10 @@ class _PiShutdownCardState extends ConsumerState<PiShutdownCard> {
                     child: ElevatedButton.icon(
                       onPressed:
                           (_isShuttingDown ||
-                                  state.status == PiPowerStatus.shuttingDown ||
-                                  isFlightActive)
-                              ? null
-                              : _handleShutdownPressed,
+                              state.status == PiPowerStatus.shuttingDown ||
+                              isFlightActive)
+                          ? null
+                          : _handleShutdownPressed,
                       icon: _isShuttingDown
                           ? const SizedBox(
                               width: 16,
@@ -433,14 +444,15 @@ class _PiShutdownCardState extends ConsumerState<PiShutdownCard> {
                         _isShuttingDown
                             ? 'Shutting Down...'
                             : (state.status == PiPowerStatus.shutdownComplete
-                                ? 'Pi Powered Down'
-                                : 'Shut Down Raspberry Pi'),
+                                  ? 'Pi Powered Down'
+                                  : 'Shut Down Raspberry Pi'),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.danger,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor:
-                            AppTheme.danger.withValues(alpha: 0.3),
+                        disabledBackgroundColor: AppTheme.danger.withValues(
+                          alpha: 0.3,
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -531,14 +543,13 @@ class _PiShutdownCardState extends ConsumerState<PiShutdownCard> {
                   obscureText: _obscureToken,
                   decoration: InputDecoration(
                     labelText: 'Authentication Secret Token',
-                    hintText: 'Secret configured in /etc/aerialeye/shutdown.conf',
+                    hintText:
+                        'Secret configured in /etc/aerialeye/shutdown.conf',
                     isDense: true,
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscureToken
-                            ? LucideIcons.eye
-                            : LucideIcons.eyeOff,
+                        _obscureToken ? LucideIcons.eye : LucideIcons.eyeOff,
                         size: 16,
                       ),
                       onPressed: () {

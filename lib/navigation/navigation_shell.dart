@@ -21,6 +21,7 @@ import 'package:aerial_eye/screens/camera_connection_screen.dart';
 import 'package:aerial_eye/screens/ai_detections_screen.dart';
 import 'package:aerial_eye/screens/mission_history_screen.dart';
 import 'package:aerial_eye/screens/gallery_screen.dart';
+import 'package:aerial_eye/screens/video_recordings_screen.dart';
 import 'package:aerial_eye/screens/notifications_screen.dart';
 import 'package:aerial_eye/screens/settings_screen.dart';
 import 'package:aerial_eye/screens/motor_test_screen.dart';
@@ -389,11 +390,20 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
             Navigator.pop(context);
             setState(() => _currentTabIndex = 4);
           }),
-          _buildDrawerItem(LucideIcons.image, 'Gallery Grid', () {
+          _buildDrawerItem(LucideIcons.image, 'Captured Photos & Evidence', () {
             Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const GalleryScreen()),
+            );
+          }),
+          _buildDrawerItem(LucideIcons.film, 'Video Recordings Library', () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const VideoRecordingsScreen(),
+              ),
             );
           }),
           _buildDrawerItem(LucideIcons.bell, 'Notifications Log', () {

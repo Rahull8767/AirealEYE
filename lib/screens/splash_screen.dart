@@ -19,6 +19,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  Timer? _navTimer;
 
   @override
   void initState() {
@@ -33,7 +34,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _fadeController.forward();
 
-    Timer(const Duration(seconds: 3), () {
+    _navTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
       final authState = ref.read(authProvider);
       if (authState.isAuthenticated) {
         Navigator.pushReplacement(
@@ -51,6 +53,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   void dispose() {
+    _navTimer?.cancel();
     _fadeController.dispose();
     super.dispose();
   }

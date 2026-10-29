@@ -282,6 +282,32 @@ class TestFlaskViewEndpoints(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"AerialEYE Live Monitoring", response.data)
 
+    def test_capture_endpoint(self):
+        response = self.app.get("/capture")
+        # Either returns 200 image/jpeg or 503 if no frame loaded in tests
+        self.assertIn(response.status_code, [200, 503])
+        if response.status_code == 200:
+            self.assertEqual(response.mimetype, "image/jpeg")
+
+    def test_record_status_and_lifecycle(self):
+        # 1. Status when idle
+        resp = self.app.get("/record/status")
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.data)
+        self.assertIn("is_recording", data)
+        self.assertIn("duration_seconds", data)
+
+        # 2. List recordings
+        resp_list = self.app.get("/record/list")
+        self.assertEqual(resp_list.status_code, 200)
+        data_list = json.loads(resp_list.data)
+        self.assertIn("recordings", data_list)
+
+        # 3. Stop when not recording returns 400
+        resp_stop = self.app.post("/record/stop")
+        if not data["is_recording"]:
+            self.assertEqual(resp_stop.status_code, 400)
+
 
 if __name__ == "__main__":
     unittest.main()
